@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <script defer src="https://cloud.umami.is/script.js"
+        data-website-id="d6ee6da5-3779-4551-a754-7f63fdf95dbb"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 工具集 - Oscar Studio</title>
+    <link rel="stylesheet" href="user-auth.css">
+    <style>
+        :root {
+            --primary-color: #6A00FF;
+            --secondary-color: #00E5FF;
+            --accent-color: #FF6B00;
+            --light-color: #010409;
+            --dark-color: #ffffff;
+            --card-bg: #0d1117;
+            --card-border: 1px solid #30363d;
+            --card-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            --transition: all 0.3s ease;
+            --text-secondary: #8b949e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #6A00FF, #00E5FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .search-container {
+            margin-bottom: 30px;
+            position: relative;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: 1px solid #30363d;
+            background: #161b22;
+            color: var(--dark-color);
+            font-size: 1rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .search-container input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2);
+        }
+
+        .categories {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 40px;
+        }
+
+        .category-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid #30363d;
+            background: #161b22;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+
+        .category-btn:hover,
+        .category-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .tool-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            border: var(--card-border);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+            border-color: var(--secondary-color);
+        }
+
+        .tool-icon {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+            font-size: 3rem;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .tool-content {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tool-content h3 {
+            margin-bottom: 10px;
+            color: var(--dark-color);
+            font-size: 1.2rem;
+        }
+
+        .tool-content p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            flex-grow: 1;
+            line-height: 1.5;
+        }
+
+        .tool-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .tool-tag {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            background: #161b22;
+            color: var(--text-secondary);
+            border-radius: 4px;
+            border: 1px solid #30363d;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: var(--secondary-color);
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            color: var(--text-secondary);
+            border-top: 1px solid #30363d;
+            margin-top: 30px;
+        }
+
+        .featured {
+            border: 2px solid var(--accent-color);
+        }
+
+        .featured-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--accent-color);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #dc3545;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .tools-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+
+            header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 用户登录区域 -->
+    <div class="user-section" id="userSection">
+        <button class="user-btn" id="loginBtn">登录</button>
+        <button class="user-btn" id="registerBtn">注册</button>
+        <div id="loggedInUser" style="display: none;">
+            <div class="user-avatar" id="userAvatar"></div>
+            <div class="user-dropdown" id="userDropdown">
+                <div class="user-info">
+                    <div class="username" id="dropdownUsername"></div>
+                    <div class="phone" id="dropdownPhone"></div>
+                </div>
+                <ul class="dropdown-menu">
+                    <li><a href="#" id="editProfileBtn">修改个人信息</a></li>
+                    <li><a href="#" id="changePasswordBtn">修改密码</a></li>
+                    <li><a href="#" id="logoutBtn">退出登录</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>🤖 AI 工具集</h1>
+            <p>Oscar Studio AI 工具集，让 AI 帮你学习和工作</p>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="搜索工具...">
+            </div>
+            <div class="categories" id="categoriesContainer">
+                <button class="category-btn active" data-category="all">全部</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="tools-grid" id="toolsGrid">
+                <p class="loading">正在加载工具配置...</p>
+            </div>
+        </main>
+
+        <footer>
+            <p>AI 工具集 &copy; 2026 - Designed by Oscar</p>
+            <p><a href="https://beian.miit.gov.cn/" target="_blank">粤ICP备2026012488号-1</a></p>
+        </footer>
+    </div>
+
+    <!-- 用户登录注册模态框 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">登录</h3>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="apiMessage"></div>
+                <form id="loginForm" style="display: none;">
+                    <div class="form-group">
+                        <label for="loginAccount">用户名/手机号</label>
+                        <input type="text" id="loginAccount" placeholder="请输入用户名或手机号">
+                        <div class="error" id="loginAccountError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">密码</label>
+                        <input type="password" id="loginPassword" placeholder="请输入密码">
+                        <div class="error" id="loginPasswordError"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn" style="width: 100%;">登录</button>
+                    </div>
+                </form>
+                <form id="registerForm" style="display: none;">
+                    <div class="form-group">
+                        <label for="regUsername">用户名</label>
+                        <input type="text" id="regUsername" placeholder="请输入用户名（3-50字符）">
+                        <div class="error" id="regUsernameError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPhone">手机号</label>
+                        <input type="text" id="regPhone" placeholder="请输入11位手机号">
+                        <div class="error" id="regPhoneError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">密码</label>
+                        <input type="password" id="regPassword" placeholder="请输入密码（至少6位）">
+                        <div class="error" id="regPasswordError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="regConfirmPassword">确认密码</label>
+                        <input type="password" id="regConfirmPassword" placeholder="请再次输入密码">
+                        <div class="error" id="regConfirmPasswordError"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn" style="width: 100%;">注册</button>
+                    </div>
+                </form>
+                <form id="editProfileForm" style="display: none;">
+                    <div class="form-group">
+                        <label for="editUsername">用户名</label>
+                        <input type="text" id="editUsername" placeholder="请输入新用户名">
+                        <div class="error" id="editUsernameError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPhone">手机号</label>
+                        <input type="text" id="editPhone" placeholder="请输入新手机号">
+                        <div class="error" id="editPhoneError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPassword">当前密码（用于验证）</label>
+                        <input type="password" id="editPassword" placeholder="请输入当前密码">
+                        <div class="error" id="editPasswordError"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn" style="width: 100%;">保存修改</button>
+                    </div>
+                </form>
+                <form id="changePasswordForm" style="display: none;">
+                    <div class="form-group">
+                        <label for="currentPassword">当前密码</label>
+                        <input type="password" id="currentPassword" placeholder="请输入当前密码">
+                        <div class="error" id="currentPasswordError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">新密码</label>
+                        <input type="password" id="newPassword" placeholder="请输入新密码（至少6位）">
+                        <div class="error" id="newPasswordError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmNewPassword">确认新密码</label>
+                        <input type="password" id="confirmNewPassword" placeholder="请再次输入新密码">
+                        <div class="error" id="confirmNewPasswordError"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn" style="width: 100%;">修改密码</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toolsGrid = document.getElementById('toolsGrid');
+            const searchInput = document.getElementById('searchInput');
+            const categoriesContainer = document.getElementById('categoriesContainer');
+            let currentCategory = 'all';
+            let tools = [];
+
+            loadToolsConfig();
+
+            function loadToolsConfig() {
+                toolsGrid.innerHTML = '<p class="loading">正在加载工具配置...</p>';
+                fetch('tools-config.json')
+                    .then(r => r.json())
+                    .then(data => {
+                        tools = data.tools || [];
+                        tools.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+                        generateCategoryButtons();
+                        renderTools(tools);
+                        setupSearch();
+                        setupCategories();
+                    })
+                    .catch(() => {
+                        toolsGrid.innerHTML = '<p class="error">加载工具配置失败</p>';
+                    });
+            }
+
+            function generateCategoryButtons() {
+                const allTags = new Set();
+                tools.forEach(t => (t.tags || []).forEach(tag => allTags.add(tag)));
+                let html = '<button class="category-btn active" data-category="all">全部</button>';
+                [...allTags].sort().forEach(tag => {
+                    html += `<button class="category-btn" data-category="${tag}">${tag}</button>`;
+                });
+                categoriesContainer.innerHTML = html;
+            }
+
+            function renderTools(toolsToRender) {
+                toolsGrid.innerHTML = '';
+                if (!toolsToRender.length) {
+                    toolsGrid.innerHTML = '<p class="no-results">没有找到匹配的工具</p>';
+                    return;
+                }
+                toolsToRender.forEach(tool => {
+                    const card = document.createElement('div');
+                    card.className = 'tool-card' + (tool.featured ? ' featured' : '');
+                    const demoUrl = tool.demoFile || `${tool.name}/index.html`;
+                    card.innerHTML = `
+                        ${tool.featured ? '<span class="featured-badge">推荐</span>' : ''}
+                        <div class="tool-icon">${tool.icon || '🤖'}</div>
+                        <div class="tool-content">
+                            <h3>${tool.name}</h3>
+                            <p>${tool.description}</p>
+                            <div class="tool-tags">
+                                ${(tool.tags || []).map(t => `<span class="tool-tag">${t}</span>`).join('')}
+                            </div>
+                            <a href="${demoUrl}" class="btn btn-block">进入演示</a>
+                        </div>
+                    `;
+                    toolsGrid.appendChild(card);
+                });
+            }
+
+            function setupSearch() {
+                searchInput.addEventListener('input', filter);
+            }
+
+            function setupCategories() {
+                categoriesContainer.addEventListener('click', e => {
+                    if (e.target.classList.contains('category-btn')) {
+                        currentCategory = e.target.dataset.category;
+                        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        filter();
+                    }
+                });
+            }
+
+            function filter() {
+                const term = searchInput.value.toLowerCase();
+                let filtered = tools;
+                if (currentCategory !== 'all') {
+                    filtered = filtered.filter(t => t.tags && t.tags.includes(currentCategory));
+                }
+                if (term) {
+                    filtered = filtered.filter(t =>
+                        t.name.toLowerCase().includes(term) ||
+                        t.description.toLowerCase().includes(term) ||
+                        (t.tags && t.tags.some(tag => tag.toLowerCase().includes(term)))
+                    );
+                }
+                renderTools(filtered);
+            }
+        });
+    </script>
+    <script src="user-auth.js"></script>
+</body>
+
+</html>

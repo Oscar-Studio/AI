@@ -1,0 +1,17 @@
+{
+    "tools": [
+        {
+            "name": "AI_Launcher",
+            "description": "简洁好用的 AI 助手，支持 DeepSeek 和 MiniMax 多模型",
+            "tags": [
+                "AI",
+                "助手"
+            ],
+            "subject": [
+                "通用"
+            ],
+            "icon": "🤖",
+            "featured": true
+        }
+    ]
+}

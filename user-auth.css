@@ -1,0 +1,253 @@
+/* 用户登录相关样式 */
+.user-section {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-btn {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.user-btn:hover {
+    background: #D32F2F;
+    /* 根据你的主题色调整 */
+    border-color: #D32F2F;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D32F2F, #FFD700);
+    /* 根据你的主题色调整 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    border: 2px solid #FFD700;
+    /* 根据你的主题色调整 */
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    background: #1a0f0f;
+    /* 根据你的卡片背景色调整 */
+    border: 1px solid #4a1a1a;
+    /* 根据你的边框色调整 */
+    border-radius: 10px;
+    min-width: 200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+    display: none;
+    overflow: hidden;
+}
+
+.user-dropdown.active {
+    display: block;
+}
+
+.user-info {
+    padding: 15px;
+    border-bottom: 1px solid #30363d;
+}
+
+.user-info .username {
+    font-weight: bold;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.user-info .phone {
+    color: #8b949e;
+    font-size: 0.85rem;
+}
+
+.dropdown-menu {
+    list-style: none;
+}
+
+.dropdown-menu li {
+    border-bottom: 1px solid #30363d;
+}
+
+.dropdown-menu li:last-child {
+    border-bottom: none;
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 12px 15px;
+    color: #d0d7de;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.dropdown-menu a:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+/* 模态框样式 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    display: none;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal {
+    background: #1a0f0f;
+    /* 根据你的卡片背景色调整 */
+    border-radius: 10px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid #4a1a1a;
+    /* 根据你的边框色调整 */
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    color: white;
+    margin: 0;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    color: #8b949e;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.close-modal:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #d0d7de;
+    font-size: 0.9rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #30363d;
+    border-radius: 5px;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #D32F2F;
+    /* 根据你的主题色调整 */
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.form-group .error {
+    color: #ff3b30;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: none;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 1px solid #30363d;
+    text-align: right;
+}
+
+#apiMessage {
+    text-align: center;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    font-size: 0.9rem;
+}
+
+#apiMessage.success {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+#apiMessage.error {
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+    border: 1px solid rgba(255, 59, 48, 0.3);
+}
+
+@media (max-width: 768px) {
+    .user-section {
+        position: relative;
+        top: 0;
+        right: 0;
+        justify-content: flex-end;
+        margin-bottom: 15px;
+    }
+
+    .user-dropdown {
+        right: 50%;
+        transform: translateX(50%);
+    }
+}

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <script defer src="https://cloud.umami.is/script.js"
+        data-website-id="d6ee6da5-3779-4551-a754-7f63fdf95dbb"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek AI Launcher</title>
+    <style>
+        :root {
+            --primary-color: #2A5CAA;
+            --secondary-color: #00E5FF;
+            --accent-color: #6A00FF;
+            --light-color: #010409;
+            --dark-color: #ffffff;
+            --card-bg: #0d1117;
+            --card-border: 1px solid #30363d;
+            --card-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            --text-secondary: #8b949e;
+            --msg-user-bg: #1f6feb;
+            --msg-ai-bg: #161b22;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--dark-color);
+            overflow: hidden;
+            /* Prevent body scroll, let chat container scroll */
+        }
+
+        /* Authentication Overlay */
+        #auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(1, 4, 9, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .auth-box {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            border: var(--card-border);
+            box-shadow: var(--card-shadow);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .auth-box h2 {
+            color: var(--secondary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="password"],
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 1rem;
+            background: #010409;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+        }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #1a4a9a;
+        }
+
+        button:disabled {
+            background: #30363d;
+            cursor: not-allowed;
+            color: #8b949e;
+        }
+
+        button.stop-btn {
+            background: #da3633;
+        }
+
+        button.stop-btn:hover {
+            background: #b62324;
+        }
+
+        button.secondary-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            padding: 5px 15px;
+            font-size: 14px;
+        }
+
+        button.secondary-btn:hover {
+            background: #30363d;
+            border-color: #8b949e;
+        }
+
+        /* Main Application */
+        #app-container {
+            display: none;
+            /* Hidden by default */
+            width: 100%;
+            height: 100vh;
+            flex-direction: column;
+            max-width: 1200px;
+            background: var(--card-bg);
+            border-left: var(--card-border);
+            border-right: var(--card-border);
+        }
+
+        header {
+            padding: 1rem;
+            border-bottom: var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #161b22;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            color: var(--secondary-color);
+            margin: 0;
+        }
+
+        .stats-bar {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 15px;
+        }
+
+        .stats-item strong {
+            color: var(--secondary-color);
+        }
+
+        select {
+            background: #010409;
+            color: white;
+            border: 1px solid #30363d;
+            padding: 5px 10px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        #chat-window {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            line-height: 1.5;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background-color: var(--msg-user-bg);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background-color: var(--msg-ai-bg);
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            border-bottom-left-radius: 2px;
+            white-space: pre-wrap;
+            /* Simple markdown support */
+        }
+
+        .message.ai .reasoning {
+            display: block;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid var(--accent-color);
+            color: #8b949e;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+
+        .message.error {
+            align-self: center;
+            background-color: rgba(218, 54, 51, 0.1);
+            border: 1px solid #da3633;
+            color: #ff7b72;
+            text-align: center;
+        }
+
+        .typing-indicator::after {
+            content: '...';
+            animation: typing 1s infinite;
+        }
+
+        @keyframes typing {
+            0% {
+                content: '.';
+            }
+
+            33% {
+                content: '..';
+            }
+
+            66% {
+                content: '...';
+            }
+        }
+
+        .input-area {
+            padding: 1rem;
+            background: #161b22;
+            border-top: var(--card-border);
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        textarea {
+            resize: none;
+            height: 80px;
+            margin-bottom: 0;
+            font-family: inherit;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .controls button {
+            height: 80px;
+            /* Match textarea height for the single button */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            font-weight: bold;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #010409;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8b949e;
+        }
+    </style>
+
+<script charset="UTF-8" id="LA_COLLECT" src="//sdk.51.la/js-sdk-pro.min.js"></script>
+<script>LA.init({id:"3ObMo9NLgqBCvJ53",ck:"3ObMo9NLgqBCvJ53"})</script>
+</head>
+
+
+<body>
+
+    <!-- Authentication Overlay -->
+    <div id="auth-overlay">
+        <div class="auth-box">
+            <h2>AI 安全访问</h2>
+            <p style="color: #8b949e; margin-bottom: 15px;">请输入访问密码</p>
+            <input type="password" id="password-input" placeholder="输入密码...">
+            <button onclick="attemptLogin()">进入系统</button>
+            <p id="login-error" style="color: #da3633; margin-top: 10px; display: none;">密码错误</p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app-container">
+        <header>
+            <div class="header-left">
+                <h1>AI Launcher</h1>
+                <select id="model-select">
+                    <option value="deepseek-chat">DeepSeek Chat (快速回答)</option>
+                    <option value="deepseek-reasoner">DeepSeek Reasoner (深度思考)</option>
+                    <option value="MiniMax-M2.7">MiniMax-M2.7 (思考模型)</option>
+                </select>
+                <button id="new-chat-btn" class="secondary-btn">开启新对话</button>
+            </div>
+            <div class="stats-bar">
+                <span class="stats-item">Input: <strong id="token-input">0</strong></span>
+                <span class="stats-item">Output: <strong id="token-output">0</strong></span>
+                <span class="stats-item">Total: <strong id="token-total">0</strong></span>
+            </div>
+        </header>
+
+        <div id="chat-window">
+            <div class="message ai">你好！我是 DeepSeek AI 助手。有什么我可以帮你的吗？</div>
+        </div>
+
+        <div class="input-area">
+            <textarea id="user-input" placeholder="请输入你的问题... (Shift + Enter 换行)"></textarea>
+            <div class="controls">
+                <button id="action-btn" onclick="handleAction()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURATION =================
+        // 用户请在此处填入 BASE64 编码后的值
+        // 可以使用在线工具比如 https://www.base64encode.org/ 进行编码
+        const ENCODED_PASSWORD = "T3NjYXI5NDUxOA==";
+        const ENCODED_API_KEY = "c2stYzgyOWZmN2VjYjliNDFjMTlkMjZhYzVlNmViNzBhYzU=";
+        const ENCODED_MINIMAX_API_KEY = "c2stY3AtTnhoWVc5SlpLa2ZRUXUyOFhQNEdTZUpXdTRzSjQ3VExIeHR0VXZ2cHNoTlNaZzJVUzMweU1ZZFRfMmVELWJCdkpqRklrVndGQ0xHanVTNVdxY2FOQXZCMF82N3JuLVh2M2NneFlBNUVxcTdzNG5RMXFZTjFtQ2c=";
+        // MiniMax API 配置 (OpenAI 兼容)
+        const MINIMAX_API_ENDPOINT = "https://api.minimaxi.com/v1/chat/completions";
+        // =================================================
+
+        let controller = null; // For aborting fetch
+
+        const authOverlay = document.getElementById('auth-overlay');
+        const appContainer = document.getElementById('app-container');
+        const passwordInput = document.getElementById('password-input');
+        const loginError = document.getElementById('login-error');
+
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const actionBtn = document.getElementById('action-btn');
+        const newChatBtn = document.getElementById('new-chat-btn');
+        const modelSelect = document.getElementById('model-select');
+
+        const tokenInputDisp = document.getElementById('token-input');
+        const tokenOutputDisp = document.getElementById('token-output');
+        const tokenTotalDisp = document.getElementById('token-total');
+
+        // Handle Password Login
+        function attemptLogin() {
+            const input = passwordInput.value;
+            try {
+                const correctPassword = ENCODED_PASSWORD ? atob(ENCODED_PASSWORD) : "";
+
+                if (input === correctPassword) {
+                    authOverlay.style.display = 'none';
+                    appContainer.style.display = 'flex';
+                } else {
+                    showError('密码错误');
+                }
+            } catch (e) {
+                console.error("Decoding error", e);
+                showError('配置错误: 无法解码预设密码');
+            }
+        }
+
+        function showError(msg) {
+            loginError.textContent = msg;
+            loginError.style.display = 'block';
+            passwordInput.value = '';
+        }
+
+        // Enter key for password
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') attemptLogin();
+        });
+
+        // Chat Logic
+        const history = []; // {role: 'user'|'assistant', content: string}
+
+        function handleAction() {
+            if (controller) {
+                stopGeneration();
+            } else {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            if (!ENCODED_API_KEY) {
+                appendMessage('error', '错误: 未配置 API 密钥。请在源码中填入 base64 编码的密钥。');
+                return;
+            }
+
+            // UI Updates
+            userInput.value = '';
+            appendMessage('user', text);
+            history.push({ role: 'user', content: text });
+
+            setLoading(true);
+
+            // Create placeholder
+            const aiMsgDiv = appendMessage('ai', '');
+
+            // Create separate containers for reasoning and content
+            const reasoningDiv = document.createElement('div');
+            reasoningDiv.className = 'reasoning';
+            reasoningDiv.style.display = 'none'; // Initially hidden
+            aiMsgDiv.appendChild(reasoningDiv);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'content';
+            contentDiv.classList.add('typing-indicator'); // Indicator on content
+            aiMsgDiv.appendChild(contentDiv);
+
+
+            // API Config
+            const apiKey = atob(ENCODED_API_KEY);
+            const model = modelSelect.value;
+            controller = new AbortController();
+
+            let fullAiResponse = "";
+            let fullReasoning = "";
+            let isMiniMax = model.startsWith('MiniMax');
+
+            // API 配置
+            let apiEndpoint = 'https://api.deepseek.com/chat/completions';
+            let requestBody = {
+                model: model,
+                messages: history,
+                stream: true
+            };
+
+            if (isMiniMax) {
+                apiEndpoint = MINIMAX_API_ENDPOINT;
+                requestBody = {
+                    model: "MiniMax-M2.7",
+                    messages: history,
+                    stream: true,
+                    reasoning_split: true
+                };
+            }
+
+            try {
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${isMiniMax ? atob(ENCODED_MINIMAX_API_KEY) : apiKey}`
+                    },
+                    body: JSON.stringify(requestBody),
+                    signal: controller.signal
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`API Error: ${response.status} - ${errText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                contentDiv.classList.remove('typing-indicator');
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6);
+                            if (dataStr === '[DONE]') break;
+
+                            try {
+                                const data = JSON.parse(dataStr);
+
+                                // MiniMax 思考内容处理
+                                // reasoning_split=true 时，思考内容在 reasoning_details 字段
+                                if (isMiniMax && data.choices && data.choices[0].delta) {
+                                    const delta = data.choices[0].delta;
+                                    // 优先从 reasoning_details 提取思考内容
+                                    if (delta.reasoning_details && delta.reasoning_details[0]) {
+                                        for (const detail of delta.reasoning_details) {
+                                            if (detail.text) {
+                                                fullReasoning += detail.text;
+                                            }
+                                        }
+                                        reasoningDiv.textContent = fullReasoning;
+                                        reasoningDiv.style.display = 'block';
+                                        scrollToBottom();
+                                    }
+                                    // 回答内容从 content 字段提取
+                                    if (delta.content) {
+                                        fullAiResponse += delta.content;
+                                        contentDiv.textContent = fullAiResponse;
+                                        scrollToBottom();
+                                    }
+                                }
+                                // DeepSeek 思考内容处理
+                                else if (data.choices && data.choices[0].delta.reasoning_content) {
+                                    const rContent = data.choices[0].delta.reasoning_content;
+                                    fullReasoning += rContent;
+                                    reasoningDiv.textContent = fullReasoning;
+                                    reasoningDiv.style.display = 'block';
+                                    scrollToBottom();
+                                }
+
+                                // DeepSeek 回答内容处理
+                                if (!isMiniMax && data.choices && data.choices[0].delta.content) {
+                                    fullAiResponse += data.choices[0].delta.content;
+                                    contentDiv.textContent = fullAiResponse;
+                                    scrollToBottom();
+                                }
+
+                                if (data.usage) {
+                                    updateStats(data.usage);
+                                }
+                            } catch (e) { }
+                        }
+                    }
+                }
+
+                // Add AI response to history on success
+                // Note: We generally do NOT push reasoning content to history for future context, usually just the final answer.
+                history.push({ role: 'assistant', content: fullAiResponse });
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    contentDiv.textContent += '\n[已停止生成]';
+                    if (fullAiResponse) history.push({ role: 'assistant', content: fullAiResponse });
+                } else {
+                    contentDiv.classList.remove('typing-indicator');
+                    contentDiv.textContent += `\n[出错: ${error.message}]`;
+                }
+            } finally {
+                setLoading(false);
+                controller = null;
+            }
+        }
+
+        function stopGeneration() {
+            if (controller) {
+                controller.abort();
+                controller = null;
+                setLoading(false);
+            }
+        }
+
+        function appendMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            if (role === 'ai') {
+                // For AI, we might structure it later, but initially empty or text
+                // logic handled inside sendMessage
+            } else {
+                div.textContent = text;
+            }
+            chatWindow.appendChild(div);
+            scrollToBottom();
+            return div;
+        }
+
+        function scrollToBottom() {
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function setLoading(loading) {
+            if (loading) {
+                actionBtn.textContent = '停止';
+                actionBtn.classList.add('stop-btn');
+                userInput.disabled = false;
+            } else {
+                actionBtn.textContent = '发送';
+                actionBtn.classList.remove('stop-btn');
+                userInput.focus();
+            }
+        }
+
+        function updateStats(usage) {
+            if (!usage) return;
+            // DeepSeek 格式
+            if (usage.prompt_tokens !== undefined) tokenInputDisp.textContent = usage.prompt_tokens;
+            if (usage.completion_tokens !== undefined) tokenOutputDisp.textContent = usage.completion_tokens;
+            if (usage.total_tokens !== undefined) tokenTotalDisp.textContent = usage.total_tokens;
+            // Anthropic/MiniMax 格式
+            if (usage.input_tokens !== undefined) tokenInputDisp.textContent = usage.input_tokens;
+            if (usage.output_tokens !== undefined) tokenOutputDisp.textContent = usage.output_tokens;
+            if (usage.total_tokens !== undefined) tokenTotalDisp.textContent = usage.total_tokens;
+        }
+
+        // Bind Shift+Enter to new line, Enter to send
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleAction(); // Trigger action
+            }
+        });
+
+        // New Chat Logic
+        newChatBtn.addEventListener('click', () => {
+            history.length = 0; // Clear history array
+
+            // Allow stopping current generation if active
+            if (controller) stopGeneration();
+
+            // Visual indicator
+            const div = document.createElement('div');
+            div.style.textAlign = 'center';
+            div.style.color = '#8b949e';
+            div.style.margin = '1rem 0';
+            div.style.fontSize = '0.9rem';
+            div.textContent = '--- 新对话开始 (上下文已清除) ---';
+            chatWindow.appendChild(div);
+            scrollToBottom();
+        });
+    </script>
+    <p><a href="https://beian.miit.gov.cn/" target="_blank">粤ICP备2026012488号-1</a></p>
+</body>
+
+</html>
