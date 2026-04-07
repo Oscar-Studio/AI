@@ -12,6 +12,20 @@
             ],
             "icon": "🤖",
             "featured": true
+        },
+        {
+            "name": "MIMO-TTS",
+            "description": "基于小米 MiMo 开放平台的文本转语音工具，支持多种风格和音色",
+            "tags": [
+                "AI",
+                "语音",
+                "TTS"
+            ],
+            "subject": [
+                "通用"
+            ],
+            "icon": "🎤",
+            "featured": true
         }
     ]
 }

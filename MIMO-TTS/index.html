@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>MIMO-TTS 语音生成器 - Oscar Studio</title>
+ <style>
+ :root {
+ --primary-color: #6A00FF;
+ --secondary-color: #00E5FF;
+ --accent-color: #FF6B00;
+ --light-color: #010409;
+ --dark-color: #ffffff;
+ --card-bg: #0d1117;
+ --card-border: 1px solid #30363d;
+ --card-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+ --text-secondary: #8b949e;
+ --input-bg: #161b22;
+ --transition: all 0.3s ease;
+ }
+
+ * {
+ margin: 0;
+ padding: 0;
+ box-sizing: border-box;
+ }
+
+ body {
+ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+ background-color: var(--light-color);
+ min-height: 100vh;
+ padding: 20px;
+ color: var(--dark-color);
+ }
+
+ .container {
+ max-width: 800px;
+ margin: 0 auto;
+ background: var(--card-bg);
+ border-radius: 12px;
+ box-shadow: var(--card-shadow);
+ border: var(--card-border);
+ padding: 40px;
+ }
+
+ h1 {
+ text-align: center;
+ margin-bottom: 8px;
+ font-size: 1.8rem;
+ background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+ -webkit-background-clip: text;
+ -webkit-text-fill-color: transparent;
+ background-clip: text;
+ }
+
+ .subtitle {
+ text-align: center;
+ color: var(--text-secondary);
+ margin-bottom: 30px;
+ font-size: 14px;
+ }
+
+ .form-group {
+ margin-bottom: 20px;
+ }
+
+ label {
+ display: block;
+ margin-bottom: 8px;
+ color: var(--dark-color);
+ font-weight: 600;
+ font-size: 14px;
+ }
+
+ textarea {
+ width: 100%;
+ min-height: 120px;
+ padding: 12px 15px;
+ border: 1px solid var(--card-border);
+ border-radius: 8px;
+ font-size: 15px;
+ resize: vertical;
+ transition: border-color 0.3s;
+ font-family: inherit;
+ background: var(--input-bg);
+ color: var(--dark-color);
+ }
+
+ textarea:focus {
+ outline: none;
+ border-color: var(--secondary-color);
+ box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.1);
+ }
+
+ .param-row {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ gap: 20px;
+ }
+
+ select, input[type="text"] {
+ width: 100%;
+ padding: 10px 14px;
+ border: 1px solid var(--card-border);
+ border-radius: 8px;
+ font-size: 14px;
+ transition: border-color 0.3s;
+ background: var(--input-bg);
+ color: var(--dark-color);
+ }
+
+ select:focus, input[type="text"]:focus {
+ outline: none;
+ border-color: var(--secondary-color);
+ box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.1);
+ }
+
+ .style-hint {
+ font-size: 12px;
+ color: var(--text-secondary);
+ margin-top: 5px;
+ }
+
+ .style-tags {
+ display: flex;
+ flex-wrap: wrap;
+ gap: 8px;
+ margin-top: 10px;
+ }
+
+ .style-tag {
+ padding: 5px 12px;
+ background: var(--input-bg);
+ border: 1px solid var(--card-border);
+ border-radius: 15px;
+ font-size: 12px;
+ cursor: pointer;
+ transition: var(--transition);
+ color: var(--text-secondary);
+ }
+
+ .style-tag:hover {
+ border-color: var(--secondary-color);
+ color: var(--secondary-color);
+ }
+
+ .btn {
+ width: 100%;
+ padding: 12px;
+ border: none;
+ border-radius: 8px;
+ font-size: 15px;
+ font-weight: 600;
+ cursor: pointer;
+ transition: var(--transition);
+ }
+
+ .btn-primary {
+ background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+ color: white;
+ }
+
+ .btn-primary:hover:not(:disabled) {
+ transform: translateY(-2px);
+ box-shadow: 0 8px 25px rgba(102, 126, 234, 0.35);
+ }
+
+ .btn-primary:disabled {
+ opacity: 0.5;
+ cursor: not-allowed;
+ transform: none;
+ }
+
+ .btn-secondary {
+ background: var(--input-bg);
+ color: var(--dark-color);
+ border: 1px solid var(--card-border);
+ margin-top: 10px;
+ }
+
+ .btn-secondary:hover:not(:disabled) {
+ border-color: var(--secondary-color);
+ color: var(--secondary-color);
+ }
+
+ .status {
+ text-align: center;
+ padding: 12px;
+ border-radius: 8px;
+ margin-top: 15px;
+ display: none;
+ }
+
+ .status.loading {
+ display: block;
+ background: rgba(255, 193, 7, 0.1);
+ color: #ffc107;
+ }
+
+ .status.success {
+ display: block;
+ background: rgba(40, 167, 69, 0.1);
+ color: #28a745;
+ }
+
+ .status.error {
+ display: block;
+ background: rgba(220, 53, 69, 0.1);
+ color: #dc3545;
+ }
+
+ .audio-player {
+ margin-top: 20px;
+ display: none;
+ }
+
+ .audio-player.show {
+ display: block;
+ }
+
+ audio {
+ width: 100%;
+ margin-top: 10px;
+ border-radius: 8px;
+ background: var(--input-bg);
+ }
+
+ .examples {
+ margin-top: 25px;
+ padding: 15px;
+ background: var(--input-bg);
+ border-radius: 10px;
+ border: var(--card-border);
+ }
+
+ .examples h3 {
+ font-size: 13px;
+ color: var(--text-secondary);
+ margin-bottom: 12px;
+ font-weight: normal;
+ }
+
+ .example-item {
+ padding: 10px 12px;
+ background: var(--card-bg);
+ border: 1px solid var(--card-border);
+ border-radius: 8px;
+ margin-bottom: 8px;
+ cursor: pointer;
+ font-size: 13px;
+ color: var(--text-secondary);
+ transition: var(--transition);
+ }
+
+ .example-item:hover {
+ border-color: var(--secondary-color);
+ color: var(--dark-color);
+ }
+
+ .example-item:last-child {
+ margin-bottom: 0;
+ }
+
+ .footer {
+ text-align: center;
+ margin-top: 30px;
+ color: var(--text-secondary);
+ font-size: 12px;
+ }
+
+ .loading-spinner {
+ display: inline-block;
+ width: 16px;
+ height: 16px;
+ border: 2px solid rgba(255,255,255,0.1);
+ border-top: 2px solid #ffc107;
+ border-radius: 50%;
+ animation: spin 1s linear infinite;
+ margin-right: 8px;
+ vertical-align: middle;
+ }
+
+ @keyframes spin {
+ 0% { transform: rotate(0deg); }
+ 100% { transform: rotate(360deg); }
+ }
+
+ @media (max-width: 600px) {
+ .container {
+ padding: 20px;
+ }
+ .param-row {
+ grid-template-columns: 1fr;
+ }
+ h1 {
+ font-size: 1.5rem;
+ }
+ }
+ </style>
+</head>
+<body>
+ <div class="container">
+ <h1>🎤 MIMO-TTS 语音生成器</h1>
+ <p class="subtitle">基于小米 MiMo 开放平台的文本转语音工具</p>
+
+ <div class="form-group">
+ <label for="text-input">输入文本</label>
+ <textarea id="text-input" placeholder="请输入要转换为语音的文本..."></textarea>
+ </div>
+
+ <div class="param-row">
+ <div class="form-group">
+ <label for="voice-select">选择音色</label>
+ <select id="voice-select">
+ <option value="mimo_default">MiMo-默认</option>
+ <option value="default_zh">MiMo-中文女声</option>
+ <option value="default_en">MiMo-英文女声</option>
+ </select>
+ </div>
+
+ <div class="form-group">
+ <label for="style-input">风格设置（可选）</label>
+ <input type="text" id="style-input" placeholder="如：开心、悲伤、东北话...">
+ <p class="style-hint">可选风格：语速控制、情绪变化、角色扮演、方言等</p>
+ </div>
+ </div>
+
+ <div class="style-tags">
+ <span class="style-tag" data-style="开心">开心</span>
+ <span class="style-tag" data-style="悲伤">悲伤</span>
+ <span class="style-tag" data-style="东北话">东北话</span>
+ <span class="style-tag" data-style="粤语">粤语</span>
+ <span class="style-tag" data-style="唱歌">唱歌</span>
+ <span class="style-tag" data-style="悄悄话">悄悄话</span>
+ <span class="style-tag" data-style="变快">变快</span>
+ <span class="style-tag" data-style="变慢">变慢</span>
+ </div>
+
+ <button id="generate-btn" class="btn btn-primary">生成语音</button>
+
+ <div id="status" class="status"></div>
+
+ <div id="audio-player" class="audio-player">
+ <audio id="audio-element" controls></audio>
+ <button id="download-btn" class="btn btn-secondary">下载 MP3</button>
+ </div>
+
+ <div class="examples">
+ <h3>📝 示例文本（点击使用）</h3>
+ <div class="example-item" data-text="明天就是周五了，真开心！" data-style="开心">开心风格：明天就是周五了，真开心！</div>
+ <div class="example-item" data-text="哎呀妈呀，这天儿也忒冷了吧！你说这风，嗖嗖的，跟刀子似的，割脸啊！" data-style="东北话">东北话风格：哎呀妈呀，这天儿也忒冷了吧！</div>
+ <div class="example-item" data-text="呢个真係好正啊！食过一次就唔会忘记！" data-style="粤语">粤语风格：呢个真係好正啊！</div>
+ <div class="example-item" data-text="原谅我这一生不羁放纵爱自由，也会怕有一天会跌倒，Oh no。背弃了理想，谁人都可以，哪会怕有一天只你共我。" data-style="唱歌">唱歌风格：原谅我这一生不羁放纵爱自由...</div>
+ </div>
+
+ <div class="footer">
+ Powered by 小米 MiMo 开放平台
+ </div>
+ </div>
+
+ <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+ <script>
+ const MIMO_API_KEY = 'sk-cfgugykt1oa7swi5ei0k1l16419ga3em9101f5am177ahcau';
+ const API_URL = 'https://api.xiaomimimo.com/v1/chat/completions';
+
+ let audioBlob = null;
+ let audioFileName = 'mimo-tts-output';
+
+ const textInput = document.getElementById('text-input');
+ const voiceSelect = document.getElementById('voice-select');
+ const styleInput = document.getElementById('style-input');
+ const generateBtn = document.getElementById('generate-btn');
+ const statusDiv = document.getElementById('status');
+ const audioPlayer = document.getElementById('audio-player');
+ const audioElement = document.getElementById('audio-element');
+ const downloadBtn = document.getElementById('download-btn');
+
+ document.querySelectorAll('.style-tag').forEach(tag => {
+ tag.addEventListener('click', () => {
+ const style = tag.dataset.style;
+ styleInput.value = styleInput.value ? `${styleInput.value} ${style}` : style;
+ });
+ });
+
+ document.querySelectorAll('.example-item').forEach(item => {
+ item.addEventListener('click', () => {
+ textInput.value = item.dataset.text;
+ styleInput.value = item.dataset.style || '';
+ });
+ });
+
+ generateBtn.addEventListener('click', generateSpeech);
+ downloadBtn.addEventListener('click', downloadMP3);
+
+ async function generateSpeech() {
+ const text = textInput.value.trim();
+ if (!text) {
+ showStatus('请输入要转换的文本', 'error');
+ return;
+ }
+
+ generateBtn.disabled = true;
+ showStatus('<span class="loading-spinner"></span>正在生成语音，请稍候...', 'loading');
+ audioPlayer.classList.remove('show');
+
+ try {
+ const style = styleInput.value.trim();
+ let content = text;
+ if (style) {
+ content = `<style>${style}</style>${text}`;
+ }
+
+ const response = await fetch(API_URL, {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json',
+ 'api-key': MIMO_API_KEY
+ },
+ body: JSON.stringify({
+ model: 'mimo-v2-tts',
+ messages: [
+ { role: 'user', content: '请将以下内容转换为语音' },
+ { role: 'assistant', content: content }
+ ],
+ audio: {
+ format: 'wav',
+ voice: voiceSelect.value
+ }
+ })
+ });
+
+ if (!response.ok) {
+ const errorData = await response.json().catch(() => ({}));
+ throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+ }
+
+ const data = await response.json();
+
+ if (data.choices && data.choices[0]?.message?.audio?.data) {
+ const audioData = data.choices[0].message.audio.data;
+ const audioBytes = base64ToArrayBuffer(audioData);
+ audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
+ audioElement.src = URL.createObjectURL(audioBlob);
+ audioPlayer.classList.add('show');
+ audioFileName = `mimo-tts-${Date.now()}`;
+ showStatus('✅ 语音生成成功！', 'success');
+ } else {
+ throw new Error('API 返回数据格式错误');
+ }
+
+ } catch (error) {
+ showStatus(`❌ 生成失败：${error.message}`, 'error');
+ } finally {
+ generateBtn.disabled = false;
+ }
+ }
+
+ function base64ToArrayBuffer(base64) {
+ const binaryString = atob(base64);
+ const bytes = new Uint8Array(binaryString.length);
+ for (let i = 0; i < binaryString.length; i++) {
+ bytes[i] = binaryString.charCodeAt(i);
+ }
+ return bytes.buffer;
+ }
+
+ async function downloadMP3() {
+ if (!audioBlob) {
+ showStatus('请先生成语音', 'error');
+ return;
+ }
+ showStatus('<span class="loading-spinner"></span>正在转换为 MP3 格式...', 'loading');
+ try {
+ const mp3Blob = await convertWavToMp3(audioBlob);
+ const url = URL.createObjectURL(mp3Blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = `${audioFileName}.mp3`;
+ document.body.appendChild(a);
+ a.click();
+ document.body.removeChild(a);
+ URL.revokeObjectURL(url);
+ showStatus('✅ MP3 文件已下载！', 'success');
+ } catch (error) {
+ showStatus(`❌ MP3 转换失败：${error.message}`, 'error');
+ }
+ }
+
+ async function convertWavToMp3(wavBlob) {
+ return new Promise((resolve, reject) => {
+ const reader = new FileReader();
+ reader.onload = function(e) {
+ try {
+ const wavData = e.target.result;
+ const wav = parseWav(wavData);
+ const mp3encoder = new lamejs.Mp3Encoder(wav.channels, wav.sampleRate, 128);
+ const mp3Data = [];
+ const samples = wav.channels === 1 ? wav.samples : interleave(wav.leftChannel, wav.rightChannel);
+ const sampleBlockSize = 1152;
+ for (let i = 0; i < samples.length; i += sampleBlockSize) {
+ const mp3buf = mp3encoder.encodeBuffer(samples.subarray(i, i + sampleBlockSize));
+ if (mp3buf.length > 0) mp3Data.push(mp3buf);
+ }
+ const mp3buf = mp3encoder.flush();
+ if (mp3buf.length > 0) mp3Data.push(mp3buf);
+ resolve(new Blob(mp3Data, { type: 'audio/mp3' }));
+ } catch (error) { reject(error); }
+ };
+ reader.onerror = reject;
+ reader.readAsArrayBuffer(wavBlob);
+ });
+ }
+
+ function parseWav(wavData) {
+ const view = new DataView(wavData);
+ if (String.fromCharCode(view.getUint8(0),view.getUint8(1),view.getUint8(2),view.getUint8(3)) !== 'RIFF') {
+ throw new Error('Invalid WAV file');
+ }
+ let offset = 12, channels = 0, sampleRate = 0, bitsPerSample = 0, dataOffset = 0, dataSize = 0;
+ while (offset < view.byteLength) {
+ const chunkId = String.fromCharCode(view.getUint8(offset),view.getUint8(offset+1),view.getUint8(offset+2),view.getUint8(offset+3));
+ const chunkSize = view.getUint32(offset + 4, true);
+ if (chunkId === 'fmt ') {
+ channels = view.getUint16(offset + 10, true);
+ sampleRate = view.getUint32(offset + 12, true);
+ bitsPerSample = view.getUint16(offset + 22, true);
+ } else if (chunkId === 'data') {
+ dataOffset = offset + 8;
+ dataSize = chunkSize;
+ break;
+ }
+ offset += 8 + chunkSize;
+ }
+ const samples = new Int16Array(wavData, dataOffset, dataSize / 2);
+ let leftChannel, rightChannel;
+ if (channels === 2) {
+ leftChannel = new Int16Array(samples.length / 2);
+ rightChannel = new Int16Array(samples.length / 2);
+ for (let i = 0; i < samples.length; i += 2) {
+ leftChannel[i / 2] = samples[i];
+ rightChannel[i / 2] = samples[i + 1];
+ }
+ }
+ return { channels, sampleRate, bitsPerSample, samples, leftChannel, rightChannel };
+ }
+
+ function interleave(left, right) {
+ const result = new Int16Array(left.length + right.length);
+ for (let i = 0; i < left.length; i++) {
+ result[2 * i] = left[i];
+ result[2 * i + 1] = right[i];
+ }
+ return result;
+ }
+
+ function showStatus(message, type) {
+ statusDiv.innerHTML = message;
+ statusDiv.className = `status ${type}`;
+ }
+ </script>
+</body>
+</html>
