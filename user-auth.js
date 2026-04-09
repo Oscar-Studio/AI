@@ -297,13 +297,10 @@ async function handleLogin(e) {
     console.log('尝试登录:', account);
 
     try {
-        const formData = new FormData();
-        formData.append('account', account);
-        formData.append('password', password);
-
         const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
-            body: formData
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account, password })
         });
 
         console.log('登录响应状态:', response.status, response.statusText);
