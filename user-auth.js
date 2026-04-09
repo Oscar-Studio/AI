@@ -1,7 +1,7 @@
 // ================= 用户登录管理 =================
 
 // API基础URL - 根据你的服务器IP修改
-const API_BASE_URL = 'https://api.oscarstudio.cn';
+const API_BASE_URL = 'https://api.oscarstudio.cn/api';
 
 // 跨域Cookie域名配置
 const COOKIE_DOMAIN = '.oscarstudio.cn';
