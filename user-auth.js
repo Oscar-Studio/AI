@@ -1,7 +1,7 @@
 // ================= 用户登录管理 =================
 
 // API基础URL - 根据你的服务器IP修改
-const API_BASE_URL = 'https://119.23.64.153/api';
+const API_BASE_URL = 'https://api.oscarstudio.cn';
 
 // 跨域Cookie域名配置
 const COOKIE_DOMAIN = '.oscarstudio.cn';
@@ -301,7 +301,7 @@ async function handleLogin(e) {
         formData.append('account', account);
         formData.append('password', password);
 
-        const response = await fetch(`${API_BASE_URL}/login.php`, {
+        const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
             body: formData
         });
@@ -375,7 +375,7 @@ async function handleRegister(e) {
     console.log('尝试注册:', username);
 
     try {
-        const response = await fetch(`${API_BASE_URL}/register.php`, {
+        const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -434,7 +434,7 @@ async function handleEditProfile(e) {
     console.log('尝试更新个人信息:', username);
 
     try {
-        const response = await fetch(`${API_BASE_URL}/update.php`, {
+        const response = await fetch(`${API_BASE_URL}/update`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -509,7 +509,7 @@ async function handleChangePassword(e) {
     console.log('尝试修改密码');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/change_password.php`, {
+        const response = await fetch(`${API_BASE_URL}/change_password`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
