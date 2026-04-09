@@ -360,8 +360,8 @@
 
  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
  <script>
- const MIMO_API_KEY = 'sk-cfgugykt1oa7swi5ei0k1l16419ga3em9101f5am177ahcau';
- const API_URL = 'https://api.xiaomimimo.com/v1/chat/completions';
+ // API key 已移至后端
+ const API_URL = 'https://api.oscarstudio.cn/api/tts';
 
  let audioBlob = null;
  let audioFileName = 'mimo-tts-output';
@@ -412,20 +412,11 @@
 
  const response = await fetch(API_URL, {
  method: 'POST',
- headers: {
- 'Content-Type': 'application/json',
- 'api-key': MIMO_API_KEY
- },
+ headers: { 'Content-Type': 'application/json' },
  body: JSON.stringify({
- model: 'mimo-v2-tts',
- messages: [
- { role: 'user', content: '请将以下内容转换为语音' },
- { role: 'assistant', content: content }
- ],
- audio: {
- format: 'wav',
- voice: voiceSelect.value
- }
+ text: text,
+ voice: voiceSelect.value,
+ style: style
  })
  });
 
