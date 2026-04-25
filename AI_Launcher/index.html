@@ -678,8 +678,8 @@
                                 scrollBottom();
                             }
                         }
-                        // DeepSeek reasoning — 仅在思考开启时显示
-                        else if (provider === 'deepseek' && d.choices?.[0]?.delta?.reasoning_content && thinking) {
+                        // DeepSeek / MiMo reasoning — 仅在思考开启时显示
+                        else if ((provider === 'deepseek' || provider === 'mimo') && d.choices?.[0]?.delta?.reasoning_content && thinking) {
                             fullReasoning += d.choices[0].delta.reasoning_content;
                             reasoningDiv.textContent = fullReasoning;
                             reasoningDiv.style.display = 'block';
