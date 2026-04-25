@@ -60,6 +60,50 @@
  font-size: 14px;
  }
 
+ /* 模型选择器 */
+ .model-selector {
+ display: flex;
+ gap: 10px;
+ margin-bottom: 25px;
+ border-bottom: 1px solid var(--card-border);
+ padding-bottom: 15px;
+ }
+
+ .model-tab {
+ flex: 1;
+ padding: 12px 16px;
+ background: var(--input-bg);
+ border: 1px solid var(--card-border);
+ border-radius: 8px;
+ color: var(--text-secondary);
+ font-size: 14px;
+ font-weight: 600;
+ cursor: pointer;
+ transition: var(--transition);
+ text-align: center;
+ }
+
+ .model-tab:hover {
+ border-color: var(--secondary-color);
+ color: var(--dark-color);
+ }
+
+ .model-tab.active {
+ background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+ color: white;
+ border-color: transparent;
+ }
+
+ /* 隐藏非活动面板 */
+ .tab-panel {
+ display: none;
+ }
+
+ .tab-panel.active {
+ display: block;
+ }
+
+ /* 表单元素 */
  .form-group {
  margin-bottom: 20px;
  }
@@ -74,7 +118,7 @@
 
  textarea {
  width: 100%;
- min-height: 120px;
+ min-height: 100px;
  padding: 12px 15px;
  border: 1px solid var(--card-border);
  border-radius: 8px;
@@ -144,6 +188,97 @@
  color: var(--secondary-color);
  }
 
+ .style-tag.selected {
+ border-color: var(--secondary-color);
+ color: var(--secondary-color);
+ background: rgba(0, 229, 255, 0.1);
+ }
+
+ /* 文件上传 */
+ .upload-area {
+ border: 2px dashed var(--card-border);
+ border-radius: 12px;
+ padding: 30px;
+ text-align: center;
+ cursor: pointer;
+ transition: var(--transition);
+ background: var(--input-bg);
+ }
+
+ .upload-area:hover, .upload-area.dragover {
+ border-color: var(--secondary-color);
+ background: rgba(0, 229, 255, 0.05);
+ }
+
+ .upload-area input[type="file"] {
+ display: none;
+ }
+
+ .upload-icon {
+ font-size: 40px;
+ margin-bottom: 10px;
+ }
+
+ .upload-text {
+ color: var(--text-secondary);
+ font-size: 14px;
+ }
+
+ .upload-hint {
+ color: var(--text-secondary);
+ font-size: 12px;
+ margin-top: 5px;
+ }
+
+ .file-preview {
+ display: none;
+ margin-top: 15px;
+ padding: 12px;
+ background: var(--card-bg);
+ border: 1px solid var(--card-border);
+ border-radius: 8px;
+ }
+
+ .file-preview.show {
+ display: flex;
+ align-items: center;
+ gap: 10px;
+ }
+
+ .file-preview-icon {
+ font-size: 24px;
+ }
+
+ .file-preview-info {
+ flex: 1;
+ }
+
+ .file-preview-name {
+ font-size: 14px;
+ color: var(--dark-color);
+ word-break: break-all;
+ }
+
+ .file-preview-size {
+ font-size: 12px;
+ color: var(--text-secondary);
+ }
+
+ .file-preview-remove {
+ color: #dc3545;
+ cursor: pointer;
+ font-size: 18px;
+ }
+
+ /* 字符计数 */
+ .char-count {
+ text-align: right;
+ font-size: 12px;
+ color: var(--text-secondary);
+ margin-top: 5px;
+ }
+
+ /* 按钮 */
  .btn {
  width: 100%;
  padding: 12px;
@@ -292,6 +427,9 @@
  .param-row {
  grid-template-columns: 1fr;
  }
+ .model-selector {
+ flex-direction: column;
+ }
  h1 {
  font-size: 1.5rem;
  }
@@ -303,24 +441,38 @@
  <h1>🎤 MIMO-TTS 语音生成器</h1>
  <p class="subtitle">基于小米 MiMo 开放平台的文本转语音工具</p>
 
+ <!-- 模型选择器 -->
+ <div class="model-selector">
+ <button class="model-tab active" data-model="mimo-v2.5-tts">内置音色</button>
+ <button class="model-tab" data-model="mimo-v2.5-tts-voicedesign">声音定制</button>
+ <button class="model-tab" data-model="mimo-v2.5-tts-voiceclone">声音克隆</button>
+ </div>
+
+ <!-- 模型1: 内置音色 -->
+ <div id="panel-builtin" class="tab-panel active">
  <div class="form-group">
- <label for="text-input">输入文本</label>
- <textarea id="text-input" placeholder="请输入要转换为语音的文本..."></textarea>
+ <label for="builtin-text">输入文本</label>
+ <textarea id="builtin-text" placeholder="请输入要转换为语音的文本..."></textarea>
  </div>
 
  <div class="param-row">
  <div class="form-group">
- <label for="voice-select">选择音色</label>
- <select id="voice-select">
- <option value="mimo_default">MiMo-默认</option>
- <option value="default_zh">MiMo-中文女声</option>
- <option value="default_en">MiMo-英文女声</option>
+ <label for="builtin-voice">选择音色</label>
+ <select id="builtin-voice">
+ <option value="冰糖">冰糖</option>
+ <option value="茉莉">茉莉</option>
+ <option value="苏打">苏打</option>
+ <option value="白桦">白桦</option>
+ <option value="Mia">Mia</option>
+ <option value="Chloe">Chloe</option>
+ <option value="Milo">Milo</option>
+ <option value="Dean">Dean</option>
  </select>
  </div>
 
  <div class="form-group">
- <label for="style-input">风格设置（可选）</label>
- <input type="text" id="style-input" placeholder="如：开心、悲伤、东北话...">
+ <label for="builtin-style">风格描述（可选）</label>
+ <input type="text" id="builtin-style" placeholder="如：开心、悲伤、东北话...">
  <p class="style-hint">可选风格：语速控制、情绪变化、角色扮演、方言等</p>
  </div>
  </div>
@@ -336,21 +488,78 @@
  <span class="style-tag" data-style="变慢">变慢</span>
  </div>
 
- <button id="generate-btn" class="btn btn-primary">生成语音</button>
-
- <div id="status" class="status"></div>
-
- <div id="audio-player" class="audio-player">
- <audio id="audio-element" controls></audio>
- <button id="download-btn" class="btn btn-secondary">下载 MP3</button>
- </div>
-
  <div class="examples">
  <h3>📝 示例文本（点击使用）</h3>
  <div class="example-item" data-text="明天就是周五了，真开心！" data-style="开心">开心风格：明天就是周五了，真开心！</div>
  <div class="example-item" data-text="哎呀妈呀，这天儿也忒冷了吧！你说这风，嗖嗖的，跟刀子似的，割脸啊！" data-style="东北话">东北话风格：哎呀妈呀，这天儿也忒冷了吧！</div>
  <div class="example-item" data-text="呢个真係好正啊！食过一次就唔会忘记！" data-style="粤语">粤语风格：呢个真係好正啊！</div>
  <div class="example-item" data-text="原谅我这一生不羁放纵爱自由，也会怕有一天会跌倒，Oh no。背弃了理想，谁人都可以，哪会怕有一天只你共我。" data-style="唱歌">唱歌风格：原谅我这一生不羁放纵爱自由...</div>
+ </div>
+ </div>
+
+ <!-- 模型2: 声音定制 -->
+ <div id="panel-voicedesign" class="tab-panel">
+ <div class="form-group">
+ <label for="vd-description">声音描述</label>
+ <textarea id="vd-description" placeholder="请描述你想要的声音特征，如：温柔的年轻女性声音，带有轻微的南方口音..."></textarea>
+ <p class="style-hint">描述声音的性别、年龄、情感、特点等</p>
+ </div>
+
+ <div class="form-group">
+ <label for="vd-text">要合成的文本</label>
+ <textarea id="vd-text" placeholder="请输入要转换为语音的文本..."></textarea>
+ <div class="char-count"><span id="vd-char-count">0</span> 字符</div>
+ </div>
+
+ <div class="examples">
+ <h3>💡 示例描述（点击使用）</h3>
+ <div class="example-item" data-desc="活泼开朗的年轻女孩，声音甜美清新" data-text="大家好，我是小美，很高兴认识你们！">活泼开朗的年轻女孩</div>
+ <div class="example-item" data-desc="沉稳有力的中年男性声音，播音员风格" data-text="欢迎收听今天的新闻播报，本期主要内容有...">沉稳有力的中年男性</div>
+ <div class="example-item" data-desc="可爱的小朋友，声音稚嫩纯真" data-text="妈妈，妈妈，我今天在幼儿园画了一幅画！">可爱的小朋友</div>
+ </div>
+ </div>
+
+ <!-- 模型3: 声音克隆 -->
+ <div id="panel-voiceclone" class="tab-panel">
+ <div class="form-group">
+ <label>上传音频样本</label>
+ <div class="upload-area" id="vc-upload-area">
+ <input type="file" id="vc-audio-file" accept=".mp3,.wav,audio/mpeg,audio/wav">
+ <div class="upload-icon">🎙️</div>
+ <div class="upload-text">点击或拖拽上传音频文件</div>
+ <div class="upload-hint">支持 MP3/WAV 格式，最大 10MB</div>
+ </div>
+ <div class="file-preview" id="vc-file-preview">
+ <span class="file-preview-icon">🎵</span>
+ <div class="file-preview-info">
+ <div class="file-preview-name" id="vc-file-name"></div>
+ <div class="file-preview-size" id="vc-file-size"></div>
+ </div>
+ <span class="file-preview-remove" id="vc-remove-file">✕</span>
+ </div>
+ </div>
+
+ <div class="form-group">
+ <label for="vc-style">风格指导（可选）</label>
+ <input type="text" id="vc-style" placeholder="如：带有情感地朗读...">
+ <p class="style-hint">对克隆声音的语气、情感等提供指导</p>
+ </div>
+
+ <div class="form-group">
+ <label for="vc-text">要合成的文本</label>
+ <textarea id="vc-text" placeholder="请输入要转换为语音的文本..."></textarea>
+ <div class="char-count"><span id="vc-char-count">0</span> 字符</div>
+ </div>
+ </div>
+
+ <!-- 通用区域 -->
+ <button id="generate-btn" class="btn btn-primary">生成语音</button>
+
+ <div id="status" class="status"></div>
+
+ <div id="audio-player" class="audio-player">
+ <audio id="audio-element" controls></audio>
+ <button id="download-btn" class="btn btn-secondary">下载 WAV</button>
  </div>
 
  <div class="footer">
@@ -360,40 +569,175 @@
 
  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
  <script>
- // API key 已移至后端
  const API_URL = 'https://api.oscarstudio.cn/api/tts';
 
  let audioBlob = null;
  let audioFileName = 'mimo-tts-output';
+ let uploadedAudioBase64 = null;
 
- const textInput = document.getElementById('text-input');
- const voiceSelect = document.getElementById('voice-select');
- const styleInput = document.getElementById('style-input');
+ // 元素引用
  const generateBtn = document.getElementById('generate-btn');
  const statusDiv = document.getElementById('status');
  const audioPlayer = document.getElementById('audio-player');
  const audioElement = document.getElementById('audio-element');
  const downloadBtn = document.getElementById('download-btn');
 
- document.querySelectorAll('.style-tag').forEach(tag => {
+ // 模型选择
+ document.querySelectorAll('.model-tab').forEach(tab => {
+ tab.addEventListener('click', () => {
+ document.querySelectorAll('.model-tab').forEach(t => t.classList.remove('active'));
+ tab.classList.add('active');
+ document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+ const model = tab.dataset.model;
+ if (model === 'mimo-v2.5-tts') {
+ document.getElementById('panel-builtin').classList.add('active');
+ } else if (model === 'mimo-v2.5-tts-voicedesign') {
+ document.getElementById('panel-voicedesign').classList.add('active');
+ } else if (model === 'mimo-v2.5-tts-voiceclone') {
+ document.getElementById('panel-voiceclone').classList.add('active');
+ }
+ hideAudio();
+ });
+ });
+
+ // 内置音色 - 风格标签
+ document.querySelectorAll('#panel-builtin .style-tag').forEach(tag => {
  tag.addEventListener('click', () => {
+ const styleInput = document.getElementById('builtin-style');
  const style = tag.dataset.style;
  styleInput.value = styleInput.value ? `${styleInput.value} ${style}` : style;
+ tag.classList.add('selected');
+ setTimeout(() => tag.classList.remove('selected'), 300);
  });
  });
 
- document.querySelectorAll('.example-item').forEach(item => {
+ // 内置音色 - 示例点击
+ document.querySelectorAll('#panel-builtin .example-item').forEach(item => {
  item.addEventListener('click', () => {
- textInput.value = item.dataset.text;
- styleInput.value = item.dataset.style || '';
+ document.getElementById('builtin-text').value = item.dataset.text;
+ document.getElementById('builtin-style').value = item.dataset.style || '';
  });
  });
 
+ // 声音定制 - 示例点击
+ document.querySelectorAll('#panel-voicedesign .example-item').forEach(item => {
+ item.addEventListener('click', () => {
+ document.getElementById('vd-description').value = item.dataset.desc;
+ document.getElementById('vd-text').value = item.dataset.text;
+ updateCharCount('vd');
+ });
+ });
+
+ // 声音定制 - 字符计数
+ document.getElementById('vd-text').addEventListener('input', () => updateCharCount('vd'));
+
+ // 声音克隆 - 字符计数
+ document.getElementById('vc-text').addEventListener('input', () => updateCharCount('vc'));
+
+ function updateCharCount(prefix) {
+ const text = document.getElementById(`${prefix}-text`).value;
+ document.getElementById(`${prefix}-char-count`).textContent = text.length;
+ }
+
+ // 声音克隆 - 文件上传
+ const vcUploadArea = document.getElementById('vc-upload-area');
+ const vcAudioFile = document.getElementById('vc-audio-file');
+ const vcFilePreview = document.getElementById('vc-file-preview');
+ const vcFileName = document.getElementById('vc-file-name');
+ const vcFileSize = document.getElementById('vc-file-size');
+ const vcRemoveFile = document.getElementById('vc-remove-file');
+
+ vcUploadArea.addEventListener('click', () => vcAudioFile.click());
+
+ vcUploadArea.addEventListener('dragover', (e) => {
+ e.preventDefault();
+ vcUploadArea.classList.add('dragover');
+ });
+
+ vcUploadArea.addEventListener('dragleave', () => {
+ vcUploadArea.classList.remove('dragover');
+ });
+
+ vcUploadArea.addEventListener('drop', (e) => {
+ e.preventDefault();
+ vcUploadArea.classList.remove('dragover');
+ handleAudioFile(e.dataTransfer.files[0]);
+ });
+
+ vcAudioFile.addEventListener('change', () => {
+ if (vcAudioFile.files[0]) {
+ handleAudioFile(vcAudioFile.files[0]);
+ }
+ });
+
+ vcRemoveFile.addEventListener('click', (e) => {
+ e.stopPropagation();
+ uploadedAudioBase64 = null;
+ vcFilePreview.classList.remove('show');
+ vcAudioFile.value = '';
+ });
+
+ function handleAudioFile(file) {
+ if (!file) return;
+
+ // 检查文件类型
+ const validTypes = ['audio/mpeg', 'audio/wav', 'audio/x-wav'];
+ if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|wav)$/i)) {
+ showStatus('请上传 MP3 或 WAV 格式的音频文件', 'error');
+ return;
+ }
+
+ // 检查文件大小 (10MB)
+ if (file.size > 10 * 1024 * 1024) {
+ showStatus('音频文件大小不能超过 10MB', 'error');
+ return;
+ }
+
+ const reader = new FileReader();
+ reader.onload = function(e) {
+ const base64 = e.target.result.split(',')[1];
+ uploadedAudioBase64 = base64;
+ vcFileName.textContent = file.name;
+ vcFileSize.textContent = formatFileSize(file.size);
+ vcFilePreview.classList.add('show');
+ };
+ reader.readAsDataURL(file);
+ }
+
+ function formatFileSize(bytes) {
+ if (bytes < 1024) return bytes + ' B';
+ if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+ return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+ }
+
+ // 生成按钮
  generateBtn.addEventListener('click', generateSpeech);
- downloadBtn.addEventListener('click', downloadMP3);
+ downloadBtn.addEventListener('click', downloadWAV);
 
  async function generateSpeech() {
- const text = textInput.value.trim();
+ const activeModel = document.querySelector('.model-tab.active').dataset.model;
+ let model, text, voice, style, audioData;
+
+ if (activeModel === 'mimo-v2.5-tts') {
+ text = document.getElementById('builtin-text').value.trim();
+ voice = document.getElementById('builtin-voice').value;
+ style = document.getElementById('builtin-style').value.trim();
+ model = 'mimo-v2.5-tts';
+ } else if (activeModel === 'mimo-v2.5-tts-voicedesign') {
+ text = document.getElementById('vd-text').value.trim();
+ style = document.getElementById('vd-description').value.trim();
+ model = 'mimo-v2.5-tts-voicedesign';
+ } else {
+ text = document.getElementById('vc-text').value.trim();
+ style = document.getElementById('vc-style').value.trim();
+ audioData = uploadedAudioBase64;
+ model = 'mimo-v2.5-tts-voiceclone';
+ if (!audioData) {
+ showStatus('请先上传音频样本', 'error');
+ return;
+ }
+ }
+
  if (!text) {
  showStatus('请输入要转换的文本', 'error');
  return;
@@ -401,35 +745,25 @@
 
  generateBtn.disabled = true;
  showStatus('<span class="loading-spinner"></span>正在生成语音，请稍候...', 'loading');
- audioPlayer.classList.remove('show');
+ hideAudio();
 
  try {
- const style = styleInput.value.trim();
- let content = text;
- if (style) {
- content = `<style>${style}</style>${text}`;
- }
-
  const response = await fetch(API_URL, {
  method: 'POST',
  headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({
- text: text,
- voice: voiceSelect.value,
- style: style
- })
+ body: JSON.stringify({ model, text, voice, style, audioData })
  });
 
  if (!response.ok) {
  const errorData = await response.json().catch(() => ({}));
- throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+ throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
  }
 
  const data = await response.json();
 
  if (data.choices && data.choices[0]?.message?.audio?.data) {
- const audioData = data.choices[0].message.audio.data;
- const audioBytes = base64ToArrayBuffer(audioData);
+ const audioDataBase64 = data.choices[0].message.audio.data;
+ const audioBytes = base64ToArrayBuffer(audioDataBase64);
  audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
  audioElement.src = URL.createObjectURL(audioBlob);
  audioPlayer.classList.add('show');
@@ -446,6 +780,11 @@
  }
  }
 
+ function hideAudio() {
+ audioPlayer.classList.remove('show');
+ audioBlob = null;
+ }
+
  function base64ToArrayBuffer(base64) {
  const binaryString = atob(base64);
  const bytes = new Uint8Array(binaryString.length);
@@ -455,93 +794,20 @@
  return bytes.buffer;
  }
 
- async function downloadMP3() {
+ function downloadWAV() {
  if (!audioBlob) {
  showStatus('请先生成语音', 'error');
  return;
  }
- showStatus('<span class="loading-spinner"></span>正在转换为 MP3 格式...', 'loading');
- try {
- const mp3Blob = await convertWavToMp3(audioBlob);
- const url = URL.createObjectURL(mp3Blob);
+ const url = URL.createObjectURL(audioBlob);
  const a = document.createElement('a');
  a.href = url;
- a.download = `${audioFileName}.mp3`;
+ a.download = `${audioFileName}.wav`;
  document.body.appendChild(a);
  a.click();
  document.body.removeChild(a);
  URL.revokeObjectURL(url);
- showStatus('✅ MP3 文件已下载！', 'success');
- } catch (error) {
- showStatus(`❌ MP3 转换失败：${error.message}`, 'error');
- }
- }
-
- async function convertWavToMp3(wavBlob) {
- return new Promise((resolve, reject) => {
- const reader = new FileReader();
- reader.onload = function(e) {
- try {
- const wavData = e.target.result;
- const wav = parseWav(wavData);
- const mp3encoder = new lamejs.Mp3Encoder(wav.channels, wav.sampleRate, 128);
- const mp3Data = [];
- const samples = wav.channels === 1 ? wav.samples : interleave(wav.leftChannel, wav.rightChannel);
- const sampleBlockSize = 1152;
- for (let i = 0; i < samples.length; i += sampleBlockSize) {
- const mp3buf = mp3encoder.encodeBuffer(samples.subarray(i, i + sampleBlockSize));
- if (mp3buf.length > 0) mp3Data.push(mp3buf);
- }
- const mp3buf = mp3encoder.flush();
- if (mp3buf.length > 0) mp3Data.push(mp3buf);
- resolve(new Blob(mp3Data, { type: 'audio/mp3' }));
- } catch (error) { reject(error); }
- };
- reader.onerror = reject;
- reader.readAsArrayBuffer(wavBlob);
- });
- }
-
- function parseWav(wavData) {
- const view = new DataView(wavData);
- if (String.fromCharCode(view.getUint8(0),view.getUint8(1),view.getUint8(2),view.getUint8(3)) !== 'RIFF') {
- throw new Error('Invalid WAV file');
- }
- let offset = 12, channels = 0, sampleRate = 0, bitsPerSample = 0, dataOffset = 0, dataSize = 0;
- while (offset < view.byteLength) {
- const chunkId = String.fromCharCode(view.getUint8(offset),view.getUint8(offset+1),view.getUint8(offset+2),view.getUint8(offset+3));
- const chunkSize = view.getUint32(offset + 4, true);
- if (chunkId === 'fmt ') {
- channels = view.getUint16(offset + 10, true);
- sampleRate = view.getUint32(offset + 12, true);
- bitsPerSample = view.getUint16(offset + 22, true);
- } else if (chunkId === 'data') {
- dataOffset = offset + 8;
- dataSize = chunkSize;
- break;
- }
- offset += 8 + chunkSize;
- }
- const samples = new Int16Array(wavData, dataOffset, dataSize / 2);
- let leftChannel, rightChannel;
- if (channels === 2) {
- leftChannel = new Int16Array(samples.length / 2);
- rightChannel = new Int16Array(samples.length / 2);
- for (let i = 0; i < samples.length; i += 2) {
- leftChannel[i / 2] = samples[i];
- rightChannel[i / 2] = samples[i + 1];
- }
- }
- return { channels, sampleRate, bitsPerSample, samples, leftChannel, rightChannel };
- }
-
- function interleave(left, right) {
- const result = new Int16Array(left.length + right.length);
- for (let i = 0; i < left.length; i++) {
- result[2 * i] = left[i];
- result[2 * i + 1] = right[i];
- }
- return result;
+ showStatus('✅ WAV 文件已下载！', 'success');
  }
 
  function showStatus(message, type) {
