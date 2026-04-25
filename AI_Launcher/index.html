@@ -535,10 +535,7 @@
 
     function applyThinkBtn() {
         // MiniMax：无法控制思考（reasoning_split 关不掉），按钮隐藏
-        // MiMo Flash：模型不支持独立 reasoning_content，先隐藏
-        const hideThink =
-            provider === 'minimax' ||
-            modelId === 'mimo-v2-flash';
+        const hideThink = provider === 'minimax';
         if (hideThink) {
             thinkBtn.style.display = 'none';
             thinking = true;
@@ -624,10 +621,11 @@
             body.reasoning_split = true;
         }
 
-        // MiMo：thinking 参数控制思考内容
+        // MiMo：thinking 参数放顶层
         if (provider === 'mimo') {
-            body.extra_body = {
-                thinking: { type: thinking ? 'enabled' : 'disabled' }
+            body.thinking = {
+                type: thinking ? 'enabled' : 'disabled',
+                budget_tokens: thinking ? 2048 : undefined
             };
         }
 
