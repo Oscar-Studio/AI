@@ -391,6 +391,7 @@
             <select id="provider-select" style="font-size:0.88rem; padding:5px 10px;">
                 <option value="deepseek">DeepSeek</option>
                 <option value="minimax">MiniMax</option>
+                <option value="mimo">MiMo</option>
             </select>
         </div>
         <div class="header-right">
@@ -444,6 +445,7 @@
     // CONFIG
     // DeepSeek API: https://api-docs.deepseek.com/zh-cn/
     // MiniMax API: https://platform.minimaxi.com/docs/api-reference/
+    // MiMo API: https://platform.xiaomimimo.com/docs/quick-start/first-api-call
     // ==========================================
 
     const MODEL_CONFIG = {
@@ -457,6 +459,13 @@
             models: [
                 { id: 'MiniMax-M2.7', name: 'M2.7' },
                 { id: 'MiniMax-M2.5', name: 'M2.5' }
+            ]
+        },
+        mimo: {
+            models: [
+                { id: 'mimo-v2-flash',  name: 'V2-flash' },
+                { id: 'mimo-v2.5',      name: 'V2.5' },
+                { id: 'mimo-v2.5-pro',  name: 'V2.5-Pro' }
             ]
         }
     };
@@ -513,8 +522,16 @@
     providerSel.addEventListener('change', () => {
         provider = providerSel.value;
         thinking = false;
-        buildModelList();
         thinkBtn.classList.remove('active');
+        // MiMo 不支持 thinking
+        if (provider === 'mimo') {
+            thinkBtn.style.opacity = '0.4';
+            thinkBtn.style.pointerEvents = 'none';
+        } else {
+            thinkBtn.style.opacity = '';
+            thinkBtn.style.pointerEvents = '';
+        }
+        buildModelList();
     });
 
     modelSel.addEventListener('change', () => {
