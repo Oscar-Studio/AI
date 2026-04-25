@@ -609,12 +609,14 @@
             stream: true
         };
 
-        // DeepSeek：显式控制开关
+        // DeepSeek：显式控制开关，thinking 放 extra_body
         if (provider === 'deepseek') {
             body.extra_body = {
-                thinking: { type: thinking ? 'enabled' : 'disabled' },
-                reasoning_effort: thinking ? 'high' : 'low'
+                thinking: { type: thinking ? 'enabled' : 'disabled' }
             };
+            if (thinking) {
+                body.extra_body.reasoning_effort = 'high';
+            }
         }
 
         // MiniMax：思考无法关闭，始终强制开启并分离显示
