@@ -523,14 +523,6 @@
         provider = providerSel.value;
         thinking = false;
         thinkBtn.classList.remove('active');
-        // MiMo 不支持 thinking
-        if (provider === 'mimo') {
-            thinkBtn.style.opacity = '0.4';
-            thinkBtn.style.pointerEvents = 'none';
-        } else {
-            thinkBtn.style.opacity = '';
-            thinkBtn.style.pointerEvents = '';
-        }
         buildModelList();
     });
 
