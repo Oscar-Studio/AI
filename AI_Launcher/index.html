@@ -591,15 +591,17 @@
             stream: true
         };
 
-        if (isMiniMax && thinking) {
-            body.reasoning_split = true;
+        // DeepSeek：显式控制开关
+        if (provider === 'deepseek') {
+            body.extra_body = {
+                thinking: { type: thinking ? 'enabled' : 'disabled' },
+                reasoning_effort: thinking ? 'high' : 'low'
+            };
         }
 
-        if (provider === 'deepseek' && thinking) {
-            body.extra_body = {
-                thinking: { type: 'enabled' },
-                reasoning_effort: 'high'
-            };
+        // MiniMax：reasoning_split 决定思考内容是否分离
+        if (isMiniMax) {
+            body.reasoning_split = thinking;
         }
 
         try {
