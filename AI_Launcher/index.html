@@ -499,6 +499,7 @@
     // INIT
     // ==========================================
     document.getElementById('app').style.display = 'flex';
+    thinkBtn.classList.add('active');  // thinking 默认开启
     buildModelList();
 
     // ==========================================
@@ -521,8 +522,8 @@
     // ==========================================
     providerSel.addEventListener('change', () => {
         provider = providerSel.value;
-        thinking = false;
-        thinkBtn.classList.remove('active');
+        // 保留当前 thinking 状态，不重置
+        thinkBtn.classList.toggle('active', thinking);
         buildModelList();
     });
 
@@ -602,6 +603,13 @@
         // MiniMax：reasoning_split 决定思考内容是否分离
         if (isMiniMax) {
             body.reasoning_split = thinking;
+        }
+
+        // MiMo：thinking 参数控制思考内容
+        if (provider === 'mimo') {
+            body.extra_body = {
+                thinking: { type: thinking ? 'enabled' : 'disabled' }
+            };
         }
 
         try {
