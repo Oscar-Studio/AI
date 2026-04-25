@@ -501,6 +501,7 @@
     document.getElementById('app').style.display = 'flex';
     thinkBtn.classList.add('active');  // thinking 默认开启
     buildModelList();
+    applyThinkBtn();  // 首次根据默认模型决定按钮状态
 
     // ==========================================
     // MODEL LIST
@@ -522,20 +523,30 @@
     // ==========================================
     providerSel.addEventListener('change', () => {
         provider = providerSel.value;
-        // MiniMax 思考无法关闭，直接隐藏按钮
-        if (provider === 'minimax') {
+        thinking = true;
+        buildModelList();
+        applyThinkBtn();  // 根据模型决定按钮显示
+    });
+
+    modelSel.addEventListener('change', () => {
+        modelId = modelSel.value;
+        applyThinkBtn();  // 切换模型也要更新按钮
+    });
+
+    function applyThinkBtn() {
+        // MiniMax / DeepSeek V4 / MiMo Flash：无法控制思考，按钮隐藏
+        const hideThink =
+            provider === 'minimax' ||
+            provider === 'deepseek' ||
+            modelId === 'mimo-v2-flash';
+        if (hideThink) {
             thinkBtn.style.display = 'none';
             thinking = true;
         } else {
             thinkBtn.style.display = '';
             thinkBtn.classList.toggle('active', thinking);
         }
-        buildModelList();
-    });
-
-    modelSel.addEventListener('change', () => {
-        modelId = modelSel.value;
-    });
+    }
 
     thinkBtn.addEventListener('click', () => {
         thinking = !thinking;
