@@ -534,10 +534,10 @@
     });
 
     function applyThinkBtn() {
-        // MiniMax / DeepSeek V4 / MiMo Flash：无法控制思考，按钮隐藏
+        // MiniMax：无法控制思考（reasoning_split 关不掉），按钮隐藏
+        // MiMo Flash：不确定是否支持 thinking 参数，先隐藏确认后再开
         const hideThink =
             provider === 'minimax' ||
-            provider === 'deepseek' ||
             modelId === 'mimo-v2-flash';
         if (hideThink) {
             thinkBtn.style.display = 'none';
