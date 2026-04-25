@@ -522,8 +522,14 @@
     // ==========================================
     providerSel.addEventListener('change', () => {
         provider = providerSel.value;
-        // 保留当前 thinking 状态，不重置
-        thinkBtn.classList.toggle('active', thinking);
+        // MiniMax 思考无法关闭，直接隐藏按钮
+        if (provider === 'minimax') {
+            thinkBtn.style.display = 'none';
+            thinking = true;
+        } else {
+            thinkBtn.style.display = '';
+            thinkBtn.classList.toggle('active', thinking);
+        }
         buildModelList();
     });
 
@@ -600,9 +606,9 @@
             };
         }
 
-        // MiniMax：reasoning_split 决定思考内容是否分离
+        // MiniMax：思考无法关闭，始终强制开启并分离显示
         if (isMiniMax) {
-            body.reasoning_split = thinking;
+            body.reasoning_split = true;
         }
 
         // MiMo：thinking 参数控制思考内容
