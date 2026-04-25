@@ -535,7 +535,7 @@
 
     function applyThinkBtn() {
         // MiniMax：无法控制思考（reasoning_split 关不掉），按钮隐藏
-        // MiMo Flash：不确定是否支持 thinking 参数，先隐藏确认后再开
+        // MiMo Flash：模型不支持独立 reasoning_content，先隐藏
         const hideThink =
             provider === 'minimax' ||
             modelId === 'mimo-v2-flash';
@@ -678,8 +678,8 @@
                                 scrollBottom();
                             }
                         }
-                        // DeepSeek reasoning
-                        else if (d.choices?.[0]?.delta?.reasoning_content) {
+                        // DeepSeek reasoning — 仅在思考开启时显示
+                        else if (provider === 'deepseek' && d.choices?.[0]?.delta?.reasoning_content && thinking) {
                             fullReasoning += d.choices[0].delta.reasoning_content;
                             reasoningDiv.textContent = fullReasoning;
                             reasoningDiv.style.display = 'block';
