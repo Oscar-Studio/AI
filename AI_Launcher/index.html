@@ -636,10 +636,10 @@
             };
         }
 
-        // xAI (Grok via OpenRouter)：thinking 放 extra_body，与 DeepSeek 相同格式
+        // xAI (Grok via OpenRouter)：OpenRouter 用 reasoning 参数
         if (provider === 'xai') {
             body.extra_body = {
-                thinking: { type: thinking ? 'enabled' : 'disabled' }
+                reasoning: thinking ? 'enabled' : 'disabled'
             };
         }
 
@@ -696,8 +696,17 @@
                                 scrollBottom();
                             }
                         }
-                        // DeepSeek / MiMo / xAI reasoning — 仅在思考开启时显示
-                        else if ((provider === 'deepseek' || provider === 'mimo' || provider === 'xai') && d.choices?.[0]?.delta?.reasoning_content && thinking) {
+                        // xAI reasoning_details 格式（与 MiniMax 相同）
+                        if (provider === 'xai' && d.choices?.[0]?.delta?.reasoning_details) {
+                            for (const rd of d.choices[0].delta.reasoning_details) {
+                                if (rd.text) fullReasoning += rd.text;
+                            }
+                            reasoningDiv.textContent = fullReasoning;
+                            reasoningDiv.style.display = 'block';
+                            scrollBottom();
+                        }
+                        // DeepSeek / MiMo reasoning — 仅在思考开启时显示
+                        else if ((provider === 'deepseek' || provider === 'mimo') && d.choices?.[0]?.delta?.reasoning_content && thinking) {
                             fullReasoning += d.choices[0].delta.reasoning_content;
                             reasoningDiv.textContent = fullReasoning;
                             reasoningDiv.style.display = 'block';
