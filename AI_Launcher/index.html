@@ -684,6 +684,16 @@
                             console.log('[xAI delta]', JSON.stringify(d.choices[0].delta));
                         }
 
+                        // xAI reasoning — 推理内容在 delta.reasoning 字符串，reasoning_details 是增量摘要
+                        if (provider === 'xai') {
+                            const delta = d.choices?.[0]?.delta;
+                            if (delta?.reasoning) {
+                                fullReasoning += delta.reasoning;
+                                reasoningDiv.textContent = fullReasoning;
+                                reasoningDiv.style.display = 'block';
+                                scrollBottom();
+                            }
+                        }
                         // MiniMax reasoning
                         if (isMiniMax && d.choices?.[0]?.delta) {
                             const delta = d.choices[0].delta;
@@ -700,15 +710,6 @@
                                 contentDiv.textContent = fullResponse;
                                 scrollBottom();
                             }
-                        }
-                        // xAI reasoning_details 格式（与 MiniMax 相同）
-                        if (provider === 'xai' && d.choices?.[0]?.delta?.reasoning_details) {
-                            for (const rd of d.choices[0].delta.reasoning_details) {
-                                if (rd.text) fullReasoning += rd.text;
-                            }
-                            reasoningDiv.textContent = fullReasoning;
-                            reasoningDiv.style.display = 'block';
-                            scrollBottom();
                         }
                         // DeepSeek / MiMo reasoning — 仅在思考开启时显示
                         else if ((provider === 'deepseek' || provider === 'mimo') && d.choices?.[0]?.delta?.reasoning_content && thinking) {
