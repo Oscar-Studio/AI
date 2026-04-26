@@ -659,16 +659,23 @@
             contentDiv.classList.remove('typing');
             const reader = resp.body.getReader();
             const dec = new TextDecoder();
+            let buf = '';  // 行缓冲，拼完一整行再处理
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = dec.decode(value, { stream: true });
-                for (const line of chunk.split('\n')) {
+                buf += dec.decode(value, { stream: true });
+
+                // 按换行符拆行，处理所有完整行
+                let lines = buf.split('\n');
+                // 最后一行不完整，留到下次拼上
+                buf = lines.pop() || '';
+
+                for (const line of lines) {
                     if (!line.startsWith('data: ')) continue;
                     const s = line.slice(6);
-                    if (s === '[DONE]') break;
+                    if (s === '[DONE]') continue;
 
                     try {
                         const d = JSON.parse(s);
@@ -686,7 +693,7 @@
                             }
                             if (delta.content) {
                                 fullResponse += delta.content;
-                                renderMd(contentDiv, fullResponse);
+                                contentDiv.textContent = fullResponse;
                                 scrollBottom();
                             }
                         }
@@ -698,10 +705,10 @@
                             scrollBottom();
                         }
 
-                        // Answer content
+                        // Answer content (流式过程用 textContent，等完整后一次渲染 markdown)
                         if (!isMiniMax && d.choices?.[0]?.delta?.content) {
                             fullResponse += d.choices[0].delta.content;
-                            renderMd(contentDiv, fullResponse);
+                            contentDiv.textContent = fullResponse;
                             scrollBottom();
                         }
 
@@ -711,7 +718,10 @@
             }
 
             history.push({ role: 'assistant', content: fullResponse });
-            renderMdFinal(contentDiv, fullResponse);
+            // 生成完毕后再渲染 markdown，避免流式过程中 innerHTML 解析损坏
+            const r = typeof marked !== 'undefined' ? marked.parse(fullResponse) : fullResponse;
+            if (r instanceof Promise) r.then(html => { contentDiv.innerHTML = html; });
+            else contentDiv.innerHTML = r;
 
         } catch (err) {
             contentDiv.classList.remove('typing');
