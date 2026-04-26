@@ -679,13 +679,8 @@
                     try {
                         const d = JSON.parse(s);
 
-                        // DEBUG: 打印 xAI 原始 delta 结构
-                        if (provider === 'xai' && d.choices?.[0]?.delta) {
-                            console.log('[xAI delta]', JSON.stringify(d.choices[0].delta));
-                        }
-
-                        // xAI reasoning — 推理内容在 delta.reasoning 字符串，reasoning_details 是增量摘要
-                        if (provider === 'xai') {
+                        // xAI reasoning — 仅在思考开启时显示
+                        if (provider === 'xai' && thinking) {
                             const delta = d.choices?.[0]?.delta;
                             if (delta?.reasoning) {
                                 fullReasoning += delta.reasoning;
