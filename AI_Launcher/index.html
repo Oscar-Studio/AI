@@ -679,6 +679,11 @@
                     try {
                         const d = JSON.parse(s);
 
+                        // DEBUG: 打印 xAI 原始 delta 结构
+                        if (provider === 'xai' && d.choices?.[0]?.delta) {
+                            console.log('[xAI delta]', JSON.stringify(d.choices[0].delta));
+                        }
+
                         // MiniMax reasoning
                         if (isMiniMax && d.choices?.[0]?.delta) {
                             const delta = d.choices[0].delta;
