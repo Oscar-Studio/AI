@@ -830,12 +830,14 @@
 
     function updateStats(u) {
         if (!u) return;
-        if (u.prompt_tokens !== undefined)       statIn.textContent = u.prompt_tokens;
-        if (u.completion_tokens !== undefined)  statOut.textContent = u.completion_tokens;
-        if (u.total_tokens !== undefined)        statTotal.textContent = u.total_tokens;
-        if (u.input_tokens !== undefined)        statIn.textContent = u.input_tokens;
-        if (u.output_tokens !== undefined)       statOut.textContent = u.output_tokens;
-        if (u.total_tokens !== undefined)        statTotal.textContent = u.total_tokens;
+        // 不同 API 返回的字段名不同，按优先级取：input/prompt → output/completion
+        if (u.input_tokens !== undefined)      statIn.textContent = u.input_tokens;
+        else if (u.prompt_tokens !== undefined) statIn.textContent = u.prompt_tokens;
+
+        if (u.output_tokens !== undefined)      statOut.textContent = u.output_tokens;
+        else if (u.completion_tokens !== undefined) statOut.textContent = u.completion_tokens;
+
+        if (u.total_tokens !== undefined)      statTotal.textContent = u.total_tokens;
     }
 
     function clearStats() {
