@@ -129,7 +129,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             localStorage.setItem('ai_user', JSON.stringify(data.user));
             showSuccess('登录成功，即将跳转...');
             setTimeout(() => {
-                location.href = 'AI_Launcher/index.html';
+                location.href = getReturnURL();
             }, 800);
         } else {
             showError('login-error', data.message || '登录失败');
@@ -188,7 +188,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
             localStorage.setItem('ai_user', JSON.stringify(data.user));
             showSuccess('注册成功，即将跳转...');
             setTimeout(() => {
-                location.href = 'AI_Launcher/index.html';
+                location.href = getReturnURL();
             }, 800);
         } else {
             showError('reg-error', data.message || '注册失败');
@@ -224,7 +224,15 @@ function showSuccess(msg) {
     `;
 }
 
-// ==================== CHECK ALREADY LOGGED IN ====================
+// ================= RETURN URL ====================
+// 获取来源页面，登录/注册后返回
+function getReturnURL() {
+    const params = new URLSearchParams(window.location.search);
+    let returnURL = params.get('return') || 'https://ai.oscarstudio.cn/AI_Launcher/index.html';
+    return returnURL;
+}
+
+// ================= CHECK ALREADY LOGGED IN ====================
 (function checkAuth() {
     const token = localStorage.getItem('ai_token');
     if (!token) return;
@@ -234,7 +242,7 @@ function showSuccess(msg) {
     }).then(r => r.json()).then(data => {
         if (data.success) {
             // 已登录，跳转
-            location.href = 'AI_Launcher/index.html';
+            location.href = getReturnURL();
         } else {
             // token 无效，清除
             localStorage.removeItem('ai_token');
