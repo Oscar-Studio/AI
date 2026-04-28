@@ -11,11 +11,10 @@
         return window.location.href;
     }
 
-    // 获取跳转 URL（使用完整的绝对路径指向 AI 子站）
+    // 获取跳转 URL（指向 API 后端的登录页面）
     function getAuthURL() {
         const currentPage = getCurrentPage();
-        // auth.html 在 AI 目录下，完整 URL
-        return `https://ai.oscarstudio.cn/auth.html?return=${encodeURIComponent(currentPage)}`;
+        return `https://api.oscarstudio.cn/auth.html?return=${encodeURIComponent(currentPage)}`;
     }
 
     // 检查登录状态
