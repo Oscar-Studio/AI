@@ -82,44 +82,37 @@ async function sendCode(email, purpose, btn, tip) {
     }
 }
 
-loginSendBtn.addEventListener('click', () => {
-    const email = document.getElementById('login-email').value;
-    sendCode(email, 'login', loginSendBtn, loginCountdown);
-});
-
-regSendBtn.addEventListener('click', () => {
-    const email = document.getElementById('reg-email').value;
-    sendCode(email, 'register', regSendBtn, regCountdown);
-});
+// 注册发送验证码
+if (regSendBtn) {
+    regSendBtn.addEventListener('click', () => {
+        const email = document.getElementById('reg-email').value;
+        sendCode(email, 'register', regSendBtn, regCountdown);
+    });
+}
 
 // ==================== LOGIN FORM ====================
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('login-email').value.trim();
-    const code = document.getElementById('login-code').value.trim();
+    const password = document.getElementById('login-password').value;
     const btn = e.target.querySelector('.submit-btn');
 
     clearErrors();
 
-    if (!email || !code) {
-        showError('login-error', '请填写邮箱和验证码');
-        return;
-    }
-
-    if (!/^\d{6}$/.test(code)) {
-        showError('login-error', '验证码必须是6位数字');
+    if (!email || !password) {
+        showError('login-error', '请填写邮箱和密码');
         return;
     }
 
     btn.disabled = true;
     btn.classList.add('loading');
-    btn.textContent = '登录中';
+    btn.textContent = '登录中...';
 
     try {
-        const resp = await fetch(`${API_BASE}/auth/login_by_code`, {
+        const resp = await fetch(`${API_BASE}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, code })
+            body: JSON.stringify({ email, password })
         });
 
         const data = await resp.json();
@@ -150,18 +143,24 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     e.preventDefault();
     const email = document.getElementById('reg-email').value.trim();
     const username = document.getElementById('reg-username').value.trim();
+    const password = document.getElementById('reg-password').value;
     const code = document.getElementById('reg-code').value.trim();
     const btn = e.target.querySelector('.submit-btn');
 
     clearErrors();
 
-    if (!email || !username || !code) {
+    if (!email || !username || !password || !code) {
         showError('reg-error', '请填写所有字段');
         return;
     }
 
     if (username.length < 3 || username.length > 50) {
         showError('reg-error', '用户名长度应在 3-50 字符之间');
+        return;
+    }
+
+    if (password.length < 6) {
+        showError('reg-error', '密码长度至少6位');
         return;
     }
 
@@ -172,13 +171,13 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
 
     btn.disabled = true;
     btn.classList.add('loading');
-    btn.textContent = '注册中';
+    btn.textContent = '注册中...';
 
     try {
         const resp = await fetch(`${API_BASE}/auth/login_by_code`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, code, username })
+            body: JSON.stringify({ email, code, username, password })
         });
 
         const data = await resp.json();
@@ -220,31 +219,27 @@ function showSuccess(msg) {
     card.innerHTML = `
         <div class="success-icon">✅</div>
         <h2>${msg}</h2>
-        <p>正在跳转到 AI Launcher...</p>
+        <p>正在跳转...</p>
     `;
 }
 
-// ================= RETURN URL ====================
-// 获取来源页面，登录/注册后返回
+// ==================== RETURN URL ====================
 function getReturnURL() {
     const params = new URLSearchParams(window.location.search);
     let returnURL = params.get('return') || 'https://ai.oscarstudio.cn/AI_Launcher/index.html';
     return returnURL;
 }
 
-// ================= CHECK ALREADY LOGGED IN ====================
+// ==================== CHECK ALREADY LOGGED IN ====================
 (function checkAuth() {
     const token = localStorage.getItem('ai_token');
     if (!token) return;
-    // 验证 token 是否有效
     fetch(`${API_BASE}/user`, {
         headers: { 'Authorization': `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
         if (data.success) {
-            // 已登录，跳转
             location.href = getReturnURL();
         } else {
-            // token 无效，清除
             localStorage.removeItem('ai_token');
             localStorage.removeItem('ai_user');
         }
