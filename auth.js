@@ -242,7 +242,9 @@ function getReturnURL() {
         headers: { 'Authorization': `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
         if (data.success) {
-            location.href = getReturnURL();
+            const url = getReturnURL();
+            const delim = url.includes('#') ? '&' : '#';
+            location.href = `${url}${delim}token=${encodeURIComponent(token)}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
         } else {
             localStorage.removeItem('ai_token');
             localStorage.removeItem('ai_user');
