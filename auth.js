@@ -234,6 +234,15 @@ function getReturnURL() {
 (function checkAuth() {
     const token = localStorage.getItem('ai_token');
     if (!token) return;
+
+    // 检查跨域 Cookie 是否还在：如果在其他子站退出了登录，Cookie 会被清掉
+    const cookieToken = document.cookie.split('; ').find(c => c.startsWith('userToken='));
+    if (!cookieToken) {
+        localStorage.removeItem('ai_token');
+        localStorage.removeItem('ai_user');
+        return;
+    }
+
     fetch(`${API_BASE}/user`, {
         headers: { 'Authorization': `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
