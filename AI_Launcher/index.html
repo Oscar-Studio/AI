@@ -588,11 +588,11 @@
             const data = await resp.json();
             if (data.success && data.user) {
                 quotaCache = {
-                    remaining_base: data.user.remaining_base ?? 0,
-                    remaining_premium: data.user.remaining_premium ?? 0,
+                    remaining_base: data.user.quota?.base?.remaining ?? 0,
+                    remaining_premium: data.user.quota?.premium?.remaining ?? 0,
                     tier: data.user.tier || 'standard',
-                    used_base: data.user.base_tokens_daily || 0,
-                    used_premium: data.user.premium_tokens_daily || 0,
+                    used_base: data.user.quota?.base?.used || 0,
+                    used_premium: data.user.quota?.premium?.used || 0,
                 };
             }
         } catch (e) {
