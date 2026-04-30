@@ -476,7 +476,7 @@
                 <span>In: <strong id="stat-in">0</strong></span>
                 <span>Out: <strong id="stat-out">0</strong></span>
                 <span>Total: <strong id="stat-total">0</strong></span>
-                <span id="quota-badge" style="color:#ff7b72;font-size:0.72rem;display:none;">剩余 <strong id="quota-num">0</strong> 次</span>
+                <span id="quota-badge" style="color:#ff7b72;font-size:0.72rem;display:none;">剩余 <strong id="quota-num">0</strong> tokens</span>
             </div>
             <button class="new-chat-btn" id="new-chat-btn">新对话</button>
             <button class="premium-btn" id="premium-btn" style="background:transparent;border:1px solid var(--border);color:var(--text-secondary);padding:5px 12px;border-radius:6px;font-size:0.78rem;cursor:pointer;display:none;">高级</button>
@@ -557,12 +557,10 @@
     };
 
     // ==========================================
-    // QUOTA CONFIG
+    // QUOTA — 服务端 Token 配额
     // ==========================================
-    const QUOTA_CONFIG = {
-        high: ['deepseek-v4-flash', 'MiniMax-M2.7', 'MiniMax-M2.5', 'mimo-v2-flash', 'grok-4.1-fast'],
-        dailyLimit: (modelId) => QUOTA_CONFIG.high.includes(modelId) ? 30 : 10
-    };
+    const BASE_MODELS = ['deepseek-v4-flash', 'MiniMax-M2.5', 'mimo-v2-flash', 'grok-4.1-fast'];
+    const PREMIUM_MODELS = ['deepseek-v4-pro', 'MiniMax-M2.7', 'mimo-v2.5', 'mimo-v2.5-pro'];
 
     // ==========================================
     // STATE
@@ -577,34 +575,43 @@
     // 高级版（CCswitch 解锁）
     let isPremium = localStorage.getItem('ai_launcher_premium') === '1';
 
-    // 配额：存 { date: '2025-04-27', count: 5 }
-    function getQuotaData() {
+    // 服务端配额缓存
+    let quotaCache = null; // { remaining_base, remaining_premium, tier, used_base, used_premium }
+
+    async function fetchQuota() {
+        const token = localStorage.getItem('ai_token');
+        if (!token) { quotaCache = null; return; }
         try {
-            const raw = localStorage.getItem('ai_launcher_quota');
-            return raw ? JSON.parse(raw) : { date: '', count: 0 };
-        } catch { return { date: '', count: 0 }; }
+            const resp = await fetch('https://api.oscarstudio.cn/api/user', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await resp.json();
+            if (data.success && data.user) {
+                quotaCache = {
+                    remaining_base: data.user.remaining_base ?? 0,
+                    remaining_premium: data.user.remaining_premium ?? 0,
+                    tier: data.user.tier || 'standard',
+                    used_base: data.user.base_tokens_daily || 0,
+                    used_premium: data.user.premium_tokens_daily || 0,
+                };
+            }
+        } catch (e) {
+            console.warn('获取配额失败:', e.message);
+        }
     }
-    function saveQuotaData(data) {
-        localStorage.setItem('ai_launcher_quota', JSON.stringify(data));
+
+    function getRemainingTokens() {
+        if (isPremium) return Infinity;
+        if (!quotaCache) return null; // 未登录或无配额数据
+        const isPrem = PREMIUM_MODELS.includes(modelId);
+        return isPrem ? quotaCache.remaining_premium : quotaCache.remaining_base;
     }
-    function todayStr() {
-        return new Date().toISOString().slice(0, 10);
-    }
+
     function checkQuota() {
-        if (isPremium) return { allowed: true, remaining: Infinity };
-        const q = getQuotaData();
-        const today = todayStr();
-        const count = q.date === today ? q.count : 0;
-        const limit = QUOTA_CONFIG.dailyLimit(modelId);
-        return { allowed: count < limit, remaining: Math.max(0, limit - count) };
-    }
-    function incrQuota() {
-        const q = getQuotaData();
-        const today = todayStr();
-        if (q.date !== today) q.count = 0;
-        q.date = today;
-        q.count++;
-        saveQuotaData(q);
+        const remaining = getRemainingTokens();
+        if (remaining === Infinity) return { allowed: true, remaining: Infinity };
+        if (remaining === null) return { allowed: true, remaining: 999999 }; // 未登录时不限制
+        return { allowed: remaining > 0, remaining };
     }
 
     const chat        = document.getElementById('chat');
@@ -711,12 +718,9 @@
         // 配额检查
         const { allowed, remaining } = checkQuota();
         if (!allowed) {
-            showPremiumModal('今日免费次数已用完，请输入高级密钥解锁');
+            showPremiumModal('今日 Token 配额已用完，请输入高级密钥解锁');
             return;
         }
-        // 立即扣减配额
-        incrQuota();
-        updateQuotaUI();
 
         welcome.style.display = 'none';
         inputArea.value = '';
@@ -911,6 +915,7 @@
         } finally {
             setLoading(false);
             abortCtrl = null;
+            fetchQuota().then(() => updateQuotaUI());
         }
     }
 
@@ -1005,14 +1010,21 @@
             premiumBtn.textContent = '高级 ✓';
             premiumBtn.classList.add('unlocked');
             quotaBadge.style.display = 'none';
+            premiumBtn.style.display = 'inline';
         } else {
             premiumBtn.textContent = '高级';
             premiumBtn.classList.remove('unlocked');
-            const { remaining } = checkQuota();
-            if (remaining < QUOTA_CONFIG.dailyLimit(modelId)) {
+            premiumBtn.style.display = 'inline';
+
+            const remaining = getRemainingTokens();
+            if (remaining === null || remaining === Infinity) {
+                quotaBadge.style.display = 'none';
+            } else if (remaining <= 5000) {
+                // 剩余不足 5000 tokens 时显示具体数字
                 quotaBadge.style.display = 'inline';
-                quotaNum.textContent = remaining;
+                quotaNum.textContent = remaining.toLocaleString();
             } else {
+                // tokens 还很多就不显示，不占地方
                 quotaBadge.style.display = 'none';
             }
         }
@@ -1090,6 +1102,7 @@
 
     // 初始化
     updateQuotaUI();
+    fetchQuota(); // 加载后立即获取服务端配额
 </script>
 <script src="../user-button.js"></script>
 </body>
