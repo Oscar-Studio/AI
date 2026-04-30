@@ -24,6 +24,17 @@
         const token = localStorage.getItem('ai_token');
         const userStr = localStorage.getItem('ai_user');
         if (!token || !userStr) return null;
+
+        // 双重验证：Cookie 必须也存在（跨域登出同步）
+        // 如果用户在别的子站退出了登录，Cookie 会被清掉
+        const cookieToken = document.cookie.split('; ').find(c => c.startsWith('userToken='));
+        if (!cookieToken) {
+            // Cookie 已不存在 → 用户在别处退出登录了
+            localStorage.removeItem('ai_token');
+            localStorage.removeItem('ai_user');
+            return null;
+        }
+
         try { return JSON.parse(userStr); }
         catch (e) { return null; }
     }
