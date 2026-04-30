@@ -741,6 +741,8 @@
 
         let fullResponse = '';
         let fullReasoning = '';
+        let outputChars = 0;
+        let usageReceived = false; // 是否已收到后端发来的真实 usage
         const isMiniMax = provider === 'minimax';
 
         const body = {
@@ -748,6 +750,12 @@
             messages: history,
             stream: true
         };
+
+        // 统计输入字符数（快速估算 tokens）
+        let promptChars = 0;
+        for (const msg of history) {
+            if (msg.content) promptChars += msg.content.length;
+        }
 
         // DeepSeek：显式控制开关，thinking 放 extra_body
         if (provider === 'deepseek') {
@@ -835,6 +843,7 @@
                             const delta = d.choices?.[0]?.delta;
                             if (delta?.reasoning) {
                                 fullReasoning += delta.reasoning;
+                                outputChars += delta.reasoning.length;
                                 reasoningDiv.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
                                 scrollBottom();
@@ -845,7 +854,10 @@
                             const delta = d.choices[0].delta;
                             if (delta.reasoning_details) {
                                 for (const rd of delta.reasoning_details) {
-                                    if (rd.text) fullReasoning += rd.text;
+                                    if (rd.text) {
+                                        fullReasoning += rd.text;
+                                        outputChars += rd.text.length;
+                                    }
                                 }
                                 reasoningDiv.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
@@ -853,6 +865,7 @@
                             }
                             if (delta.content) {
                                 fullResponse += delta.content;
+                                outputChars += delta.content.length;
                                 contentDiv.textContent = fullResponse;
                                 scrollBottom();
                             }
@@ -860,6 +873,7 @@
                         // DeepSeek / MiMo reasoning — 仅在思考开启时显示
                         else if ((provider === 'deepseek' || provider === 'mimo') && d.choices?.[0]?.delta?.reasoning_content && thinking) {
                             fullReasoning += d.choices[0].delta.reasoning_content;
+                            outputChars += d.choices[0].delta.reasoning_content.length;
                             reasoningDiv.textContent = fullReasoning;
                             reasoningDiv.style.display = 'block';
                             scrollBottom();
@@ -868,11 +882,18 @@
                         // Answer content
                         if (!isMiniMax && d.choices?.[0]?.delta?.content) {
                             fullResponse += d.choices[0].delta.content;
+                            outputChars += d.choices[0].delta.content.length;
                             contentDiv.textContent = fullResponse;
                             scrollBottom();
                         }
 
-                        if (d.usage) updateStats(d.usage);
+                        // 后端发来的真实 token 使用数据（优先于远端 API 的 usage）
+                        if (d._type === 'usage') {
+                            usageReceived = true;
+                            updateStats(d);
+                        } else if (d.usage) {
+                            updateStats(d.usage);
+                        }
                     } catch (e) {
                         console.warn('[SSE parse error]', e.message, '| raw:', line);
                     }
@@ -889,6 +910,7 @@
                             const d = JSON.parse(s);
                             if (!isMiniMax && d.choices?.[0]?.delta?.content) {
                                 fullResponse += d.choices[0].delta.content;
+                                outputChars += d.choices[0].delta.content.length;
                             }
                         } catch (_) {}
                     }
@@ -897,7 +919,19 @@
 
             // flush TextDecoder 中可能残留的多字节字符
             const remainder = dec.decode();
-            if (remainder) fullResponse += remainder;
+            if (remainder) {
+                fullResponse += remainder;
+                outputChars += remainder.length;
+            }
+
+            // 更新 token 统计（估算，仅当没收到后端真实数据时使用）
+            if (!usageReceived) {
+                updateStats({
+                    input_tokens: Math.max(1, Math.ceil(promptChars / 4)),
+                    output_tokens: Math.max(1, Math.ceil(outputChars / 4)),
+                    total_tokens: Math.max(1, Math.ceil((promptChars + outputChars) / 4))
+                });
+            }
 
             history.push({ role: 'assistant', content: fullResponse });
             const r = typeof marked !== 'undefined' ? marked.parse(fullResponse) : fullResponse;
