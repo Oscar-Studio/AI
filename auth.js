@@ -122,7 +122,9 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             localStorage.setItem('ai_user', JSON.stringify(data.user));
             showSuccess('登录成功，即将跳转...');
             setTimeout(() => {
-                location.href = getReturnURL();
+                const url = getReturnURL();
+                const delim = url.includes('#') ? '&' : '#';
+                location.href = `${url}${delim}token=${encodeURIComponent(data.token)}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
             }, 800);
         } else {
             showError('login-error', data.message || '登录失败');
@@ -187,7 +189,9 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
             localStorage.setItem('ai_user', JSON.stringify(data.user));
             showSuccess('注册成功，即将跳转...');
             setTimeout(() => {
-                location.href = getReturnURL();
+                const url = getReturnURL();
+                const delim = url.includes('#') ? '&' : '#';
+                location.href = `${url}${delim}token=${encodeURIComponent(data.token)}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
             }, 800);
         } else {
             showError('reg-error', data.message || '注册失败');

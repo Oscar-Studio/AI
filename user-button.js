@@ -211,6 +211,23 @@
 
     // 初始化
     function init() {
+        // 检查 URL hash 是否有 token（从跨域登录页面跳转回来）
+        const hash = window.location.hash;
+        if (hash && hash.includes('token=')) {
+            try {
+                const params = new URLSearchParams(hash.replace('#', ''));
+                const token = params.get('token');
+                const userStr = params.get('user');
+                if (token && userStr) {
+                    localStorage.setItem('ai_token', token);
+                    localStorage.setItem('ai_user', userStr);
+                    // 清理 URL，去掉 hash
+                    history.replaceState(null, '', window.location.pathname + window.location.search);
+                }
+            } catch (e) {
+                console.warn('URL token 解析失败:', e);
+            }
+        }
         injectStyles();
         renderUserButton();
     }
