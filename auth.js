@@ -122,9 +122,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             localStorage.setItem('ai_user', JSON.stringify(data.user));
             showSuccess('登录成功，即将跳转...');
             setTimeout(() => {
-                const url = getReturnURL();
-                const delim = url.includes('#') ? '&' : '#';
-                location.href = `${url}${delim}token=${encodeURIComponent(data.token)}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
+                location.href = getReturnURL();
             }, 800);
         } else {
             showError('login-error', data.message || '登录失败');
@@ -189,9 +187,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
             localStorage.setItem('ai_user', JSON.stringify(data.user));
             showSuccess('注册成功，即将跳转...');
             setTimeout(() => {
-                const url = getReturnURL();
-                const delim = url.includes('#') ? '&' : '#';
-                location.href = `${url}${delim}token=${encodeURIComponent(data.token)}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
+                location.href = getReturnURL();
             }, 800);
         } else {
             showError('reg-error', data.message || '注册失败');
@@ -242,9 +238,7 @@ function getReturnURL() {
         headers: { 'Authorization': `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
         if (data.success) {
-            const url = getReturnURL();
-            const delim = url.includes('#') ? '&' : '#';
-            location.href = `${url}${delim}token=${encodeURIComponent(token)}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
+            location.href = getReturnURL();
         } else {
             localStorage.removeItem('ai_token');
             localStorage.removeItem('ai_user');

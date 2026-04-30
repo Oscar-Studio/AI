@@ -6,30 +6,48 @@
     // API 基础路径
     const API_BASE = 'https://api.oscarstudio.cn/api';
 
-    // 获取当前页面完整 URL（用于登录后返回）
-    function getCurrentPage() {
-        return window.location.href;
+    // 读取 Cookie（跨域共享：后端在 .oscarstudio.cn 设了 HttpOnly=false 的 Cookie）
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
     }
 
     // 获取跳转 URL（指向 API 后端的登录页面）
     function getAuthURL() {
-        const currentPage = getCurrentPage();
-        return `https://api.oscarstudio.cn/auth.html?return=${encodeURIComponent(currentPage)}`;
+        return `https://api.oscarstudio.cn/auth.html?return=${encodeURIComponent(window.location.href)}`;
     }
 
     // 检查登录状态
     function checkLoginStatus() {
         const token = localStorage.getItem('ai_token');
         const userStr = localStorage.getItem('ai_user');
+        if (!token || !userStr) return null;
+        try { return JSON.parse(userStr); }
+        catch (e) { return null; }
+    }
 
-        if (!token || !userStr) {
-            return null;
-        }
+    // 从跨域 Cookie 同步登录状态到 localStorage
+    async function syncLoginFromCookie() {
+        // 已经有 localStorage 数据了，跳过
+        if (localStorage.getItem('ai_token') && localStorage.getItem('ai_user')) return;
+
+        const token = getCookie('userToken');
+        if (!token) return;
 
         try {
-            return JSON.parse(userStr);
+            const resp = await fetch(`${API_BASE}/user`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await resp.json();
+            if (data.success && data.user) {
+                localStorage.setItem('ai_token', token);
+                localStorage.setItem('ai_user', JSON.stringify(data.user));
+                console.log('[用户] 从 Cookie 同步登录状态成功');
+            }
         } catch (e) {
-            return null;
+            console.warn('[用户] 从 Cookie 同步登录状态失败:', e.message);
         }
     }
 
@@ -210,31 +228,16 @@
     }
 
     // 初始化
-    function init() {
-        // 检查 URL hash 是否有 token（从跨域登录页面跳转回来）
-        const hash = window.location.hash;
-        if (hash && hash.includes('token=')) {
-            try {
-                const params = new URLSearchParams(hash.replace('#', ''));
-                const token = params.get('token');
-                const userStr = params.get('user');
-                if (token && userStr) {
-                    localStorage.setItem('ai_token', token);
-                    localStorage.setItem('ai_user', userStr);
-                    // 清理 URL，去掉 hash
-                    history.replaceState(null, '', window.location.pathname + window.location.search);
-                }
-            } catch (e) {
-                console.warn('URL token 解析失败:', e);
-            }
-        }
+    async function init() {
         injectStyles();
+        // 从跨域 Cookie 同步登录状态（如果 localStorage 还没有）
+        await syncLoginFromCookie();
         renderUserButton();
     }
 
     // DOM 加载完成后执行
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', () => init());
     } else {
         init();
     }
