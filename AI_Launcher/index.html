@@ -1019,13 +1019,9 @@
             const remaining = getRemainingTokens();
             if (remaining === null || remaining === Infinity) {
                 quotaBadge.style.display = 'none';
-            } else if (remaining <= 5000) {
-                // 剩余不足 5000 tokens 时显示具体数字
+            } else {
                 quotaBadge.style.display = 'inline';
                 quotaNum.textContent = remaining.toLocaleString();
-            } else {
-                // tokens 还很多就不显示，不占地方
-                quotaBadge.style.display = 'none';
             }
         }
     }
