@@ -480,6 +480,7 @@
             </div>
             <button class="new-chat-btn" id="new-chat-btn">新对话</button>
             <button class="premium-btn" id="premium-btn" style="background:transparent;border:1px solid var(--border);color:var(--text-secondary);padding:5px 12px;border-radius:6px;font-size:0.78rem;cursor:pointer;display:none;">高级</button>
+            <div id="userButtonContainer" style="margin-left:6px;"></div>
         </div>
     </header>
 
@@ -775,13 +776,24 @@
         }
 
         try {
+            const token = localStorage.getItem('ai_token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
             const resp = await fetch('https://api.oscarstudio.cn/api/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify(body),
                 signal: abortCtrl.signal
             });
 
+            if (resp.status === 401) {
+                throw new Error('请先登录后再使用 (401 未登录)');
+            }
+            if (resp.status === 403) {
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(errData.message || '今日配额已用完，请明天再试或升级会员');
+            }
             if (!resp.ok) {
                 const err = await resp.text();
                 throw new Error(`API ${resp.status}: ${err}`);
@@ -1075,5 +1087,6 @@
     // 初始化
     updateQuotaUI();
 </script>
+<script src="../user-button.js"></script>
 </body>
 </html>
