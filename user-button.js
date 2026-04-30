@@ -89,6 +89,8 @@
             document.getElementById('logoutBtn').addEventListener('click', function() {
                 localStorage.removeItem('ai_token');
                 localStorage.removeItem('ai_user');
+                // 清除跨域 Cookie（和登录时设置的一致）
+                document.cookie = 'userToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.oscarstudio.cn';
                 location.reload();
             });
 
