@@ -93,14 +93,14 @@ if (regSendBtn) {
 // ==================== LOGIN FORM ====================
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('login-email').value.trim();
+    const account = document.getElementById('login-account').value.trim();
     const password = document.getElementById('login-password').value;
     const btn = e.target.querySelector('.submit-btn');
 
     clearErrors();
 
-    if (!email || !password) {
-        showError('login-error', '请填写邮箱和密码');
+    if (!account || !password) {
+        showError('login-error', '请填写用户名/邮箱和密码');
         return;
     }
 
@@ -112,7 +112,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         const resp = await fetch(`${API_BASE}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ account, password })
         });
 
         const data = await resp.json();
