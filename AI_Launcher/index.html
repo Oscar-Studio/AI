@@ -476,7 +476,7 @@
                 <span>In: <strong id="stat-in">0</strong></span>
                 <span>Out: <strong id="stat-out">0</strong></span>
                 <span>Total: <strong id="stat-total">0</strong></span>
-                <span id="quota-badge" style="color:#ff7b72;font-size:0.72rem;display:none;">剩余 <strong id="quota-num">0</strong> tokens</span>
+                <span id="quota-badge" style="color:#ff7b72;font-size:0.72rem;display:none;">剩余 <strong id="quota-num">0</strong> credits</span>
             </div>
             <button class="new-chat-btn" id="new-chat-btn">新对话</button>
             <button class="premium-btn" id="premium-btn" style="background:transparent;border:1px solid var(--border);color:var(--text-secondary);padding:5px 12px;border-radius:6px;font-size:0.78rem;cursor:pointer;display:none;">高级</button>
@@ -576,7 +576,7 @@
     let isPremium = localStorage.getItem('ai_launcher_premium') === '1';
 
     // 服务端配额缓存
-    let quotaCache = null; // { remaining_base, remaining_premium, tier, used_base, used_premium }
+    let quotaCache = null; // { remaining, limit, used, tier }
 
     async function fetchQuota() {
         const token = localStorage.getItem('ai_token');
@@ -588,11 +588,10 @@
             const data = await resp.json();
             if (data.success && data.user) {
                 quotaCache = {
-                    remaining_base: data.user.quota?.base?.remaining ?? 0,
-                    remaining_premium: data.user.quota?.premium?.remaining ?? 0,
+                    remaining: data.user.quota?.credits?.remaining ?? 0,
+                    limit: data.user.quota?.credits?.limit ?? 0,
+                    used: data.user.quota?.credits?.used ?? 0,
                     tier: data.user.tier || 'standard',
-                    used_base: data.user.quota?.base?.used || 0,
-                    used_premium: data.user.quota?.premium?.used || 0,
                 };
             }
         } catch (e) {
@@ -600,17 +599,16 @@
         }
     }
 
-    function getRemainingTokens() {
+    function getRemainingCredits() {
         if (isPremium) return Infinity;
-        if (!quotaCache) return null; // 未登录或无配额数据
-        const isPrem = PREMIUM_MODELS.includes(modelId);
-        return isPrem ? quotaCache.remaining_premium : quotaCache.remaining_base;
+        if (!quotaCache) return null;
+        return quotaCache.remaining;
     }
 
     function checkQuota() {
-        const remaining = getRemainingTokens();
+        const remaining = getRemainingCredits();
         if (remaining === Infinity) return { allowed: true, remaining: Infinity };
-        if (remaining === null) return { allowed: true, remaining: 999999 }; // 未登录时不限制
+        if (remaining === null) return { allowed: true, remaining: 999999 };
         return { allowed: remaining > 0, remaining };
     }
 
@@ -718,7 +716,7 @@
         // 配额检查
         const { allowed, remaining } = checkQuota();
         if (!allowed) {
-            showPremiumModal('今日 Token 配额已用完，请输入高级密钥解锁');
+            showPremiumModal('今日 Credits 配额已用完，请输入高级密钥解锁');
             return;
         }
 
@@ -1050,7 +1048,7 @@
             premiumBtn.classList.remove('unlocked');
             premiumBtn.style.display = 'inline';
 
-            const remaining = getRemainingTokens();
+            const remaining = getRemainingCredits();
             if (remaining === null || remaining === Infinity) {
                 quotaBadge.style.display = 'none';
             } else {

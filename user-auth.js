@@ -326,6 +326,9 @@ async function handleLogin(e) {
             // 2. 写入 localStorage（本站使用 + Cookie 不可用时的备用）
             localStorage.setItem('userToken', currentToken);
             localStorage.setItem('userData', JSON.stringify(currentUser));
+            // AI_Launcher 等子站也用 ai_token key
+            localStorage.setItem('ai_token', currentToken);
+            localStorage.setItem('ai_user', JSON.stringify(currentUser));
 
             updateUserUI();
             hideModal();
@@ -460,6 +463,8 @@ async function handleEditProfile(e) {
             // 更新 localStorage
             localStorage.setItem('userToken', currentToken);
             localStorage.setItem('userData', JSON.stringify(currentUser));
+            localStorage.setItem('ai_token', currentToken);
+            localStorage.setItem('ai_user', JSON.stringify(currentUser));
 
             updateUserUI();
             hideModal();
@@ -553,6 +558,8 @@ function logout() {
     // 清除 localStorage
     localStorage.removeItem('userToken');
     localStorage.removeItem('userData');
+    localStorage.removeItem('ai_token');
+    localStorage.removeItem('ai_user');
 
     updateUserUI();
     if (userDropdown) userDropdown.classList.remove('active');

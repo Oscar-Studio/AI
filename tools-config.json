@@ -26,6 +26,21 @@
             ],
             "icon": "🎤",
             "featured": true
+        },
+        {
+            "name": "AI_Image",
+            "description": "基于 OpenRouter gpt-5.4-image-2 的 AI 图片生成工具，文生图每次消耗 5000 credits。每日额度：Standard 20000 credits，Pro 40000，Pro Max 80000",
+            "tags": [
+                "AI",
+                "图片",
+                "绘画",
+                "图像生成"
+            ],
+            "subject": [
+                "通用"
+            ],
+            "icon": "🎨",
+            "featured": true
         }
     ]
 }
