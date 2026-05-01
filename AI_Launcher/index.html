@@ -479,7 +479,7 @@
                 <span id="quota-badge" style="color:#ff7b72;font-size:0.72rem;display:none;">剩余 <strong id="quota-num">0</strong> credits</span>
             </div>
             <button class="new-chat-btn" id="new-chat-btn">新对话</button>
-            <button class="premium-btn" id="premium-btn" style="background:transparent;border:1px solid var(--border);color:var(--text-secondary);padding:5px 12px;border-radius:6px;font-size:0.78rem;cursor:pointer;display:none;">高级</button>
+
             <div id="userButtonContainer" style="margin-left:6px;"></div>
         </div>
     </header>
@@ -572,9 +572,6 @@
     let abortCtrl    = null;
     let isGenerating = false;
 
-    // 高级版（CCswitch 解锁）
-    let isPremium = localStorage.getItem('ai_launcher_premium') === '1';
-
     // 服务端配额缓存
     let quotaCache = null; // { remaining, limit, used, tier }
 
@@ -600,14 +597,12 @@
     }
 
     function getRemainingCredits() {
-        if (isPremium) return Infinity;
         if (!quotaCache) return null;
         return quotaCache.remaining;
     }
 
     function checkQuota() {
         const remaining = getRemainingCredits();
-        if (remaining === Infinity) return { allowed: true, remaining: Infinity };
         if (remaining === null) return { allowed: true, remaining: 999999 };
         return { allowed: remaining > 0, remaining };
     }
@@ -716,7 +711,7 @@
         // 配额检查
         const { allowed, remaining } = checkQuota();
         if (!allowed) {
-            showPremiumModal('今日 Credits 配额已用完，请输入高级密钥解锁');
+            alert('今日 Credits 配额已用完，请明天再试或升级会员');
             return;
         }
 
@@ -1033,98 +1028,16 @@
     // ==========================================
     // PREMIUM / QUOTA UI
     // ==========================================
-    const premiumBtn  = document.getElementById('premium-btn');
     const quotaBadge = document.getElementById('quota-badge');
     const quotaNum   = document.getElementById('quota-num');
 
     function updateQuotaUI() {
-        if (isPremium) {
-            premiumBtn.textContent = '高级 ✓';
-            premiumBtn.classList.add('unlocked');
+        const remaining = getRemainingCredits();
+        if (remaining === null || remaining === Infinity) {
             quotaBadge.style.display = 'none';
-            premiumBtn.style.display = 'inline';
         } else {
-            premiumBtn.textContent = '高级';
-            premiumBtn.classList.remove('unlocked');
-            premiumBtn.style.display = 'inline';
-
-            const remaining = getRemainingCredits();
-            if (remaining === null || remaining === Infinity) {
-                quotaBadge.style.display = 'none';
-            } else {
-                quotaBadge.style.display = 'inline';
-                quotaNum.textContent = remaining.toLocaleString();
-            }
-        }
-    }
-
-    // 高级按钮点击 → 弹窗
-    premiumBtn.addEventListener('click', () => {
-        showPremiumModal();
-    });
-
-    // 弹窗元素
-    function showPremiumModal(lockedMsg) {
-        // 创建弹窗（已存在就不重复创建）
-        let overlay = document.getElementById('premium-modal-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'premium-modal-overlay';
-            overlay.innerHTML = `
-                <div id="premium-modal">
-                    <h3>🎯 高级模式</h3>
-                    <p>输入解锁密钥解除每日发送限额</p>
-                    <input type="password" id="premium-key-input" placeholder="输入密钥..." />
-                    <div id="premium-modal-btns">
-                        <button class="modal-btn" id="modal-cancel">取消</button>
-                        <button class="modal-btn" id="modal-unlock">解锁</button>
-                    </div>
-                    <div id="modal-error"></div>
-                </div>
-            `;
-            document.body.appendChild(overlay);
-
-            document.getElementById('modal-cancel').addEventListener('click', hidePremiumModal);
-            document.getElementById('modal-unlock').addEventListener('click', tryUnlock);
-            document.getElementById('premium-key-input').addEventListener('keydown', e => {
-                if (e.key === 'Enter') tryUnlock();
-            });
-            overlay.addEventListener('click', e => {
-                if (e.target === overlay) hidePremiumModal();
-            });
-        }
-        overlay.classList.add('show');
-        const errEl = document.getElementById('modal-error');
-        if (errEl) errEl.textContent = lockedMsg || '';
-        const inputEl = document.getElementById('premium-key-input');
-        if (inputEl) { inputEl.value = ''; inputEl.focus(); }
-    }
-
-    function hidePremiumModal() {
-        const overlay = document.getElementById('premium-modal-overlay');
-        if (overlay) overlay.classList.remove('show');
-    }
-
-    // SHA256 解锁验证
-    async function sha256(str) {
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    async function tryUnlock() {
-        const input = document.getElementById('premium-key-input');
-        if (!input) return;
-        const key = input.value.trim();
-        if (!key) return;
-        const hash = await sha256(key);
-        // CCswitch 的 SHA256
-        if (hash === '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92') {
-            isPremium = true;
-            localStorage.setItem('ai_launcher_premium', '1');
-            hidePremiumModal();
-            updateQuotaUI();
-        } else {
-            document.getElementById('modal-error').textContent = '密钥错误';
+            quotaBadge.style.display = 'inline';
+            quotaNum.textContent = remaining.toLocaleString();
         }
     }
 
