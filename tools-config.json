@@ -25,7 +25,8 @@
                 "生物学"
             ],
             "icon": "🦎",
-            "featured": false
+            "featured": false,
+            "demoFile": "camouflage/index.html"
         },
         {
             "name": "MIMO-TTS",
