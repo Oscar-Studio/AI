@@ -14,6 +14,20 @@
             "featured": true
         },
         {
+            "name": "保护色实验",
+            "description": "模拟生物保护色实验，点击你看到的纸片进行自然选择，观看复式折线统计图了解种群变化",
+            "tags": [
+                "生物",
+                "实验",
+                "教学"
+            ],
+            "subject": [
+                "生物学"
+            ],
+            "icon": "🦎",
+            "featured": false
+        },
+        {
             "name": "MIMO-TTS",
             "description": "基于小米 MiMo 开放平台的文本转语音工具，支持多种风格和音色",
             "tags": [

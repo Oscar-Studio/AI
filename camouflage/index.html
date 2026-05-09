@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保护色实验 - Oscar Studio</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0d1117;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #2A5CAA, #00E5FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #8b949e;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+        /* Settings */
+        .settings {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .setting-item label {
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+        .setting-item input, .setting-item select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            width: 120px;
+        }
+        .setting-item input:focus, .setting-item select:focus {
+            border-color: #00E5FF;
+        }
+        .btn-start {
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #2A5CAA, #6A00FF);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            align-self: flex-end;
+        }
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(106,0,255,0.3);
+        }
+        /* Game Area */
+        #gameArea {
+            position: relative;
+            width: min(90vw, 700px);
+            height: min(70vh, 500px);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #30363d;
+            margin-bottom: 15px;
+            cursor: crosshair;
+        }
+        /* Paper pieces */
+        .paper {
+            position: absolute;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            user-select: none;
+        }
+        .paper:hover { transform: scale(1.08); }
+        /* Timer bar */
+        #timerBar {
+            width: min(90vw, 700px);
+            height: 6px;
+            background: #21262d;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        #timerFill {
+            height: 100%;
+            background: linear-gradient(90deg, #00E5FF, #6A00FF);
+            width: 100%;
+            transition: width 0.05s linear;
+        }
+        /* Round info */
+        #roundInfo {
+            color: #8b949e;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        /* Result chart */
+        #chartContainer {
+            width: min(90vw, 700px);
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            display: none;
+        }
+        #chartContainer h2 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #00E5FF;
+        }
+        #chartCanvas {
+            width: 100%;
+            height: 300px;
+        }
+        /* Stats summary */
+        .stats-summary {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+        .stat-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        /* Replicate flash */
+        @keyframes replicateFlash {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .paper.replicating {
+            animation: replicateFlash 0.4s ease;
+        }
+        /* Back link */
+        .back-link {
+            margin-top: 15px;
+            color: #00E5FF;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>🦎 生物保护色实验</h1>
+    <p class="subtitle">
+        在纯色背景下，不同颜色的纸片代表不同生物。<br>
+        3秒内点击你看到的纸片——越容易被发现的越容易被"淘汰"。<br>
+        剩下25%时幸存者会复制3份，最终看谁活到最后！
+    </p>
+
+    <div class="settings" id="settingsPanel">
+        <div class="setting-item">
+            <label>背景颜色</label>
+            <input type="color" id="bgColor" value="#2E7D32">
+        </div>
+        <div class="setting-item">
+            <label>颜色种类</label>
+            <input type="number" id="numColors" value="5" min="2" max="10">
+        </div>
+        <div class="setting-item">
+            <label>纸片总数</label>
+            <input type="number" id="totalPieces" value="20" min="4" step="4">
+        </div>
+        <div class="setting-item">
+            <label>实验轮数</label>
+            <input type="number" id="numRounds" value="8" min="3" max="20">
+        </div>
+        <button class="btn-start" id="btnStart">开始实验</button>
+    </div>
+
+    <div id="timerBar"><div id="timerFill"></div></div>
+    <div id="roundInfo"></div>
+    <div id="gameArea"></div>
+
+    <div id="chartContainer">
+        <h2>📊 各颜色纸片数量变化</h2>
+        <canvas id="chartCanvas"></canvas>
+        <div class="stats-summary" id="statsSummary"></div>
+    </div>
+
+    <a class="back-link" href="../index.html">← 返回工具集</a>
+
+<script>
+// Utility: generate distinguishable colors
+function generateColors(n) {
+    const palette = [
+        '#FF6B6B','#4ECDC4','#FFE66D','#95E1D3','#F38181',
+        '#AA96DA','#FCBAD3','#A8D8EA','#FF9F43','#6C5CE7',
+        '#00CEC9','#FD79A8','#A29BFE','#FAB1A0','#74B9FF'
+    ];
+    // shuffle
+    const shuffled = [...palette].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, n);
+}
+
+function randomColor(baseHex, range) {
+    // generate a color that's not too close to baseHex
+    let r = parseInt(baseHex.slice(1,3),16);
+    let g = parseInt(baseHex.slice(3,5),16);
+    let b = parseInt(baseHex.slice(5,7),16);
+    let attempts = 0;
+    let color;
+    do {
+        const dr = (Math.random() - 0.5) * range * 2;
+        const dg = (Math.random() - 0.5) * range * 2;
+        const db = (Math.random() - 0.5) * range * 2;
+        r = Math.max(0, Math.min(255, Math.round(r + dr)));
+        g = Math.max(0, Math.min(255, Math.round(g + dg)));
+        b = Math.max(0, Math.min(255, Math.round(b + db)));
+        color = '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+        attempts++;
+    } while (colorDist(color, baseHex) < 60 && attempts < 50);
+    return color;
+}
+
+function colorDist(c1, c2) {
+    const r1=parseInt(c1.slice(1,3),16), g1=parseInt(c1.slice(3,5),16), b1=parseInt(c1.slice(5,7),16);
+    const r2=parseInt(c2.slice(1,3),16), g2=parseInt(c2.slice(3,5),16), b2=parseInt(c2.slice(5,7),16);
+    return Math.sqrt((r1-r2)**2 + (g1-g2)**2 + (b1-b2)**2);
+}
+
+// State
+let state = {};
+let timerInterval = null;
+let timeLeft = 3;
+let pieces = []; // {id, color, x, y, w, h}
+let paperId = 0;
+
+const gameArea = document.getElementById('gameArea');
+const timerFill = document.getElementById('timerFill');
+const roundInfo = document.getElementById('roundInfo');
+const chartContainer = document.getElementById('chartContainer');
+const statsSummary = document.getElementById('statsSummary');
+const settingsPanel = document.getElementById('settingsPanel');
+
+function initGame() {
+    const bgColor = document.getElementById('bgColor').value;
+    const numColors = parseInt(document.getElementById('numColors').value);
+    const totalPieces = parseInt(document.getElementById('totalPieces').value);
+    const numRounds = parseInt(document.getElementById('numRounds').value);
+
+    // Make sure totalPieces is divisible by numColors
+    const baseCount = Math.floor(totalPieces / numColors);
+    const remainder = totalPieces % numColors;
+
+    const colors = generateColors(numColors);
+    // Make sure no color matches background
+    const finalColors = colors.map(c => {
+        if (colorDist(c, bgColor) < 30) {
+            return randomColor(bgColor, 150);
+        }
+        return c;
+    });
+
+    state = {
+        bgColor,
+        colors: finalColors,
+        numRounds,
+        currentRound: 0,
+        originalTotal: totalPieces,
+        // count per color: {color: [initial, r1, r2, ...]}
+        history: {},
+        running: false
+    };
+    finalColors.forEach(c => { state.history[c] = []; });
+
+    // Initial distribution: each color gets baseCount, distribute remainder randomly
+    let distribution = finalColors.map(() => baseCount);
+    for (let i = 0; i < remainder; i++) {
+        distribution[Math.floor(Math.random() * numColors)]++;
+    }
+
+    pieces = [];
+    finalColors.forEach((color, ci) => {
+        for (let i = 0; i < distribution[ci]; i++) {
+            pieces.push({ id: paperId++, color, x: 0, y: 0, w: 0, h: 0, alive: true });
+        }
+    });
+
+    chartContainer.style.display = 'none';
+    settingsPanel.style.display = 'none';
+    document.getElementById('timerBar').style.display = 'block';
+    gameArea.style.background = bgColor;
+
+    startRound();
+}
+
+function placePieces() {
+    const W = gameArea.clientWidth;
+    const H = gameArea.clientHeight;
+    const size = Math.max(20, Math.min(36, W * H / 2500));
+
+    pieces.forEach(p => {
+        if (!p.alive) return;
+        let x, y, tries = 0;
+        do {
+            x = Math.random() * (W - size);
+            y = Math.random() * (H - size);
+            tries++;
+        } while (tries < 30 && pieces.some(other =>
+            other.alive && other.id !== p.id &&
+            Math.abs(other.x - x) < size && Math.abs(other.y - y) < size
+        ));
+        p.x = x; p.y = y; p.w = size; p.h = size;
+    });
+}
+
+function renderPieces() {
+    gameArea.innerHTML = '';
+    pieces.forEach(p => {
+        if (!p.alive) return;
+        const el = document.createElement('div');
+        el.className = 'paper';
+        el.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px;background:${p.color};opacity:0.9;`;
+        el.dataset.id = p.id;
+        el.addEventListener('click', () => onPaperClick(p.id));
+        gameArea.appendChild(el);
+    });
+}
+
+function startRound() {
+    if (state.currentRound >= state.numRounds) {
+        endGame();
+        return;
+    }
+    state.currentRound++;
+    roundInfo.textContent = `第 ${state.currentRound} / ${state.numRounds} 轮 | 剩余 ${pieces.filter(p=>p.alive).length} 张纸片`;
+
+    // Record counts before selection
+    state.colors.forEach(c => {
+        const count = pieces.filter(p => p.alive && p.color === c).length;
+        state.history[c].push(count);
+    });
+
+    // Place and render
+    placePieces();
+    renderPieces();
+
+    // Start timer
+    timeLeft = 3;
+    timerFill.style.width = '100%';
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        timeLeft -= 0.05;
+        timerFill.style.width = (timeLeft / 3 * 100) + '%';
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            // Time's up — randomly remove one piece (the one user "failed to catch")
+            noSelection();
+        }
+    }, 50);
+}
+
+let roundDone = false;
+
+function onPaperClick(id) {
+    if (roundDone) return;
+    roundDone = true;
+    clearInterval(timerInterval);
+
+    const p = pieces.find(x => x.id === id);
+    if (!p || !p.alive) return;
+
+    // Remove clicked piece
+    p.alive = false;
+    renderPieces();
+
+    // Small delay then check for replication
+    setTimeout(() => checkAndReplicate(), 600);
+}
+
+function noSelection() {
+    if (roundDone) return;
+    roundDone = true;
+    // Remove a random alive piece
+    const alive = pieces.filter(p => p.alive);
+    if (alive.length > 0) {
+        alive[Math.floor(Math.random() * alive.length)].alive = false;
+        renderPieces();
+    }
+    setTimeout(() => checkAndReplicate(), 600);
+}
+
+function checkAndReplicate() {
+    const alive = pieces.filter(p => p.alive);
+    const originalCount = state.originalTotal;
+    const threshold = Math.floor(originalCount * 0.25);
+
+    if (alive.length <= threshold && alive.length > 0) {
+        // REPLICATE: each surviving color copies 3x
+        const W = gameArea.clientWidth;
+        const H = gameArea.clientHeight;
+        const size = Math.max(20, Math.min(36, W * H / 2500));
+
+        const newPieces = [];
+        state.colors.forEach(color => {
+            const survivors = alive.filter(p => p.color === color);
+            // Add 3 copies per survivor
+            survivors.forEach(s => {
+                for (let i = 0; i < 3; i++) {
+                    let x, y, tries = 0;
+                    do {
+                        x = Math.random() * (W - size);
+                        y = Math.random() * (H - size);
+                        tries++;
+                    } while (tries < 20 && newPieces.some(np =>
+                        Math.abs(np.x - x) < size && Math.abs(np.y - y) < size
+                    ));
+                    newPieces.push({ id: paperId++, color, x, y, w: size, h: size, alive: true });
+                }
+            });
+        });
+
+        // Animate flash on existing pieces
+        document.querySelectorAll('.paper').forEach(el => el.classList.add('replicating'));
+
+        setTimeout(() => {
+            pieces = [...pieces.filter(p => p.alive), ...newPieces];
+            placePieces();
+            renderPieces();
+            roundInfo.textContent = `🎉 幸存者复制！第 ${state.currentRound} 轮结束 | ${pieces.filter(p=>p.alive).length} 张`;
+            setTimeout(() => { roundDone = false; startRound(); }, 1500);
+        }, 500);
+    } else {
+        setTimeout(() => { roundDone = false; startRound(); }, 500);
+    }
+}
+
+function endGame() {
+    // Record final counts
+    state.colors.forEach(c => {
+        const count = pieces.filter(p => p.alive && p.color === c).length;
+        state.history[c].push(count);
+    });
+
+    roundInfo.textContent = '实验结束！';
+    document.getElementById('timerBar').style.display = 'none';
+    gameArea.innerHTML = '';
+
+    drawChart();
+    chartContainer.style.display = 'block';
+
+    // Show stats
+    statsSummary.innerHTML = state.colors.map((c, i) =>
+        `<div class="stat-item"><div class="stat-dot" style="background:${c}"></div>${i+1}号色: 最终${state.history[c][state.history[c].length-1]}张</div>`
+    ).join('');
+
+    settingsPanel.style.display = 'flex';
+}
+
+function drawChart() {
+    const canvas = document.getElementById('chartCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const rounds = state.numRounds + 1; // initial + each round
+    const colors = state.colors;
+    const maxVal = Math.max(...Object.values(state.history).flatMap(arr => arr), 1);
+
+    const padL = 40, padR = 20, padT = 20, padB = 40;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+
+    // Grid lines
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = padT + (chartH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(padL + chartW, y);
+        ctx.stroke();
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '11px Segoe UI';
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxVal * (1 - i/4)), padL - 5, y + 4);
+    }
+
+    // X axis labels
+    ctx.textAlign = 'center';
+    for (let r = 0; r < rounds; r++) {
+        const x = padL + (chartW / (rounds - 1)) * r;
+        const label = r === 0 ? '初始' : `R${r}`;
+        ctx.fillText(label, x, H - padB + 15);
+    }
+
+    // Draw lines for each color
+    colors.forEach((color, ci) => {
+        const data = state.history[color];
+        if (!data || data.length === 0) return;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        data.forEach((val, r) => {
+            const x = padL + (chartW / (rounds - 1)) * r;
+            const y = padT + chartH - (val / maxVal) * chartH;
+            if (r === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Dots
+        data.forEach((val, r) => {
+            const x = padL + (chartW / (rounds - 1)) * r;
+            const y = padT + chartH - (val / maxVal) * chartH;
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+        });
+    });
+
+    // Replicate markers
+    // Mark round where replicate happened (every time we go below 25% threshold)
+    // We can detect: look for when total drops then jumps
+    let prevTotal = state.originalTotal;
+    for (let r = 1; r < rounds; r++) {
+        const total = colors.reduce((s, c) => s + (state.history[c][r] || 0), 0);
+        if (total < prevTotal * 0.5) {
+            // replication happened after this round (displayed at r)
+            const x = padL + (chartW / (rounds - 1)) * r;
+            ctx.fillStyle = '#FFE66D';
+            ctx.font = '12px Segoe UI';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬆复制', x, padT - 5);
+        }
+        prevTotal = total;
+    }
+}
+
+document.getElementById('btnStart').addEventListener('click', () => {
+    const numColors = parseInt(document.getElementById('numColors').value);
+    const totalPieces = parseInt(document.getElementById('totalPieces').value);
+    if (numColors < 2) { alert('颜色种类至少2种'); return; }
+    if (totalPieces < numColors) { alert('纸片总数至少等于颜色种类数'); return; }
+    initGame();
+});
+</script>
+</body>
+</html>
