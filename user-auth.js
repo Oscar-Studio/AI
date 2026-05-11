@@ -21,14 +21,16 @@ function getCookie(name) {
 }
 
 // 写入 Cookie（跨域）
+// 注意：HttpOnly 属性需要在服务器响应头中设置，客户端 JavaScript 无法设置 HttpOnly cookie
+// 此处我们设置 secure 和 samesite 属性以增强安全性
 function setCookie(name, value, days = 7) {
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; domain=${COOKIE_DOMAIN}; samesite=Lax`;
+    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; domain=${COOKIE_DOMAIN}; samesite=Lax; secure`;
 }
 
 // 清除 Cookie
 function deleteCookie(name) {
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${COOKIE_DOMAIN}`;
+    document.cookie = `${name}=; max-age=0; path=/; domain=${COOKIE_DOMAIN}`;
 }
 
 // DOM元素（确保这些ID在你的HTML中都存在）
@@ -74,7 +76,7 @@ function checkLoginStatus() {
                 console.error('解析用户数据失败:', e);
             }
         }
-        console.log('从 Cookie 获取登录状态:', { token: token.substring(0, 20) + '...', userData });
+        console.log('从 Cookie 获取登录状态:', { hasToken: !!token });
     } else {
         // 2. Cookie 没有，fallback 到 localStorage（仅对本域名有效）
         token = localStorage.getItem('userToken');
@@ -86,7 +88,7 @@ function checkLoginStatus() {
                 console.error('解析用户数据失败:', e);
             }
         }
-        console.log('从 localStorage 获取登录状态:', { token: token ? token.substring(0, 20) + '...' : null, userData });
+        console.log('从 localStorage 获取登录状态:', { hasToken: !!token });
     }
 
     if (token && userData) {

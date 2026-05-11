@@ -36,7 +36,7 @@
         }
 
         try { return JSON.parse(userStr); }
-        catch (e) { return null; }
+        catch (e) { console.error('解析用户数据失败:', e); return null; }
     }
 
     // 从跨域 Cookie 同步登录状态到 localStorage
@@ -101,7 +101,7 @@
                 localStorage.removeItem('ai_token');
                 localStorage.removeItem('ai_user');
                 // 清除跨域 Cookie（和登录时设置的一致）
-                document.cookie = 'userToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.oscarstudio.cn';
+                document.cookie = 'userToken=; max-age=0; path=/; domain=.oscarstudio.cn';
                 location.reload();
             });
 

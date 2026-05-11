@@ -505,10 +505,19 @@
         let selectedTool = null;
         let selectedCard = null;
 
+        // HTML escape helper
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+        }
+
         // Load tools
-        fetch('tools-config.json')
+        const abortCtrl = new AbortController();
+        const timeoutId = setTimeout(() => abortCtrl.abort(), 10000);
+        fetch('tools-config.json', { signal: abortCtrl.signal })
             .then(response => response.json())
             .then(data => {
+                clearTimeout(timeoutId);
                 tools = data.tools || [];
                 tools.sort((a, b) => {
                     if (a.featured !== b.featured) return b.featured ? 1 : -1;
@@ -517,6 +526,7 @@
                 renderCards(tools);
             })
             .catch(error => {
+                clearTimeout(timeoutId);
                 cardContainer.innerHTML = '<p class="no-results">加载工具失败</p>';
             });
 
@@ -530,14 +540,15 @@
             toolsToRender.forEach(tool => {
                 const card = document.createElement('div');
                 card.className = 'card';
+                const icon = escapeHTML(tool.icon || '🤖');
+                const name = escapeHTML(tool.name);
+                const tags = tool.tags ? tool.tags.slice(0, 3).map(t => `<span class="card-tag">${escapeHTML(t)}</span>`).join('') : '';
                 card.innerHTML = `
                     <div class="card-header">
-                        <span class="card-icon">${tool.icon || '🤖'}</span>
-                        <span class="card-name">${tool.name}</span>
+                        <span class="card-icon">${icon}</span>
+                        <span class="card-name">${name}</span>
                     </div>
-                    <div class="card-tags">
-                        ${tool.tags ? tool.tags.slice(0, 3).map(t => `<span class="card-tag">${t}</span>`).join('') : ''}
-                    </div>
+                    <div class="card-tags">${tags}</div>
                 `;
                 card.addEventListener('click', () => selectCard(card, tool));
                 cardContainer.appendChild(card);
@@ -554,19 +565,21 @@
             // Create morph card at card's position
             morphCard = document.createElement('div');
             morphCard.className = 'morph-card compact';
-            const demoUrl = tool.demoFile || `${tool.name}/index.html`;
+            const demoUrl = escapeHTML(tool.demoFile || `${tool.name}/index.html`);
+            const icon = escapeHTML(tool.icon || '🤖');
+            const name = escapeHTML(tool.name);
+            const description = escapeHTML(tool.description);
+            const tags = tool.tags ? tool.tags.slice(0, 3).map(t => `<span class="morph-tag">${escapeHTML(t)}</span>`).join('') : '';
             morphCard.innerHTML = `
                 <div class="morph-header">
-                    <span class="morph-icon">${tool.icon || '🤖'}</span>
-                    <span class="morph-name">${tool.name}</span>
+                    <span class="morph-icon">${icon}</span>
+                    <span class="morph-name">${name}</span>
                 </div>
-                <div class="morph-tags">
-                    ${tool.tags ? tool.tags.slice(0, 3).map(t => `<span class="morph-tag">${t}</span>`).join('') : ''}
-                </div>
+                <div class="morph-tags">${tags}</div>
                 <div class="morph-content">
-                    <div class="morph-big-icon">${tool.icon || '🤖'}</div>
-                    <h2>${tool.name}</h2>
-                    <p>${tool.description}</p>
+                    <div class="morph-big-icon">${icon}</div>
+                    <h2>${name}</h2>
+                    <p>${description}</p>
                     <a href="${demoUrl}" class="btn-explore">进入演示</a>
                 </div>
                 <button class="close-btn">&times;</button>
@@ -694,12 +707,12 @@
         });
 
         searchInput.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase().trim();
+            const term = escapeHTML(e.target.value).toLowerCase().trim();
             if (term) {
                 renderCards(tools.filter(t =>
-                    t.name.toLowerCase().includes(term) ||
-                    (t.tags && t.tags.some(tag => tag.toLowerCase().includes(term))) ||
-                    t.description.toLowerCase().includes(term)
+                    escapeHTML(t.name).toLowerCase().includes(term) ||
+                    (t.tags && t.tags.some(tag => escapeHTML(tag).toLowerCase().includes(term))) ||
+                    escapeHTML(t.description).toLowerCase().includes(term)
                 ));
             } else {
                 renderCards(tools);

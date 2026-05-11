@@ -1,5 +1,11 @@
 const API_BASE = 'https://api.oscarstudio.cn/api';
 
+// HTML escape helper
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
 // ==================== TAB SWITCH ====================
 const tabBtns = document.querySelectorAll('.tab-btn');
 const forms = document.querySelectorAll('.auth-form');
@@ -218,7 +224,7 @@ function showSuccess(msg) {
     card.classList.add('success');
     card.innerHTML = `
         <div class="success-icon">✅</div>
-        <h2>${msg}</h2>
+        <h2>${escapeHTML(msg)}</h2>
         <p>正在跳转...</p>
     `;
 }
@@ -227,6 +233,15 @@ function showSuccess(msg) {
 function getReturnURL() {
     const params = new URLSearchParams(window.location.search);
     let returnURL = params.get('return') || 'https://ai.oscarstudio.cn/AI_Launcher/index.html';
+    // 验证 return 参数必须是 oscarstudio.cn 域名，防止开放式重定向
+    try {
+        const url = new URL(returnURL);
+        if (url.hostname !== 'oscarstudio.cn' && !url.hostname.endsWith('.oscarstudio.cn')) {
+            returnURL = 'https://ai.oscarstudio.cn/AI_Launcher/index.html';
+        }
+    } catch (e) {
+        returnURL = 'https://ai.oscarstudio.cn/AI_Launcher/index.html';
+    }
     return returnURL;
 }
 

@@ -454,6 +454,7 @@
     </style>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script charset="UTF-8" id="LA_COLLECT" src="//sdk.51.la/js-sdk-pro.min.js"></script>
 <script>LA.init({id:"3ObMo9NLgqBCvJ53",ck:"3ObMo9NLgqBCvJ53"})</script>
 </head>
@@ -785,12 +786,15 @@
             const headers = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
+            // 设置 60 秒超时
+            const timeoutId = setTimeout(() => abortCtrl.abort(), 60000);
             const resp = await fetch('https://api.oscarstudio.cn/api/chat', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(body),
                 signal: abortCtrl.signal
             });
+            clearTimeout(timeoutId);
 
             if (resp.status === 401) {
                 throw new Error('请先登录后再使用 (401 未登录)');
@@ -928,8 +932,8 @@
 
             history.push({ role: 'assistant', content: fullResponse });
             const r = typeof marked !== 'undefined' ? marked.parse(fullResponse) : fullResponse;
-            if (r instanceof Promise) r.then(html => { contentDiv.innerHTML = html; });
-            else contentDiv.innerHTML = r;
+            if (r instanceof Promise) r.then(html => { contentDiv.innerHTML = DOMPurify.sanitize(html); });
+            else contentDiv.innerHTML = DOMPurify.sanitize(r);
 
         } catch (err) {
             contentDiv.classList.remove('typing');
