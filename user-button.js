@@ -130,111 +130,146 @@
             }
 
             .user-avatar-btn {
-                background: none;
-                border: none;
+                background: rgba(255, 255, 255, 0.08);
+                backdrop-filter: blur(12px) saturate(180%);
+                -webkit-backdrop-filter: blur(12px) saturate(180%);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 50%;
                 cursor: pointer;
                 padding: 0;
+                transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            }
+
+            .user-avatar-btn:hover {
+                transform: scale(1.1);
+                background: rgba(255, 255, 255, 0.15);
+                border-color: rgba(255, 255, 255, 0.3);
+                box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
             }
 
             .user-avatar-circle {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 36px;
-                height: 36px;
+                width: 38px;
+                height: 38px;
                 border-radius: 50%;
-                background: linear-gradient(135deg, #2A5CAA, #00E5FF);
+                background: linear-gradient(135deg, #6366f1, #ec4899);
                 color: white;
                 font-weight: 600;
                 font-size: 14px;
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
-            }
-
-            .user-avatar-btn:hover .user-avatar-circle {
-                transform: scale(1.1);
-                box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
             }
 
             .user-dropdown {
                 position: absolute;
-                top: calc(100% + 8px);
+                top: calc(100% + 10px);
                 right: 0;
                 width: 200px;
-                background: #0d1117;
-                border: 1px solid #30363d;
-                border-radius: 8px;
-                padding: 8px 0;
+                background: rgba(30, 41, 59, 0.85);
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 16px;
+                padding: 0.5rem;
                 opacity: 0;
                 visibility: hidden;
-                transform: translateY(-8px);
-                transition: all 0.2s ease;
+                transform: translateY(-10px) scale(0.95);
+                transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                 z-index: 1000;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
             }
 
             .user-dropdown.active {
                 opacity: 1;
                 visibility: visible;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
             }
 
             .user-dropdown-header {
-                padding: 8px 12px;
+                padding: 1rem;
                 display: flex;
                 flex-direction: column;
-                gap: 2px;
+                gap: 4px;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 12px;
+                margin-bottom: 0.5rem;
             }
 
             .user-dropdown-header .user-name {
-                color: #ffffff;
+                color: #f8fafc;
                 font-weight: 600;
                 font-size: 14px;
             }
 
             .user-dropdown-header .user-email {
-                color: #8b949e;
+                color: #64748b;
                 font-size: 12px;
             }
 
             .user-dropdown-divider {
                 height: 1px;
-                background: #30363d;
-                margin: 4px 0;
+                background: rgba(255, 255, 255, 0.1);
+                margin: 0.5rem 0;
             }
 
             .user-dropdown-item {
                 display: block;
                 width: 100%;
-                padding: 8px 12px;
+                padding: 0.7rem 1rem;
                 background: none;
                 border: none;
                 color: #f85149;
                 font-size: 14px;
                 text-align: left;
                 cursor: pointer;
-                transition: background 0.15s ease;
+                transition: all 0.3s;
+                border-radius: 10px;
             }
 
             .user-dropdown-item:hover {
-                background: rgba(248, 81, 73, 0.1);
+                background: rgba(248, 81, 73, 0.15);
             }
 
             .login-register-btn {
                 display: inline-flex;
                 align-items: center;
-                padding: 8px 16px;
-                background: linear-gradient(135deg, #2A5CAA, #00E5FF);
-                color: white;
+                justify-content: center;
+                padding: 0.65rem 1.5rem;
+                border-radius: 50px;
+                font-weight: 600;
+                font-size: 0.9rem;
                 text-decoration: none;
-                border-radius: 20px;
-                font-weight: 500;
-                font-size: 14px;
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
+                transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(16px) saturate(180%);
+                -webkit-backdrop-filter: blur(16px) saturate(180%);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: #f8fafc;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .login-register-btn::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+                transition: left 0.6s ease;
+            }
+
+            .login-register-btn:hover::before {
+                left: 100%;
             }
 
             .login-register-btn:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
+                background: rgba(255, 255, 255, 0.18);
+                border-color: rgba(255, 255, 255, 0.35);
+                box-shadow: 0 10px 30px rgba(99, 102, 241, 0.25), 0 0 20px rgba(255, 255, 255, 0.1);
+                color: #f8fafc;
             }
         `;
         document.head.appendChild(style);
