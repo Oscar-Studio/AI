@@ -863,7 +863,9 @@
                             if (delta.content) {
                                 fullResponse += delta.content;
                                 outputChars += delta.content.length;
-                                contentDiv.textContent = fullResponse;
+                                // 流式渲染 Markdown（使用 DOMPurify 防止 XSS）
+                                const rendered = marked.parse(fullResponse, { async: false });
+                                contentDiv.innerHTML = DOMPurify.sanitize(rendered);
                                 scrollBottom();
                             }
                         }
@@ -878,9 +880,12 @@
 
                         // Answer content
                         if (!isMiniMax && d.choices?.[0]?.delta?.content) {
-                            fullResponse += d.choices[0].delta.content;
-                            outputChars += d.choices[0].delta.content.length;
-                            contentDiv.textContent = fullResponse;
+                            const content = d.choices[0].delta.content;
+                            fullResponse += content;
+                            outputChars += content.length;
+                            // 流式渲染 Markdown（使用 DOMPurify 防止 XSS）
+                            const rendered = marked.parse(fullResponse, { async: false });
+                            contentDiv.innerHTML = DOMPurify.sanitize(rendered);
                             scrollBottom();
                         }
 
