@@ -376,6 +376,78 @@
             color: #ff7b72;
         }
 
+        /* ===== MSG META (copy + token) ===== */
+        .msg-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 2px;
+            min-height: 20px;
+        }
+        .msg.user .msg-meta { justify-content: flex-end; }
+        .msg.ai .msg-meta { justify-content: flex-start; }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            transition: color 0.15s;
+            opacity: 0;
+        }
+        .msg:hover .copy-btn,
+        .copy-btn:focus { opacity: 1; }
+        .copy-btn:hover { color: var(--text); }
+        .copy-btn svg { width: 13px; height: 13px; }
+        .copy-btn.copied { color: var(--accent); }
+
+        /* Token info button */
+        .token-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            transition: color 0.15s;
+            position: relative;
+            opacity: 0;
+        }
+        .msg.ai:hover .token-btn { opacity: 1; }
+        .token-btn:hover { color: var(--text); }
+        .token-btn svg { width: 13px; height: 13px; }
+
+        /* Token tooltip */
+        .token-tip {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .token-btn:hover .token-tip,
+        .token-btn:focus .token-tip { display: block; }
+        .token-tip span { color: var(--accent); }
+
         /* ===== QUOTA BADGE ===== */
         .premium-btn.unlocked {
             background: rgba(0, 229, 255, 0.1) !important;
@@ -572,6 +644,7 @@
 
     let abortCtrl    = null;
     let isGenerating = false;
+    let latestUsage  = null; // 最近的 token 用量
 
     // 服务端配额缓存
     let quotaCache = null; // { remaining, limit, used, tier }
@@ -958,7 +1031,7 @@
     // ==========================================
     // HELPERS
     // ==========================================
-    function appendMsg(role, text) {
+    function appendMsg(role, text, meta) {
         const div = document.createElement('div');
         div.className = `msg ${role}`;
 
@@ -982,6 +1055,49 @@
         }
 
         body.appendChild(bubble);
+
+        // meta row: copy + token
+        const metaRow = document.createElement('div');
+        metaRow.className = 'msg-meta';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.title = '复制';
+        copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制`;
+        copyBtn.addEventListener('click', () => {
+            const src = role === 'ai'
+                ? bubble.querySelector('.content')?.textContent || ''
+                : bubble.textContent || '';
+            navigator.clipboard.writeText(src).then(() => {
+                copyBtn.classList.add('copied');
+                copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>已复制`;
+                setTimeout(() => {
+                    copyBtn.classList.remove('copied');
+                    copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制`;
+                }, 1500);
+            });
+        });
+
+        if (role === 'ai') {
+            const tokenBtn = document.createElement('button');
+            tokenBtn.className = 'token-btn';
+            tokenBtn.title = '用量详情';
+            const tip = document.createElement('div');
+            tip.className = 'token-tip';
+            if (meta) {
+                tip.innerHTML = `输入: <span>${meta.input || 0}</span> &nbsp;|&nbsp; 输出: <span>${meta.output || 0}</span>`;
+                tokenBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>${meta.total || 0}`;
+            } else {
+                tip.innerHTML = `输入: <span>–</span> &nbsp;|&nbsp; 输出: <span>–</span>`;
+                tokenBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>–`;
+            }
+            tokenBtn.appendChild(tip);
+            metaRow.appendChild(tokenBtn);
+        }
+
+        metaRow.appendChild(copyBtn);
+        body.appendChild(metaRow);
+
         div.appendChild(avatar);
         div.appendChild(body);
         chat.appendChild(div);
@@ -1018,20 +1134,42 @@
 
     function updateStats(u) {
         if (!u) return;
-        // 不同 API 返回的字段名不同，按优先级取：input/prompt → output/completion
-        if (u.input_tokens !== undefined)      statIn.textContent = u.input_tokens;
-        else if (u.prompt_tokens !== undefined) statIn.textContent = u.prompt_tokens;
-
-        if (u.output_tokens !== undefined)      statOut.textContent = u.output_tokens;
-        else if (u.completion_tokens !== undefined) statOut.textContent = u.completion_tokens;
-
-        if (u.total_tokens !== undefined)      statTotal.textContent = u.total_tokens;
+        latestUsage = {
+            input: u.input_tokens ?? u.prompt_tokens ?? 0,
+            output: u.output_tokens ?? u.completion_tokens ?? 0,
+            total: u.total_tokens ?? 0
+        };
+        statIn.textContent = latestUsage.input;
+        statOut.textContent = latestUsage.output;
+        statTotal.textContent = latestUsage.total;
+        updateTokenBtn();
     }
 
     function clearStats() {
         statIn.textContent = '0';
         statOut.textContent = '0';
         statTotal.textContent = '0';
+    }
+
+    // 更新 AI 消息框下的 token 按钮
+    function updateTokenBtn() {
+        const tokenBtns = chat.querySelectorAll('.msg.ai .token-btn');
+        tokenBtns.forEach(btn => {
+            const total = btn.querySelector('svg')?.nextSibling;
+            if (latestUsage) {
+                const tip = btn.querySelector('.token-tip');
+                if (tip) {
+                    tip.innerHTML = `输入: <span>${latestUsage.input}</span> &nbsp;|&nbsp; 输出: <span>${latestUsage.output}</span>`;
+                }
+                // 找到文字节点并更新
+                for (let i = 0; i < btn.childNodes.length; i++) {
+                    if (btn.childNodes[i].nodeType === 3) {
+                        btn.childNodes[i].textContent = latestUsage.total;
+                        break;
+                    }
+                }
+            }
+        });
     }
 
     // ==========================================
