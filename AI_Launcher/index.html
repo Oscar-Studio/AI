@@ -644,7 +644,7 @@
 
     let abortCtrl    = null;
     let isGenerating = false;
-    let latestUsage  = null; // 最近的 token 用量
+    let currentAiDiv = null; // 当前正在生成中的 AI 消息框
 
     // 服务端配额缓存
     let quotaCache = null; // { remaining, limit, used, tier }
@@ -797,6 +797,7 @@
         setLoading(true);
 
         const aiDiv = appendMsg('ai', '');
+        currentAiDiv = aiDiv;
         const reasoningDiv = document.createElement('div');
         reasoningDiv.className = 'reasoning-block';
         aiDiv.querySelector('.msg-bubble').prepend(reasoningDiv);
@@ -1024,6 +1025,7 @@
         } finally {
             setLoading(false);
             abortCtrl = null;
+            currentAiDiv = null;
             fetchQuota().then(() => updateQuotaUI());
         }
     }
@@ -1134,42 +1136,35 @@
 
     function updateStats(u) {
         if (!u) return;
-        latestUsage = {
-            input: u.input_tokens ?? u.prompt_tokens ?? 0,
-            output: u.output_tokens ?? u.completion_tokens ?? 0,
-            total: u.total_tokens ?? 0
-        };
-        statIn.textContent = latestUsage.input;
-        statOut.textContent = latestUsage.output;
-        statTotal.textContent = latestUsage.total;
-        updateTokenBtn();
+        const input = u.input_tokens ?? u.prompt_tokens ?? 0;
+        const output = u.output_tokens ?? u.completion_tokens ?? 0;
+        const total = u.total_tokens ?? 0;
+        statIn.textContent = input;
+        statOut.textContent = output;
+        statTotal.textContent = total;
+
+        // 仅更新当前 AI 消息框的 token 按钮
+        if (currentAiDiv) {
+            const tokenBtn = currentAiDiv.querySelector('.token-btn');
+            if (tokenBtn) {
+                const tip = tokenBtn.querySelector('.token-tip');
+                if (tip) {
+                    tip.innerHTML = `输入: <span>${input}</span> &nbsp;|&nbsp; 输出: <span>${output}</span>`;
+                }
+                for (let i = 0; i < tokenBtn.childNodes.length; i++) {
+                    if (tokenBtn.childNodes[i].nodeType === 3) {
+                        tokenBtn.childNodes[i].textContent = total;
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     function clearStats() {
         statIn.textContent = '0';
         statOut.textContent = '0';
         statTotal.textContent = '0';
-    }
-
-    // 更新 AI 消息框下的 token 按钮
-    function updateTokenBtn() {
-        const tokenBtns = chat.querySelectorAll('.msg.ai .token-btn');
-        tokenBtns.forEach(btn => {
-            const total = btn.querySelector('svg')?.nextSibling;
-            if (latestUsage) {
-                const tip = btn.querySelector('.token-tip');
-                if (tip) {
-                    tip.innerHTML = `输入: <span>${latestUsage.input}</span> &nbsp;|&nbsp; 输出: <span>${latestUsage.output}</span>`;
-                }
-                // 找到文字节点并更新
-                for (let i = 0; i < btn.childNodes.length; i++) {
-                    if (btn.childNodes[i].nodeType === 3) {
-                        btn.childNodes[i].textContent = latestUsage.total;
-                        break;
-                    }
-                }
-            }
-        });
     }
 
     // ==========================================
