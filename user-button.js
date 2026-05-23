@@ -316,19 +316,19 @@
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
             }
 
-            // 应用背景图片 - 直接设置 body style 属性，确保最高优先级
+            // 应用背景图片 - 设置在 html 元素上（优先级高于 body）
             if (ui.backgroundImage) {
                 const bgUrl = `${UPLOAD_BASE}${ui.backgroundImage}`;
                 console.log('[UI] 设置背景:', bgUrl);
 
-                // 直接设置 body 元素的 style（优先级高于 CSS 选择器）
-                document.body.style.setProperty('background-image', `url(${bgUrl})`);
-                document.body.style.setProperty('background-size', 'cover');
-                document.body.style.setProperty('background-position', 'center');
-                document.body.style.setProperty('background-repeat', 'no-repeat');
-                document.body.style.setProperty('background-attachment', 'fixed');
+                // 设置 html 元素的背景
+                document.documentElement.style.backgroundImage = `url(${bgUrl})`;
+                document.documentElement.style.backgroundSize = 'cover';
+                document.documentElement.style.backgroundPosition = 'center';
+                document.documentElement.style.backgroundRepeat = 'no-repeat';
+                document.documentElement.style.backgroundAttachment = 'fixed';
             } else {
-                document.body.style.setProperty('background-image', 'none');
+                document.documentElement.style.backgroundImage = 'none';
             }
 
             // 应用字体
