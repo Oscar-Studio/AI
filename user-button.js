@@ -343,9 +343,14 @@
                 document.body.style.setProperty('font-family', ui.fontFamily, 'important');
             }
 
-            // 背景音乐（需要用户交互后才能播放，所以暂不自动播放）
+            // 背景音乐
             if (ui.backgroundMusic) {
                 window._userBgMusic = `${UPLOAD_BASE}${ui.backgroundMusic}`;
+                // 自动播放背景音乐
+                const audio = new Audio(window._userBgMusic);
+                audio.loop = true;
+                audio.volume = 0.3;
+                audio.play().catch(() => {}); // 忽略自动播放限制
             }
         } catch (e) {
             console.warn('[UI] 应用用户配置失败:', e.message);
