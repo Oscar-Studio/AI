@@ -316,17 +316,31 @@
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
             }
 
-            // 应用背景图片 - 通过 CSS 变量让 main-station style.css 可以继承
+            // 应用背景图片 - 通过直接注入 style 元素来确保优先级最高
             if (ui.backgroundImage) {
                 const bgUrl = `url(${UPLOAD_BASE}${ui.backgroundImage})`;
                 console.log('[UI] 设置背景:', bgUrl);
-                document.documentElement.style.setProperty('--user-bg-image', bgUrl);
-                document.documentElement.style.setProperty('--user-bg-size', 'cover');
-                document.documentElement.style.setProperty('--user-bg-position', 'center');
-                document.documentElement.style.setProperty('--user-bg-repeat', 'no-repeat');
-                document.documentElement.style.setProperty('--user-bg-attachment', 'fixed');
+
+                // 移除旧的可能存在的用户背景样式
+                const oldStyle = document.getElementById('user-custom-bg');
+                if (oldStyle) oldStyle.remove();
+
+                // 注入新样式，确保最高优先级
+                const style = document.createElement('style');
+                style.id = 'user-custom-bg';
+                style.textContent = `
+                    body {
+                        background-image: ${bgUrl} !important;
+                        background-size: cover !important;
+                        background-position: center !important;
+                        background-repeat: no-repeat !important;
+                        background-attachment: fixed !important;
+                    }
+                `;
+                document.head.appendChild(style);
             } else {
-                document.documentElement.style.setProperty('--user-bg-image', 'none');
+                const oldStyle = document.getElementById('user-custom-bg');
+                if (oldStyle) oldStyle.remove();
             }
 
             // 应用字体
