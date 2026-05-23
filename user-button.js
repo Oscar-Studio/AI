@@ -316,19 +316,37 @@
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
             }
 
-            // 应用背景图片 - 设置在 html 元素上（优先级高于 body）
+            // 应用背景图片 - 作为固定覆盖层（滤镜效果）
             if (ui.backgroundImage) {
                 const bgUrl = `${UPLOAD_BASE}${ui.backgroundImage}`;
                 console.log('[UI] 设置背景:', bgUrl);
 
-                // 设置 html 元素的背景
-                document.documentElement.style.backgroundImage = `url(${bgUrl})`;
-                document.documentElement.style.backgroundSize = 'cover';
-                document.documentElement.style.backgroundPosition = 'center';
-                document.documentElement.style.backgroundRepeat = 'no-repeat';
-                document.documentElement.style.backgroundAttachment = 'fixed';
+                // 移除旧的覆盖层
+                const oldOverlay = document.getElementById('user-bg-overlay');
+                if (oldOverlay) oldOverlay.remove();
+
+                // 创建固定覆盖层
+                const overlay = document.createElement('div');
+                overlay.id = 'user-bg-overlay';
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-image: url(${bgUrl});
+                    background-size: cover;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                    background-attachment: fixed;
+                    opacity: 0.3;
+                    z-index: -1;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(overlay);
             } else {
-                document.documentElement.style.backgroundImage = 'none';
+                const oldOverlay = document.getElementById('user-bg-overlay');
+                if (oldOverlay) oldOverlay.remove();
             }
 
             // 应用字体
