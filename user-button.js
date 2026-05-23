@@ -346,11 +346,26 @@
             // 背景音乐
             if (ui.backgroundMusic) {
                 window._userBgMusic = `${UPLOAD_BASE}${ui.backgroundMusic}`;
-                // 自动播放背景音乐
-                const audio = new Audio(window._userBgMusic);
-                audio.loop = true;
-                audio.volume = 0.3;
-                audio.play().catch(() => {}); // 忽略自动播放限制
+                console.log('[UI] 背景音乐:', window._userBgMusic);
+                // 先暂停之前的
+                if (window._bgAudio) {
+                    window._bgAudio.pause();
+                    window._bgAudio = null;
+                }
+                // 创建音频
+                window._bgAudio = new Audio(window._userBgMusic);
+                window._bgAudio.loop = true;
+                window._bgAudio.volume = 0.3;
+                window._bgAudio.play().then(() => {
+                    console.log('[UI] 背景音乐开始播放');
+                }).catch(e => {
+                    console.warn('[UI] 音乐播放失败（可能需要用户交互）:', e.message);
+                    // 监听用户首次交互后播放
+                    document.addEventListener('click', function once() {
+                        document.removeEventListener('click', once);
+                        window._bgAudio.play().catch(() => {});
+                    }, { once: true });
+                });
             }
         } catch (e) {
             console.warn('[UI] 应用用户配置失败:', e.message);
