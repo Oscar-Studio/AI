@@ -316,15 +316,28 @@
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
             }
 
-            // 应用背景图片 - 设置在 main-station 的 #user-bg-layer 上
+            // 应用背景图片
             const bgLayer = document.getElementById('user-bg-layer');
-            if (bgLayer) {
-                if (ui.backgroundImage) {
-                    const bgUrl = `${UPLOAD_BASE}${ui.backgroundImage}`;
-                    console.log('[UI] 设置背景:', bgUrl);
+            if (ui.backgroundImage) {
+                const bgUrl = `${UPLOAD_BASE}${ui.backgroundImage}`;
+                console.log('[UI] 设置背景:', bgUrl);
+
+                if (bgLayer) {
+                    // main-station：有专用背景层
                     bgLayer.style.backgroundImage = `url(${bgUrl})`;
                 } else {
+                    // 其他站点：直接设置 body style
+                    document.body.style.backgroundImage = `url(${bgUrl})`;
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundRepeat = 'no-repeat';
+                    document.body.style.backgroundAttachment = 'fixed';
+                }
+            } else {
+                if (bgLayer) {
                     bgLayer.style.backgroundImage = 'none';
+                } else {
+                    document.body.style.backgroundImage = 'none';
                 }
             }
 
