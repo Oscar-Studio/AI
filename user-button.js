@@ -316,20 +316,20 @@
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
             }
 
-            // 应用背景图片
+            // 应用背景图片 - 使用更高优先级
             if (ui.backgroundImage) {
                 const bgUrl = `url(${UPLOAD_BASE}${ui.backgroundImage})`;
                 console.log('[UI] 设置背景:', bgUrl);
-                document.body.style.backgroundImage = bgUrl;
-                document.body.style.backgroundSize = 'cover';
-                document.body.style.backgroundPosition = 'center';
-                document.body.style.backgroundRepeat = 'no-repeat';
-                document.body.style.backgroundAttachment = 'fixed';
+                document.body.style.setProperty('background-image', bgUrl, 'important');
+                document.body.style.setProperty('background-size', 'cover', 'important');
+                document.body.style.setProperty('background-position', 'center', 'important');
+                document.body.style.setProperty('background-repeat', 'no-repeat', 'important');
+                document.body.style.setProperty('background-attachment', 'fixed', 'important');
             }
 
             // 应用字体
             if (ui.fontFamily) {
-                document.body.style.fontFamily = ui.fontFamily;
+                document.body.style.setProperty('font-family', ui.fontFamily, 'important');
             }
 
             // 背景音乐（需要用户交互后才能播放，所以暂不自动播放）
