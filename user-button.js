@@ -310,21 +310,10 @@
             // 上传文件的基础路径（不带 /api）
             const UPLOAD_BASE = 'https://api.oscarstudio.cn';
 
-            // 应用主题颜色到 CSS 变量和色调层
+            // 应用主题颜色到 CSS 变量
             if (ui.primaryColor) {
                 document.documentElement.style.setProperty('--primary', ui.primaryColor);
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
-
-                // 给 body 添加色调覆盖层
-                let tintOverlay = document.getElementById('user-tint-overlay');
-                if (!tintOverlay) {
-                    tintOverlay = document.createElement('div');
-                    tintOverlay.id = 'user-tint-overlay';
-                    tintOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:-1;';
-                    document.body.appendChild(tintOverlay);
-                }
-                tintOverlay.style.background = ui.primaryColor;
-                tintOverlay.style.opacity = '0.15';
             }
 
             // 应用背景图片 - 统一设置 body style
