@@ -86,6 +86,7 @@
                             <span class="user-email">${user.email || ''}</span>
                         </div>
                         <div class="user-dropdown-divider"></div>
+                        <a href="https://api.oscarstudio.cn/user/settings" class="user-dropdown-item" target="_blank">UI 设置</a>
                         <button class="user-dropdown-item" id="logoutBtn">退出登录</button>
                     </div>
                 </div>
@@ -224,6 +225,12 @@
                 cursor: pointer;
                 transition: all 0.3s;
                 border-radius: 10px;
+                text-decoration: none;
+            }
+
+            .user-dropdown-item:not(:last-child):hover {
+                background: rgba(99, 102, 241, 0.15);
+                color: #818cf8;
             }
 
             .user-dropdown-item:hover {
