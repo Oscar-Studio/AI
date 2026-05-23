@@ -305,6 +305,7 @@
             if (!data.success || !data.ui) return;
 
             const ui = data.ui;
+            console.log('[UI] 应用配置:', JSON.stringify(ui));
 
             // 应用主题颜色到 CSS 变量
             if (ui.primaryColor) {
@@ -314,9 +315,12 @@
 
             // 应用背景图片
             if (ui.backgroundImage) {
-                document.body.style.backgroundImage = `url(${API_BASE}${ui.backgroundImage})`;
+                const bgUrl = `url(${API_BASE}${ui.backgroundImage})`;
+                console.log('[UI] 设置背景:', bgUrl);
+                document.body.style.backgroundImage = bgUrl;
                 document.body.style.backgroundSize = 'cover';
                 document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundRepeat = 'no-repeat';
                 document.body.style.backgroundAttachment = 'fixed';
             }
 
