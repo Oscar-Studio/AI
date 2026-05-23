@@ -307,6 +307,9 @@
             const ui = data.ui;
             console.log('[UI] 应用配置:', JSON.stringify(ui));
 
+            // 上传文件的基础路径（不带 /api）
+            const UPLOAD_BASE = 'https://api.oscarstudio.cn';
+
             // 应用主题颜色到 CSS 变量
             if (ui.primaryColor) {
                 document.documentElement.style.setProperty('--primary', ui.primaryColor);
@@ -315,7 +318,7 @@
 
             // 应用背景图片
             if (ui.backgroundImage) {
-                const bgUrl = `url(${API_BASE}${ui.backgroundImage})`;
+                const bgUrl = `url(${UPLOAD_BASE}${ui.backgroundImage})`;
                 console.log('[UI] 设置背景:', bgUrl);
                 document.body.style.backgroundImage = bgUrl;
                 document.body.style.backgroundSize = 'cover';
@@ -331,7 +334,7 @@
 
             // 背景音乐（需要用户交互后才能播放，所以暂不自动播放）
             if (ui.backgroundMusic) {
-                window._userBgMusic = `${API_BASE}${ui.backgroundMusic}`;
+                window._userBgMusic = `${UPLOAD_BASE}${ui.backgroundMusic}`;
             }
         } catch (e) {
             console.warn('[UI] 应用用户配置失败:', e.message);
