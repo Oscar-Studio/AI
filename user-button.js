@@ -86,6 +86,7 @@
                             <span class="user-email">${user.email || ''}</span>
                         </div>
                         <div class="user-dropdown-divider"></div>
+                        <button class="user-dropdown-item" id="muteBtn">🔇 静音</button>
                         <a href="https://api.oscarstudio.cn/user/settings" class="user-dropdown-item user-dropdown-link">UI 设置</a>
                         <button class="user-dropdown-item" id="logoutBtn">退出登录</button>
                     </div>
@@ -104,6 +105,14 @@
                 // 清除跨域 Cookie（和登录时设置的一致）
                 document.cookie = 'userToken=; max-age=0; path=/; domain=.oscarstudio.cn';
                 location.reload();
+            });
+
+            // 静音按钮
+            document.getElementById('muteBtn').addEventListener('click', function() {
+                if (window._bgAudio) {
+                    window._bgAudio.muted = !window._bgAudio.muted;
+                    this.textContent = window._bgAudio.muted ? '🔇 静音' : '🔊 播放';
+                }
             });
 
             // 点击其他地方关闭下拉菜单
@@ -244,6 +253,15 @@
             #logoutBtn:hover {
                 background: rgba(248, 81, 73, 0.15);
                 color: #f85149;
+            }
+
+            #muteBtn {
+                color: var(--gray);
+            }
+
+            #muteBtn:hover {
+                background: rgba(99, 102, 241, 0.15);
+                color: #818cf8;
             }
 
             .login-register-btn {
