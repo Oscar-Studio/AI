@@ -316,15 +316,17 @@
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
             }
 
-            // 应用背景图片 - 使用更高优先级
+            // 应用背景图片 - 通过 CSS 变量让 main-station style.css 可以继承
             if (ui.backgroundImage) {
                 const bgUrl = `url(${UPLOAD_BASE}${ui.backgroundImage})`;
                 console.log('[UI] 设置背景:', bgUrl);
-                document.body.style.setProperty('background-image', bgUrl, 'important');
-                document.body.style.setProperty('background-size', 'cover', 'important');
-                document.body.style.setProperty('background-position', 'center', 'important');
-                document.body.style.setProperty('background-repeat', 'no-repeat', 'important');
-                document.body.style.setProperty('background-attachment', 'fixed', 'important');
+                document.documentElement.style.setProperty('--user-bg-image', bgUrl);
+                document.documentElement.style.setProperty('--user-bg-size', 'cover');
+                document.documentElement.style.setProperty('--user-bg-position', 'center');
+                document.documentElement.style.setProperty('--user-bg-repeat', 'no-repeat');
+                document.documentElement.style.setProperty('--user-bg-attachment', 'fixed');
+            } else {
+                document.documentElement.style.setProperty('--user-bg-image', 'none');
             }
 
             // 应用字体
