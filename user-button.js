@@ -377,12 +377,18 @@
                 window._bgAudio.play().then(() => {
                     console.log('[UI] 背景音乐开始播放');
                 }).catch(e => {
-                    console.warn('[UI] 音乐播放失败（可能需要用户交互）:', e.message);
-                    // 监听用户首次交互后播放
-                    document.addEventListener('click', function once() {
-                        document.removeEventListener('click', once);
-                        window._bgAudio.play().catch(() => {});
-                    }, { once: true });
+                    console.warn('[UI] 音乐播放失败:', e.message);
+                });
+
+                // 页面失去焦点时暂停，获得焦点时继续播放
+                document.addEventListener('visibilitychange', () => {
+                    if (window._bgAudio) {
+                        if (document.hidden) {
+                            window._bgAudio.pause();
+                        } else {
+                            window._bgAudio.play().catch(() => {});
+                        }
+                    }
                 });
             }
         } catch (e) {
