@@ -316,29 +316,17 @@
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
             }
 
-            // 应用背景图片
-            const bgLayer = document.getElementById('user-bg-layer');
+            // 应用背景图片 - 统一设置 body style
             if (ui.backgroundImage) {
                 const bgUrl = `${UPLOAD_BASE}${ui.backgroundImage}`;
                 console.log('[UI] 设置背景:', bgUrl);
-
-                if (bgLayer) {
-                    // main-station：有专用背景层
-                    bgLayer.style.backgroundImage = `url(${bgUrl})`;
-                } else {
-                    // 其他站点：直接设置 body style
-                    document.body.style.backgroundImage = `url(${bgUrl})`;
-                    document.body.style.backgroundSize = 'cover';
-                    document.body.style.backgroundPosition = 'center';
-                    document.body.style.backgroundRepeat = 'no-repeat';
-                    document.body.style.backgroundAttachment = 'fixed';
-                }
+                document.body.style.backgroundImage = `url(${bgUrl})`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundRepeat = 'no-repeat';
+                document.body.style.backgroundAttachment = 'fixed';
             } else {
-                if (bgLayer) {
-                    bgLayer.style.backgroundImage = 'none';
-                } else {
-                    document.body.style.backgroundImage = 'none';
-                }
+                document.body.style.backgroundImage = 'none';
             }
 
             // 应用字体
