@@ -316,31 +316,19 @@
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
             }
 
-            // 应用背景图片 - 通过直接注入 style 元素来确保优先级最高
+            // 应用背景图片 - 直接设置 body style 属性，确保最高优先级
             if (ui.backgroundImage) {
-                const bgUrl = `url(${UPLOAD_BASE}${ui.backgroundImage})`;
+                const bgUrl = `${UPLOAD_BASE}${ui.backgroundImage}`;
                 console.log('[UI] 设置背景:', bgUrl);
 
-                // 移除旧的可能存在的用户背景样式
-                const oldStyle = document.getElementById('user-custom-bg');
-                if (oldStyle) oldStyle.remove();
-
-                // 注入新样式，确保最高优先级
-                const style = document.createElement('style');
-                style.id = 'user-custom-bg';
-                style.textContent = `
-                    body {
-                        background-image: ${bgUrl} !important;
-                        background-size: cover !important;
-                        background-position: center !important;
-                        background-repeat: no-repeat !important;
-                        background-attachment: fixed !important;
-                    }
-                `;
-                document.head.appendChild(style);
+                // 直接设置 body 元素的 style（优先级高于 CSS 选择器）
+                document.body.style.setProperty('background-image', `url(${bgUrl})`);
+                document.body.style.setProperty('background-size', 'cover');
+                document.body.style.setProperty('background-position', 'center');
+                document.body.style.setProperty('background-repeat', 'no-repeat');
+                document.body.style.setProperty('background-attachment', 'fixed');
             } else {
-                const oldStyle = document.getElementById('user-custom-bg');
-                if (oldStyle) oldStyle.remove();
+                document.body.style.setProperty('background-image', 'none');
             }
 
             // 应用字体
