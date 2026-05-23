@@ -86,7 +86,7 @@
                             <span class="user-email">${user.email || ''}</span>
                         </div>
                         <div class="user-dropdown-divider"></div>
-                        <a href="https://api.oscarstudio.cn/user/settings" class="user-dropdown-item" target="_blank">UI 设置</a>
+                        <a href="https://api.oscarstudio.cn/user/settings" class="user-dropdown-item">UI 设置</a>
                         <button class="user-dropdown-item" id="logoutBtn">退出登录</button>
                     </div>
                 </div>
@@ -288,6 +288,59 @@
         // 从跨域 Cookie 同步登录状态（如果 localStorage 还没有）
         await syncLoginFromCookie();
         renderUserButton();
+        // 应用用户 UI 配置
+        applyUserUI();
+    }
+
+    // 应用用户 UI 配置
+    async function applyUserUI() {
+        const token = localStorage.getItem('ai_token') || getCookie('userToken');
+        if (!token) return;
+
+        try {
+            const resp = await fetch(`${API_BASE}/ui`, {
+                credentials: 'include'
+            });
+            const data = await resp.json();
+            if (!data.success || !data.ui) return;
+
+            const ui = data.ui;
+
+            // 应用主题颜色到 CSS 变量
+            if (ui.primaryColor) {
+                document.documentElement.style.setProperty('--primary', ui.primaryColor);
+                document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
+            }
+
+            // 应用背景图片
+            if (ui.backgroundImage) {
+                document.body.style.backgroundImage = `url(${API_BASE}${ui.backgroundImage})`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundAttachment = 'fixed';
+            }
+
+            // 应用字体
+            if (ui.fontFamily) {
+                document.body.style.fontFamily = ui.fontFamily;
+            }
+
+            // 背景音乐（需要用户交互后才能播放，所以暂不自动播放）
+            if (ui.backgroundMusic) {
+                window._userBgMusic = `${API_BASE}${ui.backgroundMusic}`;
+            }
+        } catch (e) {
+            console.warn('[UI] 应用用户配置失败:', e.message);
+        }
+    }
+
+    // 调整颜色亮度
+    function adjustColor(hex, amount) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+        const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+        const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+        return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
     }
 
     // DOM 加载完成后执行
