@@ -546,9 +546,7 @@
         </div>
         <div class="header-right">
             <div class="header-stats">
-                <span>In: <strong id="stat-in">0</strong></span>
-                <span>Out: <strong id="stat-out">0</strong></span>
-                <span>Total: <strong id="stat-total">0</strong></span>
+                <span>累计: <strong id="stat-total">0</strong> tokens</span>
                 <span id="quota-badge" style="color:#ff7b72;font-size:0.72rem;display:none;">剩余 <strong id="quota-num">0</strong> credits</span>
             </div>
             <button class="new-chat-btn" id="new-chat-btn">新对话</button>
@@ -690,8 +688,6 @@
     const providerSel  = document.getElementById('provider-select');
     const modelSel     = document.getElementById('model-select');
     const thinkBtn     = document.getElementById('think-btn');
-    const statIn       = document.getElementById('stat-in');
-    const statOut      = document.getElementById('stat-out');
     const statTotal    = document.getElementById('stat-total');
 
     const history = [];
@@ -1139,11 +1135,9 @@
         const input = u.input_tokens ?? u.prompt_tokens ?? 0;
         const output = u.output_tokens ?? u.completion_tokens ?? 0;
         const total = u.total_tokens ?? 0;
-        statIn.textContent = input;
-        statOut.textContent = output;
         statTotal.textContent = total;
 
-        // 仅更新当前 AI 消息框的 token 按钮
+        // 更新当前 AI 消息框的 token 按钮（本次用量）
         if (currentAiDiv) {
             const tokenBtn = currentAiDiv.querySelector('.token-btn');
             if (tokenBtn) {
@@ -1162,8 +1156,6 @@
     }
 
     function clearStats() {
-        statIn.textContent = '0';
-        statOut.textContent = '0';
         statTotal.textContent = '0';
     }
 
