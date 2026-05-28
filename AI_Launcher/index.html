@@ -545,7 +545,7 @@
                 <option value="qwen">Qwen</option>
                 <option value="zai">GLM</option>
                 <option value="moonshot">Kimi</option>
-                <option value="hy3">Hy3</option>
+                <option value="hy3">Tencent</option>
             </select>
         </div>
         <div class="header-right">
@@ -945,6 +945,21 @@
                                 reasoningDiv.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
                                 scrollBottom();
+                            }
+                        }
+                        // Qwen / GLM / Kimi / Hy3 reasoning via OpenRouter
+                        if (['qwen', 'zai', 'moonshot', 'hy3'].includes(provider) && thinking) {
+                            const delta = d.choices?.[0]?.delta;
+                            if (delta) {
+                                // 尝试多个可能的 reasoning 字段名
+                                const reasoningText = delta.reasoning || delta.thinking || delta.reasoning_content || delta.thought;
+                                if (reasoningText) {
+                                    fullReasoning += reasoningText;
+                                    outputChars += reasoningText.length;
+                                    reasoningDiv.textContent = fullReasoning;
+                                    reasoningDiv.style.display = 'block';
+                                    scrollBottom();
+                                }
                             }
                         }
                         // MiniMax reasoning
