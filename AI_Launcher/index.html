@@ -541,11 +541,11 @@
                 <option value="deepseek">DeepSeek</option>
                 <option value="minimax">MiniMax</option>
                 <option value="mimo">MiMo</option>
+                <option value="xai">xAI</option>
                 <option value="qwen">Qwen</option>
                 <option value="zai">GLM</option>
                 <option value="moonshot">Kimi</option>
                 <option value="tencent">Hy3</option>
-                <option value="openrouter">OpenRouter</option>
             </select>
         </div>
         <div class="header-right">
@@ -650,7 +650,7 @@
                 { id: 'tencent/hy3-preview', name: 'Hy3-Preview' }
             ]
         },
-        openrouter: {
+        xai: {
             models: [
                 { id: 'x-ai/grok-4.3', name: 'Grok 4.3' }
             ]
@@ -876,7 +876,7 @@
         }
 
         // xAI Grok via OpenRouter
-        if (provider === 'openrouter' && modelId === 'x-ai/grok-4.3') {
+        if (provider === 'xai' && modelId === 'x-ai/grok-4.3') {
             body.extra_body = {
                 reasoning: thinking ? 'enabled' : 'disabled'
             };
@@ -942,7 +942,7 @@
                         const d = JSON.parse(s);
 
                         // xAI reasoning — 仅在思考开启时显示
-                        if (provider === 'openrouter' && modelId === 'x-ai/grok-4.3' && thinking) {
+                        if (provider === 'xai' && modelId === 'x-ai/grok-4.3' && thinking) {
                             const delta = d.choices?.[0]?.delta;
                             if (delta?.reasoning) {
                                 fullReasoning += delta.reasoning;
