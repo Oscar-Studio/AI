@@ -541,7 +541,11 @@
                 <option value="deepseek">DeepSeek</option>
                 <option value="minimax">MiniMax</option>
                 <option value="mimo">MiMo</option>
-                <option value="xai">xAI</option>
+                <option value="qwen">Qwen</option>
+                <option value="zai">GLM</option>
+                <option value="moonshot">Kimi</option>
+                <option value="tencent">Hy3</option>
+                <option value="openrouter">OpenRouter</option>
             </select>
         </div>
         <div class="header-right">
@@ -620,7 +624,33 @@
                 { id: 'mimo-v2.5-pro',  name: 'V2.5-Pro' }
             ]
         },
-        xai: {
+        qwen: {
+            models: [
+                { id: 'qwen/qwen3.7-max',   name: 'Qwen3.7-Max' },
+                { id: 'qwen/qwen3.6-plus',  name: 'Qwen3.6-Plus' },
+                { id: 'qwen/qwen3.6-flash', name: 'Qwen3.6-Flash' }
+            ]
+        },
+        zai: {
+            models: [
+                { id: 'z-ai/glm-5.1',       name: 'GLM-5.1' },
+                { id: 'z-ai/glm-5',          name: 'GLM-5' },
+                { id: 'z-ai/glm-4.7-flash', name: 'GLM-4.7-Flash' },
+                { id: 'z-ai/glm-5v-turbo',  name: 'GLM-5V-Turbo' }
+            ]
+        },
+        moonshot: {
+            models: [
+                { id: 'moonshotai/kimi-k2.6', name: 'Kimi-K2.6' },
+                { id: 'moonshotai/kimi-k2.5', name: 'Kimi-K2.5' }
+            ]
+        },
+        tencent: {
+            models: [
+                { id: 'tencent/hy3-preview', name: 'Hy3-Preview' }
+            ]
+        },
+        openrouter: {
             models: [
                 { id: 'x-ai/grok-4.3', name: 'Grok 4.3' }
             ]
@@ -734,7 +764,8 @@
 
     function applyThinkBtn() {
         // MiniMax：无法控制思考（reasoning_split 关不掉），按钮隐藏
-        const hideThink = provider === 'minimax';
+        // OpenRouter 通用模型（Qwen/GLM/Kimi/Hy3）也不支持 thinking 控制
+        const hideThink = provider === 'minimax' || ['qwen', 'zai', 'moonshot', 'tencent'].includes(provider);
         if (hideThink) {
             thinkBtn.style.display = 'none';
             thinking = true;
@@ -844,11 +875,16 @@
             };
         }
 
-        // xAI (Grok via OpenRouter)：OpenRouter 用 reasoning 参数
-        if (provider === 'xai') {
+        // xAI Grok via OpenRouter
+        if (provider === 'openrouter' && modelId === 'x-ai/grok-4.3') {
             body.extra_body = {
                 reasoning: thinking ? 'enabled' : 'disabled'
             };
+        }
+        // OpenRouter 通用模型（Qwen/GLM/Kimi/Hy3 等）— OpenRouter 不支持 thinking/reasoning
+        if (['qwen', 'zai', 'moonshot', 'tencent'].includes(provider)) {
+            delete body.extra_body;
+            delete body.thinking;
         }
 
         try {
@@ -906,7 +942,7 @@
                         const d = JSON.parse(s);
 
                         // xAI reasoning — 仅在思考开启时显示
-                        if (provider === 'xai' && thinking) {
+                        if (provider === 'openrouter' && modelId === 'x-ai/grok-4.3' && thinking) {
                             const delta = d.choices?.[0]?.delta;
                             if (delta?.reasoning) {
                                 fullReasoning += delta.reasoning;
