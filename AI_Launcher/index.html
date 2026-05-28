@@ -527,6 +527,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <script charset="UTF-8" id="LA_COLLECT" src="//sdk.51.la/js-sdk-pro.min.js"></script>
 <script>LA.init({id:"3ObMo9NLgqBCvJ53",ck:"3ObMo9NLgqBCvJ53"})</script>
 </head>
@@ -982,6 +985,7 @@
                                 // 流式渲染 Markdown（使用 DOMPurify 防止 XSS）
                                 const rendered = marked.parse(fullResponse, { async: false });
                                 contentDiv.innerHTML = DOMPurify.sanitize(rendered);
+                                renderMath(contentDiv);
                                 scrollBottom();
                             }
                         }
@@ -1002,6 +1006,7 @@
                             // 流式渲染 Markdown（使用 DOMPurify 防止 XSS）
                             const rendered = marked.parse(fullResponse, { async: false });
                             contentDiv.innerHTML = DOMPurify.sanitize(rendered);
+                            renderMath(contentDiv);
                             scrollBottom();
                         }
 
@@ -1053,8 +1058,15 @@
 
             history.push({ role: 'assistant', content: fullResponse });
             const r = typeof marked !== 'undefined' ? marked.parse(fullResponse) : fullResponse;
-            if (r instanceof Promise) r.then(html => { contentDiv.innerHTML = DOMPurify.sanitize(html); });
-            else contentDiv.innerHTML = DOMPurify.sanitize(r);
+            if (r instanceof Promise) {
+                r.then(html => {
+                    contentDiv.innerHTML = DOMPurify.sanitize(html);
+                    renderMath(contentDiv);
+                });
+            } else {
+                contentDiv.innerHTML = DOMPurify.sanitize(r);
+                renderMath(contentDiv);
+            }
 
         } catch (err) {
             contentDiv.classList.remove('typing');
@@ -1152,8 +1164,15 @@
     function renderMd(el, text) {
         if (typeof marked !== 'undefined') {
             const r = marked.parse(text);
-            if (r instanceof Promise) r.then(html => { el.innerHTML = html; });
-            else el.innerHTML = r;
+            if (r instanceof Promise) {
+                r.then(html => {
+                    el.innerHTML = DOMPurify.sanitize(html);
+                    renderMath(el);
+                });
+            } else {
+                el.innerHTML = DOMPurify.sanitize(r);
+                renderMath(el);
+            }
         } else {
             el.textContent = text;
         }
@@ -1161,8 +1180,27 @@
 
     function renderMdFinal(el, text) {
         const r = typeof marked !== 'undefined' ? marked.parse(text) : text;
-        if (r instanceof Promise) r.then(html => { el.innerHTML = html; });
-        else el.innerHTML = r;
+        if (r instanceof Promise) {
+            r.then(html => {
+                el.innerHTML = DOMPurify.sanitize(html);
+                renderMath(el);
+            });
+        } else {
+            el.innerHTML = DOMPurify.sanitize(r);
+            renderMath(el);
+        }
+    }
+
+    function renderMath(el) {
+        if (typeof renderMathInElement !== 'undefined') {
+            renderMathInElement(el, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                ],
+                throwOnError: false
+            });
+        }
     }
 
     function scrollBottom() {
