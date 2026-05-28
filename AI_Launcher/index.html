@@ -545,7 +545,7 @@
                 <option value="qwen">Qwen</option>
                 <option value="zai">GLM</option>
                 <option value="moonshot">Kimi</option>
-                <option value="tencent">Hy3</option>
+                <option value="hy3">Hy3</option>
             </select>
         </div>
         <div class="header-right">
@@ -645,7 +645,7 @@
                 { id: 'moonshotai/kimi-k2.5', name: 'Kimi-K2.5' }
             ]
         },
-        tencent: {
+        hy3: {
             models: [
                 { id: 'tencent/hy3-preview', name: 'Hy3-Preview' }
             ]
@@ -765,7 +765,7 @@
     function applyThinkBtn() {
         // MiniMax：无法控制思考（reasoning_split 关不掉），按钮隐藏
         // OpenRouter 通用模型（Qwen/GLM/Kimi/Hy3）也不支持 thinking 控制
-        const hideThink = provider === 'minimax' || ['qwen', 'zai', 'moonshot', 'tencent'].includes(provider);
+        const hideThink = provider === 'minimax';
         if (hideThink) {
             thinkBtn.style.display = 'none';
             thinking = true;
@@ -881,12 +881,7 @@
                 reasoning: thinking ? 'enabled' : 'disabled'
             };
         }
-        // OpenRouter 通用模型（Qwen/GLM/Kimi/Hy3 等）— OpenRouter 不支持 thinking/reasoning
-        if (['qwen', 'zai', 'moonshot', 'tencent'].includes(provider)) {
-            delete body.extra_body;
-            delete body.thinking;
-        }
-
+        
         try {
             const token = localStorage.getItem('ai_token');
             const headers = { 'Content-Type': 'application/json' };
