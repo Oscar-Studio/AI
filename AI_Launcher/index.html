@@ -227,13 +227,10 @@
             font-size: 0.82rem;
             font-style: italic;
             line-height: 1.6;
-            max-height: 40px;
             overflow: hidden;
-            transition: max-height 0.25s ease;
         }
 
         .reasoning-block.expanded .reasoning-body {
-            max-height: 2000px;
             overflow-y: auto;
         }
 
@@ -1137,7 +1134,7 @@
                                 outputChars += delta.reasoning.length;
                                 reasoningBody.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
-                                reasoningDiv.classList.add('expanded');
+                                reasoningDiv.classList.remove('expanded');
                                 scrollBottom();
                             }
                         }
@@ -1152,7 +1149,7 @@
                                     outputChars += reasoningText.length;
                                     reasoningBody.textContent = fullReasoning;
                                     reasoningDiv.style.display = 'block';
-                                    reasoningDiv.classList.add('expanded');
+                                    reasoningDiv.classList.remove('expanded');
                                     scrollBottom();
                                 }
                             }
@@ -1169,7 +1166,7 @@
                                 }
                                 reasoningBody.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
-                                reasoningDiv.classList.add('expanded');
+                                reasoningDiv.classList.remove('expanded');
                                 scrollBottom();
                             }
                             if (delta.content) {
@@ -1190,7 +1187,7 @@
                             outputChars += d.choices[0].delta.reasoning_content.length;
                             reasoningBody.textContent = fullReasoning;
                             reasoningDiv.style.display = 'block';
-                            reasoningDiv.classList.add('expanded');
+                            reasoningDiv.classList.remove('expanded');
                             scrollBottom();
                         }
 
