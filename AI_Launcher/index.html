@@ -1009,12 +1009,13 @@
         let _thinkStopped = false;
         let _reasoningExpanded = false; // user手动展开过就不再自动收
         const _thinkTimer = setInterval(() => {
-            if (isGenerating && !_thinkStopped) {
-                reasoningDiv.style.display = 'block';
-                const elapsed = Date.now() - thinkStartTime;
-                const secs = Math.round(elapsed / 1000);
-                const label = secs >= 60 ? `${Math.floor(secs/60)}分${secs%60}秒` : `${secs}秒`;
-                reasoningHeader.querySelector('.think-time').textContent = label;
+            if (_thinkStopped) return;
+            if (!isGenerating) return;
+            reasoningDiv.style.display = 'block';
+            const elapsed = Date.now() - thinkStartTime;
+            const secs = Math.round(elapsed / 1000);
+            const label = secs >= 60 ? `${Math.floor(secs/60)}分${secs%60}秒` : `${secs}秒`;
+            reasoningHeader.querySelector('.think-time').textContent = label;
             }
         }, 1000);
 
@@ -1174,8 +1175,8 @@
                                 scrollBottom();
                             }
                             if (delta.content) {
-                                clearInterval(_thinkTimer);
                                 _thinkStopped = true;
+                                clearInterval(_thinkTimer);
                                 finishThinking();
                                 fullResponse += delta.content;
                                 outputChars += delta.content.length;
