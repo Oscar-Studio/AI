@@ -1381,7 +1381,8 @@
         addCodeCopyBtns(el);
     }
 
-    function scrollBottom() {
+    function scrollBottom(force) {
+        if (force === false && chat.scrollHeight - chat.scrollTop - chat.clientHeight > 100) return;
         chat.scrollTop = chat.scrollHeight;
     }
 
