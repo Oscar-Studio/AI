@@ -318,6 +318,42 @@
         textarea:focus { border-color: var(--accent); }
         textarea::placeholder { color: var(--text-secondary); }
 
+        .attach-btn {
+            width: 44px;
+            height: 72px;
+            border-radius: var(--radius);
+            background: var(--surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .attach-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .attach-btn svg { width: 20px; height: 20px; }
+        .attach-btn .attach-count {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        #file-input { display: none; }
+
         .send-btn {
             width: 72px;
             height: 72px;
@@ -589,6 +625,12 @@
     <div class="input-panel">
         <div class="input-row">
             <textarea id="input-area" placeholder="输入消息，Shift+Enter 换行，Enter 发送..."></textarea>
+            <button class="attach-btn" id="attach-btn" title="添加图片或音频">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+            </button>
+            <input type="file" id="file-input" accept="image/*,audio/*" multiple>
             <button class="send-btn" id="send-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="19" x2="12" y2="5"/>
@@ -678,6 +720,18 @@
     };
 
     // ==========================================
+    // MULTIMODAL MODELS（支持图片/音频上传）
+    // ==========================================
+    const MULTIMODAL_MODELS = [
+        'qwen/qwen3.6-flash', 'qwen/qwen3.6-plus',
+        'z-ai/glm-5v-turbo',
+        'moonshotai/kimi-k2.6', 'moonshotai/kimi-k2.5',
+        'x-ai/grok-4.3',
+        'mimo-v2.5',
+        'xiaomi/mimo-v2.5',
+    ];
+
+    // ==========================================
     // QUOTA — 服务端 Token 配额
     // ==========================================
     const BASE_MODELS = ['deepseek-v4-flash', 'MiniMax-M2.5', 'mimo-v2-flash'];
@@ -696,6 +750,10 @@
 
     // 服务端配额缓存
     let quotaCache = null; // { remaining, limit, used, tier }
+
+    // 附件（图片/音频）
+    let attachments = []; // [{ type: 'image'|'audio', url: dataURL, name }]
+    let attachEl = {}; // cache DOM refs
 
     async function fetchQuota() {
         const token = localStorage.getItem('ai_token');
@@ -739,6 +797,8 @@
     const modelSel     = document.getElementById('model-select');
     const thinkBtn     = document.getElementById('think-btn');
     const statTotal    = document.getElementById('stat-total');
+    attachEl.btn      = document.getElementById('attach-btn');
+    attachEl.input    = document.getElementById('file-input');
 
     const history = [];
 
@@ -749,6 +809,7 @@
     thinkBtn.classList.add('active');  // thinking 默认开启
     buildModelList();
     applyThinkBtn();  // 首次根据默认模型决定按钮状态
+    applyAttachBtn();  // 首次根据默认模型决定上传按钮状态
 
     // ==========================================
     // MODEL LIST
@@ -773,12 +834,14 @@
         thinking = true;
         buildModelList();
         applyThinkBtn();
+        applyAttachBtn();
         updateQuotaUI();
     });
 
     modelSel.addEventListener('change', () => {
         modelId = modelSel.value;
         applyThinkBtn();
+        applyAttachBtn();
         updateQuotaUI();
     });
 
@@ -794,6 +857,49 @@
             thinkBtn.classList.toggle('active', thinking);
         }
     }
+
+    function applyAttachBtn() {
+        const isMultimodal = MULTIMODAL_MODELS.includes(modelId);
+        attachEl.btn.style.display = isMultimodal ? 'flex' : 'none';
+        if (!isMultimodal) {
+            attachments = [];
+            attachEl.input.value = '';
+            updateAttachCount();
+        }
+    }
+
+    function updateAttachCount() {
+        const count = attachments.length;
+        const badge = attachEl.btn.querySelector('.attach-count');
+        if (count > 0) {
+            if (!badge) {
+                const b = document.createElement('span');
+                b.className = 'attach-count';
+                attachEl.btn.appendChild(b);
+            }
+            attachEl.btn.querySelector('.attach-count').textContent = count;
+        } else {
+            if (badge) badge.remove();
+        }
+    }
+
+    attachEl.btn.addEventListener('click', () => attachEl.input.click());
+    attachEl.input.addEventListener('change', async () => {
+        const files = Array.from(attachEl.input.files || []);
+        for (const file of files) {
+            const isImage = file.type.startsWith('image/');
+            const isAudio = file.type.startsWith('audio/');
+            if (!isImage && !isAudio) continue;
+            const url = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+            attachments.push({ type: isImage ? 'image' : 'audio', url, name: file.name });
+        }
+        attachEl.input.value = '';
+        updateAttachCount();
+    });
 
     thinkBtn.addEventListener('click', () => {
         thinking = !thinking;
@@ -838,8 +944,10 @@
 
         welcome.style.display = 'none';
         inputArea.value = '';
-        appendMsg('user', text);
-        history.push({ role: 'user', content: text });
+        appendMsg('user', text, attachments);
+        history.push(buildMultimodalContent(text, attachments));
+        attachments = [];
+        updateAttachCount();
 
         setLoading(true);
 
@@ -1099,6 +1207,21 @@
     // ==========================================
     // HELPERS
     // ==========================================
+    function buildMultimodalContent(text, attachments) {
+        if (!attachments || attachments.length === 0) {
+            return { role: 'user', content: text };
+        }
+        const content = [{ type: 'text', text }];
+        for (const att of attachments) {
+            if (att.type === 'image') {
+                content.push({ type: 'image_url', image_url: { url: att.url } });
+            } else if (att.type === 'audio') {
+                content.push({ type: 'audio', audio_url: { url: att.url } });
+            }
+        }
+        return { role: 'user', content };
+    }
+
     function appendMsg(role, text, meta) {
         const div = document.createElement('div');
         div.className = `msg ${role}`;
@@ -1120,6 +1243,26 @@
             bubble.appendChild(content);
         } else {
             bubble.textContent = text;
+            // 渲染附件缩略图
+            if (meta && meta.length > 0) {
+                const attachRow = document.createElement('div');
+                attachRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;';
+                for (const att of meta) {
+                    if (att.type === 'image') {
+                        const img = document.createElement('img');
+                        img.src = att.url;
+                        img.style.cssText = 'max-width:120px;max-height:80px;border-radius:6px;border:1px solid var(--border);object-fit:cover;';
+                        attachRow.appendChild(img);
+                    } else if (att.type === 'audio') {
+                        const audio = document.createElement('audio');
+                        audio.src = att.url;
+                        audio.controls = true;
+                        audio.style.cssText = 'max-width:200px;height:32px;';
+                        attachRow.appendChild(audio);
+                    }
+                }
+                bubble.appendChild(attachRow);
+            }
         }
 
         body.appendChild(bubble);
