@@ -1016,7 +1016,6 @@
             const secs = Math.round(elapsed / 1000);
             const label = secs >= 60 ? `${Math.floor(secs/60)}分${secs%60}秒` : `${secs}秒`;
             reasoningHeader.querySelector('.think-time').textContent = label;
-            }
         }, 1000);
 
         reasoningDiv.appendChild(reasoningHeader);
