@@ -1002,10 +1002,12 @@
         reasoningHeader.addEventListener('click', () => {
             const expanded = reasoningDiv.classList.toggle('expanded');
             reasoningHeader.classList.toggle('expanded', expanded);
+            _reasoningExpanded = expanded;
         });
 
         // Update reasoning time every second during thinking
         let _thinkStopped = false;
+        let _reasoningExpanded = false; // user手动展开过就不再自动收
         const _thinkTimer = setInterval(() => {
             if (isGenerating && !_thinkStopped) {
                 reasoningDiv.style.display = 'block';
@@ -1136,7 +1138,7 @@
                                 outputChars += delta.reasoning.length;
                                 reasoningBody.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
-                                reasoningDiv.classList.remove('expanded');
+                                if (!_reasoningExpanded) reasoningDiv.classList.remove('expanded');
                                 scrollBottom();
                             }
                         }
@@ -1168,7 +1170,7 @@
                                 }
                                 reasoningBody.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
-                                reasoningDiv.classList.remove('expanded');
+                                if (!_reasoningExpanded) reasoningDiv.classList.remove('expanded');
                                 scrollBottom();
                             }
                             if (delta.content) {
