@@ -1005,10 +1005,14 @@
         });
 
         // Update reasoning time every second during thinking
-        const thinkTimer = setInterval(() => {
-            if (isGenerating && !thinkTimer._stopped) {
+        let _thinkStopped = false;
+        const _thinkTimer = setInterval(() => {
+            if (isGenerating && !_thinkStopped) {
                 reasoningDiv.style.display = 'block';
-                updateThinking(Date.now() - thinkStartTime);
+                const elapsed = Date.now() - thinkStartTime;
+                const secs = Math.round(elapsed / 1000);
+                const label = secs >= 60 ? `${Math.floor(secs/60)}分${secs%60}秒` : `${secs}秒`;
+                reasoningHeader.querySelector('.think-time').textContent = label;
             }
         }, 1000);
 
@@ -1023,7 +1027,6 @@
 
         let fullResponse = '';
         let fullReasoning = '';
-        let thinkTimer = null;
         let outputChars = 0;
         let usageReceived = false; // 是否已收到后端发来的真实 usage
         const isMiniMax = provider === 'minimax';
@@ -1169,8 +1172,9 @@
                                 scrollBottom();
                             }
                             if (delta.content) {
-                                clearInterval(thinkTimer);
-                                thinkTimer = null;
+                                clearInterval(_thinkTimer);
+                                _thinkStopped = true;
+                                finishThinking();
                                 fullResponse += delta.content;
                                 outputChars += delta.content.length;
                                 // 流式渲染 Markdown（使用 DOMPurify 防止 XSS）
@@ -1192,9 +1196,8 @@
 
                         // Answer content — stop thinking timer once answer starts
                         if (!isMiniMax && d.choices?.[0]?.delta?.content) {
-                            clearInterval(thinkTimer);
-                            thinkTimer = null;
-                            thinkTimer._stopped = true;
+                            clearInterval(_thinkTimer);
+                            _thinkStopped = true;
                             finishThinking();
                             const content = d.choices[0].delta.content;
                             fullResponse += content;
@@ -1271,7 +1274,7 @@
             setLoading(false);
             abortCtrl = null;
             currentAiDiv = null;
-            clearInterval(thinkTimer);
+            clearInterval(_thinkTimer);
             fetchQuota().then(() => updateQuotaUI());
         }
     }
