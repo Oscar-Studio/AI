@@ -755,6 +755,9 @@
     let attachments = []; // [{ type: 'image'|'audio', url: dataURL, name }]
     let attachEl = {}; // cache DOM refs
 
+    // 是否用户主动上滑（跳过自动滚动）
+    let userScrolledUp = false;
+
     async function fetchQuota() {
         const token = localStorage.getItem('ai_token');
         if (!token) { quotaCache = null; return; }
@@ -810,6 +813,11 @@
     buildModelList();
     applyThinkBtn();  // 首次根据默认模型决定按钮状态
     applyAttachBtn();  // 首次根据默认模型决定上传按钮状态
+
+    // 检测用户是否主动上滑
+    chat.addEventListener('scroll', () => {
+        userScrolledUp = chat.scrollTop + chat.clientHeight < chat.scrollHeight - 50;
+    });
 
     // ==========================================
     // MODEL LIST
@@ -944,6 +952,7 @@
 
         welcome.style.display = 'none';
         inputArea.value = '';
+        userScrolledUp = false;  // 重置滚动状态
         appendMsg('user', text, attachments);
         history.push(buildMultimodalContent(text, attachments));
         attachments = [];
@@ -1382,7 +1391,8 @@
     }
 
     function scrollBottom(force) {
-        if (force === false && chat.scrollHeight - chat.scrollTop - chat.clientHeight > 100) return;
+        const chat = document.getElementById('chat');
+        if (force !== true && userScrolledUp) return;
         chat.scrollTop = chat.scrollHeight;
     }
 
