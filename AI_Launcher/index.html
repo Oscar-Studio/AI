@@ -217,8 +217,8 @@
 
         .reasoning-header:hover { background: rgba(106, 0, 255, 0.12); }
         .reasoning-header .think-label { font-weight: 600; color: #c084fc; }
-        .reasoning-header .think-time { margin-left: auto; font-size: 0.72rem; opacity: 0.7; }
-        .reasoning-header .think-arrow { transition: transform 0.2s; }
+        .reasoning-header .think-time { margin-left: 4px; font-size: 0.72rem; opacity: 0.7; }
+        .reasoning-header .think-arrow { margin-left: auto; transition: transform 0.2s; font-size: 0.65rem; opacity: 0.5; }
         .reasoning-header.expanded .think-arrow { transform: rotate(90deg); }
 
         .reasoning-body {
@@ -227,15 +227,10 @@
             font-size: 0.82rem;
             font-style: italic;
             line-height: 1.6;
-            overflow: hidden;
+            display: none;
         }
 
-        .reasoning-block.expanded .reasoning-body {
-            overflow-y: auto;
-        }
-
-        .reasoning-body::-webkit-scrollbar { width: 4px; }
-        .reasoning-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+        .reasoning-block.expanded .reasoning-body { display: block; }
 
         .msg-bubble .content { white-space: pre-wrap; }
         .msg-bubble .content.typing::after { content: '...'; animation: typing 1s infinite; }
@@ -991,14 +986,17 @@
         reasoningDiv.className = 'reasoning-block';
         const reasoningHeader = document.createElement('div');
         reasoningHeader.className = 'reasoning-header';
-        reasoningHeader.innerHTML = `<span class="think-label">深度思考</span><span class="think-time"></span><span class="think-arrow">&#9654;</span>`;
+        reasoningHeader.innerHTML = `<span class="think-label">思考中</span><span class="think-time"></span><span class="think-arrow">&#9654;</span>`;
         const reasoningBody = document.createElement('div');
         reasoningBody.className = 'reasoning-body';
 
-        function updateThinking(elapsed) {
+        function finishThinking() {
+            const elapsed = Date.now() - thinkStartTime;
             const secs = Math.round(elapsed / 1000);
             const label = secs >= 60 ? `${Math.floor(secs/60)}分${secs%60}秒` : `${secs}秒`;
+            reasoningHeader.querySelector('.think-label').textContent = '已深度思考';
             reasoningHeader.querySelector('.think-time').textContent = label;
+            reasoningDiv.classList.remove('expanded');
         }
 
         reasoningHeader.addEventListener('click', () => {
@@ -1008,7 +1006,7 @@
 
         // Update reasoning time every second during thinking
         const thinkTimer = setInterval(() => {
-            if (isGenerating) {
+            if (isGenerating && !thinkTimer._stopped) {
                 reasoningDiv.style.display = 'block';
                 updateThinking(Date.now() - thinkStartTime);
             }
@@ -1025,6 +1023,7 @@
 
         let fullResponse = '';
         let fullReasoning = '';
+        let thinkTimer = null;
         let outputChars = 0;
         let usageReceived = false; // 是否已收到后端发来的真实 usage
         const isMiniMax = provider === 'minimax';
@@ -1195,6 +1194,8 @@
                         if (!isMiniMax && d.choices?.[0]?.delta?.content) {
                             clearInterval(thinkTimer);
                             thinkTimer = null;
+                            thinkTimer._stopped = true;
+                            finishThinking();
                             const content = d.choices[0].delta.content;
                             fullResponse += content;
                             outputChars += content.length;
