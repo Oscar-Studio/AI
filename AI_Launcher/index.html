@@ -991,6 +991,8 @@
         reasoningBody.className = 'reasoning-body';
 
         function finishThinking() {
+            if (_thinkingFinished) return;
+            _thinkingFinished = true;
             const elapsed = Date.now() - thinkStartTime;
             const secs = Math.round(elapsed / 1000);
             const label = secs >= 60 ? `${Math.floor(secs/60)}分${secs%60}秒` : `${secs}秒`;
@@ -1007,9 +1009,10 @@
 
         // Update reasoning time every second during thinking
         let _thinkStopped = false;
+        let _thinkingFinished = false; // 防止 finishThinking 重复执行
         let _reasoningExpanded = false; // user手动展开过就不再自动收
         const _thinkTimer = setInterval(() => {
-            if (_thinkStopped) return;
+            if (_thinkStopped || _thinkingFinished) return;
             if (!isGenerating) return;
             reasoningDiv.style.display = 'block';
             const elapsed = Date.now() - thinkStartTime;
