@@ -1173,6 +1173,8 @@
                                 scrollBottom();
                             }
                             if (delta.content) {
+                                clearInterval(thinkTimer);
+                                thinkTimer = null;
                                 fullResponse += delta.content;
                                 outputChars += delta.content.length;
                                 // 流式渲染 Markdown（使用 DOMPurify 防止 XSS）
@@ -1192,8 +1194,10 @@
                             scrollBottom();
                         }
 
-                        // Answer content
+                        // Answer content — stop thinking timer once answer starts
                         if (!isMiniMax && d.choices?.[0]?.delta?.content) {
+                            clearInterval(thinkTimer);
+                            thinkTimer = null;
                             const content = d.choices[0].delta.content;
                             fullResponse += content;
                             outputChars += content.length;
