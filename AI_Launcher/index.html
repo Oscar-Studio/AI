@@ -197,20 +197,48 @@
             display: none;
             width: 100%;
             margin-bottom: 6px;
-            padding: 8px 12px;
-            background: rgba(106, 0, 255, 0.08);
             border-left: 3px solid var(--thinking-color);
             border-radius: 0 6px 6px 0;
+            background: rgba(106, 0, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .reasoning-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            transition: background 0.15s;
+        }
+
+        .reasoning-header:hover { background: rgba(106, 0, 255, 0.12); }
+        .reasoning-header .think-label { font-weight: 600; color: #c084fc; }
+        .reasoning-header .think-time { margin-left: auto; font-size: 0.72rem; opacity: 0.7; }
+        .reasoning-header .think-arrow { transition: transform 0.2s; }
+        .reasoning-header.expanded .think-arrow { transform: rotate(90deg); }
+
+        .reasoning-body {
+            padding: 0 12px 8px;
             color: var(--text-secondary);
             font-size: 0.82rem;
             font-style: italic;
             line-height: 1.6;
-            max-height: 180px;
+            max-height: 40px;
+            overflow: hidden;
+            transition: max-height 0.25s ease;
+        }
+
+        .reasoning-block.expanded .reasoning-body {
+            max-height: 2000px;
             overflow-y: auto;
         }
 
-        .reasoning-block::-webkit-scrollbar { width: 4px; }
-        .reasoning-block::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+        .reasoning-body::-webkit-scrollbar { width: 4px; }
+        .reasoning-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
         .msg-bubble .content { white-space: pre-wrap; }
         .msg-bubble .content.typing::after { content: '...'; animation: typing 1s infinite; }
@@ -964,6 +992,33 @@
         currentAiDiv = aiDiv;
         const reasoningDiv = document.createElement('div');
         reasoningDiv.className = 'reasoning-block';
+        const reasoningHeader = document.createElement('div');
+        reasoningHeader.className = 'reasoning-header';
+        reasoningHeader.innerHTML = `<span class="think-label">深度思考</span><span class="think-time"></span><span class="think-arrow">&#9654;</span>`;
+        const reasoningBody = document.createElement('div');
+        reasoningBody.className = 'reasoning-body';
+
+        function updateThinking(elapsed) {
+            const secs = Math.round(elapsed / 1000);
+            const label = secs >= 60 ? `${Math.floor(secs/60)}分${secs%60}秒` : `${secs}秒`;
+            reasoningHeader.querySelector('.think-time').textContent = label;
+        }
+
+        reasoningHeader.addEventListener('click', () => {
+            const expanded = reasoningDiv.classList.toggle('expanded');
+            reasoningHeader.classList.toggle('expanded', expanded);
+        });
+
+        // Update reasoning time every second during thinking
+        const thinkTimer = setInterval(() => {
+            if (isGenerating) {
+                reasoningDiv.style.display = 'block';
+                updateThinking(Date.now() - thinkStartTime);
+            }
+        }, 1000);
+
+        reasoningDiv.appendChild(reasoningHeader);
+        reasoningDiv.appendChild(reasoningBody);
         aiDiv.querySelector('.msg-bubble').prepend(reasoningDiv);
 
         const contentDiv = aiDiv.querySelector('.content');
@@ -976,6 +1031,7 @@
         let outputChars = 0;
         let usageReceived = false; // 是否已收到后端发来的真实 usage
         const isMiniMax = provider === 'minimax';
+        const thinkStartTime = Date.now();
 
         const body = {
             model: modelId,
@@ -1079,8 +1135,9 @@
                             if (delta?.reasoning) {
                                 fullReasoning += delta.reasoning;
                                 outputChars += delta.reasoning.length;
-                                reasoningDiv.textContent = fullReasoning;
+                                reasoningBody.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
+                                reasoningDiv.classList.add('expanded');
                                 scrollBottom();
                             }
                         }
@@ -1093,8 +1150,9 @@
                                 if (reasoningText) {
                                     fullReasoning += reasoningText;
                                     outputChars += reasoningText.length;
-                                    reasoningDiv.textContent = fullReasoning;
+                                    reasoningBody.textContent = fullReasoning;
                                     reasoningDiv.style.display = 'block';
+                                    reasoningDiv.classList.add('expanded');
                                     scrollBottom();
                                 }
                             }
@@ -1109,8 +1167,9 @@
                                         outputChars += rd.text.length;
                                     }
                                 }
-                                reasoningDiv.textContent = fullReasoning;
+                                reasoningBody.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
+                                reasoningDiv.classList.add('expanded');
                                 scrollBottom();
                             }
                             if (delta.content) {
@@ -1127,8 +1186,9 @@
                         else if ((provider === 'deepseek' || provider === 'mimo') && d.choices?.[0]?.delta?.reasoning_content && thinking) {
                             fullReasoning += d.choices[0].delta.reasoning_content;
                             outputChars += d.choices[0].delta.reasoning_content.length;
-                            reasoningDiv.textContent = fullReasoning;
+                            reasoningBody.textContent = fullReasoning;
                             reasoningDiv.style.display = 'block';
+                            reasoningDiv.classList.add('expanded');
                             scrollBottom();
                         }
 
@@ -1209,6 +1269,7 @@
             setLoading(false);
             abortCtrl = null;
             currentAiDiv = null;
+            clearInterval(thinkTimer);
             fetchQuota().then(() => updateQuotaUI());
         }
     }
