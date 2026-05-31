@@ -335,11 +335,12 @@
             flex: 1;
             resize: none;
             height: 72px;
+            min-height: 44px;
             background: var(--surface-2);
             border: 1px solid var(--hairline);
             border-radius: var(--radius);
             color: var(--ink);
-            padding: 12px 14px;
+            padding: 10px 12px;
             font-size: 0.9rem;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             line-height: 1.5;
@@ -349,6 +350,13 @@
 
         textarea:focus { border-color: var(--body-mid); }
         textarea::placeholder { color: var(--body-mid); }
+
+        @media (max-width: 480px) {
+            textarea { height: 48px; font-size: 16px; padding: 8px 10px; }
+            .input-panel { padding: 10px 1rem 12px; }
+            .send-btn { width: 56px; height: 48px; border-radius: var(--radius); }
+            .attach-btn { width: 36px; height: 48px; }
+        }
 
         .attach-btn {
             width: 44px;
@@ -411,7 +419,7 @@
         .send-btn.stop:hover { background: #e06910; }
         .send-btn svg { width: 18px; height: 18px; }
 
-        /* Model bar below input */
+        /* Model bar */
         .model-bar {
             display: flex;
             align-items: center;
@@ -428,10 +436,10 @@
         .think-btn {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 5px 14px;
+            gap: 4px;
+            padding: 4px 10px;
             border-radius: var(--radius-pill);
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             font-weight: 500;
             border: 1px solid var(--hairline);
             background: transparent;
@@ -439,9 +447,10 @@
             cursor: pointer;
             transition: all 0.2s;
             user-select: none;
+            flex-shrink: 0;
         }
 
-        .think-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+        .think-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
 
         .think-btn:hover {
             border-color: var(--accent-dusk);
@@ -452,6 +461,16 @@
             background: rgba(124, 58, 237, 0.15);
             border-color: var(--accent-dusk);
             color: var(--accent-twilight);
+        }
+
+        @media (max-width: 480px) {
+            .model-bar { gap: 6px; margin-top: 6px; }
+            .model-bar label { font-size: 0.72rem; }
+            .think-btn { font-size: 0.72rem; padding: 3px 8px; }
+            .think-btn svg { width: 11px; height: 11px; }
+            #chat { padding: 1rem 0.75rem; }
+            .msg { max-width: 92%; }
+            .header-stats { display: none; }
         }
 
         .msg.error { align-self: center; }
