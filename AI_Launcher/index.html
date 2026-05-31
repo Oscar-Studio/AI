@@ -77,7 +77,6 @@
             font-size: 1rem;
             font-weight: 600;
             color: var(--ink);
-            letter-spacing: -0.3px;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             text-transform: uppercase;
             letter-spacing: 1.5px;
@@ -297,7 +296,8 @@
 .msg-bubble .content blockquote {
             border-left: 3px solid var(--accent-dusk);
             margin: 8px 0; padding-left: 12px;
-.msg-bubble .content a { color: var(--accent-sunset); }
+        }
+        .msg-bubble .content a { color: var(--accent-sunset); }
         .msg-bubble .content ul, .msg-bubble .content ol { padding-left: 20px; margin: 5px 0; }
         .msg-bubble .content table { border-collapse: collapse; margin: 8px 0; width: 100%; }
         .msg-bubble .content th, .msg-bubble .content td { border: 1px solid var(--border); padding: 6px 10px; }
@@ -516,7 +516,7 @@
         .copy-btn:focus { opacity: 1; }
         .copy-btn:hover { color: var(--text); }
         .copy-btn svg { width: 13px; height: 13px; }
-        .copy-btn.copied { color: var(--accent); }
+        .copy-btn.copied { color: var(--accent-sunset); }
 
         /* Token info button */
         .token-btn {
@@ -557,7 +557,7 @@
         }
         .token-btn:hover .token-tip,
         .token-btn:focus .token-tip { display: block; }
-        .token-tip span { color: var(--accent); }
+        .token-tip span { color: var(--accent-sunset); }
 
         /* ===== QUOTA BADGE ===== */
         .premium-btn.unlocked {
@@ -632,7 +632,7 @@
             background: var(--primary);
             color: white;
         }
-        #modal-unlock:hover { background: var(--primary-hover); }
+        #modal-unlock:hover { background: var(--ink-hover); }
         #modal-error { color: #ff7b72; font-size: 0.78rem; margin-top: 8px; min-height: 18px; }
     </style>
 
@@ -659,6 +659,7 @@
                 <option value="zai">GLM</option>
                 <option value="moonshot">Kimi</option>
                 <option value="hy3">Tencent</option>
+                <option value="xai">xAI / Grok</option>
                 <option value="free">🆓 Free</option>
             </select>
         </div>
