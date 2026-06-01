@@ -73,9 +73,9 @@
             gap: 12px;
         }
 
-        .header-brand h1 {
+               .header-brand h1 {
             font-size: 1rem;
-            font-weight: 600;
+            font-weight: 400;
             color: var(--ink);
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             text-transform: uppercase;
@@ -293,7 +293,7 @@
         }
         .msg-bubble .content pre:hover .copy-btn { opacity: 1; }
         .msg-bubble .content pre .copy-btn:hover { color: var(--text); }
-.msg-bubble .content blockquote {
+        .msg-bubble .content blockquote {
             border-left: 3px solid var(--accent-dusk);
             margin: 8px 0; padding-left: 12px;
         }
@@ -317,7 +317,7 @@
             color: var(--body-mid);
         }
 
-        #welcome h2 { font-size: 1.2rem; color: var(--ink); font-weight: 600; letter-spacing: 0.5px; }
+               #welcome h2 { font-size: 1.2rem; color: var(--ink); font-weight: 400; letter-spacing: 0.5px; }
         #welcome p { font-size: 0.85rem; color: var(--body-mid); }
 
         /* ===== INPUT PANEL ===== */
@@ -481,9 +481,9 @@
         }
 
         .msg.error { align-self: center; }
-        .msg.error .msg-bubble {
+               .msg.error .msg-bubble {
             background: rgba(218, 54, 51, 0.1);
-            border-color: var(--danger);
+            border-color: #ff7b72;
             color: #ff7b72;
         }
 
@@ -560,10 +560,10 @@
         .token-tip span { color: var(--accent-sunset); }
 
         /* ===== QUOTA BADGE ===== */
-        .premium-btn.unlocked {
-            background: rgba(0, 229, 255, 0.1) !important;
-            border-color: var(--accent) !important;
-            color: var(--accent) !important;
+               .premium-btn.unlocked {
+            background: rgba(255, 122, 23, 0.1) !important;
+            border-color: var(--accent-sunset) !important;
+            color: var(--accent-sunset) !important;
         }
 
         /* ===== PREMIUM MODAL ===== */
@@ -610,7 +610,7 @@
             margin-bottom: 12px;
             box-sizing: border-box;
         }
-        #premium-modal input:focus { border-color: var(--accent); }
+               #premium-modal input:focus { border-color: var(--accent-sunset); }
         #premium-modal-btns { display: flex; gap: 10px; }
         #premium-modal .modal-btn {
             flex: 1;
@@ -659,7 +659,7 @@
                 <option value="zai">GLM</option>
                 <option value="moonshot">Kimi</option>
                 <option value="hy3">Tencent</option>
-                <option value="xai">xAI / Grok</option>
+                <option value="xai">xAI</option>
                 <option value="free">🆓 Free</option>
             </select>
         </div>
