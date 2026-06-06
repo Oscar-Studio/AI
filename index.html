@@ -1,725 +1,255 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
-    <script defer src="https://cloud.umami.is/script.js"
-        data-website-id="d6ee6da5-3779-4551-a754-7f63fdf95dbb"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <title>AI 工具集 - Oscar Studio</title>
-    <style>
-        :root {
-            --primary-color: #2A5CAA;
-            --secondary-color: #00E5FF;
-            --accent-color: #6A00FF;
-            --bg-color: #010409;
-            --card-bg: #0d1117;
-            --card-border: #30363d;
-            --text-color: #ffffff;
-            --text-muted: #8b949e;
-            --elastic-bezier: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --smooth-bezier: cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', 'Arial', sans-serif;
-        }
-
-        body {
-            background: var(--bg-color);
-            color: var(--text-color);
-            min-height: 100vh;
-            overflow-x: hidden;
-            padding-top: 60px;
-        }
-
-        /* Top Bar */
-        .top-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 40px;
-            background: rgba(1, 4, 9, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 100;
-            border-bottom: 1px solid var(--card-border);
-        }
-
-        .breadcrumb {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
-
-        .breadcrumb span {
-            color: var(--secondary-color);
-        }
-
-        .search-box {
-            position: absolute;
-            left: calc(100% - 320px);
-            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .search-box input {
-            width: 280px;
-            padding: 10px 20px;
-            border-radius: 20px;
-            border: 1px solid var(--card-border);
-            background: var(--card-bg);
-            color: var(--text-color);
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .search-box input:focus {
-            width: 400px;
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
-        }
-
-        .search-box.searching {
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .search-box.searching input {
-            width: 500px;
-        }
-
-        .search-box input::placeholder {
-            color: var(--text-muted);
-        }
-
-        /* Hero Section */
-        .hero {
-            padding-top: 100px;
-            padding-bottom: 80px;
-            text-align: center;
-            background: linear-gradient(180deg, rgba(42, 92, 170, 0.15) 0%, rgba(1, 4, 9, 1) 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .hero-icon {
-            font-size: 5rem;
-            margin-bottom: 25px;
-        }
-
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            margin-bottom: 25px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero p {
-            max-width: 700px;
-            margin: 0 auto;
-            font-size: 1.15rem;
-            color: var(--text-muted);
-            line-height: 1.9;
-            padding: 0 20px;
-        }
-
-        /* Card Container */
-        .card-container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            padding: 40px;
-            max-width: 80vw;
-            margin: 0 auto;
-        }
-
-        /* Card */
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            min-height: 90px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: center;
-            gap: 8px;
-            padding: 15px 20px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .card-icon {
-            font-size: 1.8rem;
-            flex-shrink: 0;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-        }
-
-        .card-name {
-            flex: 1;
-        }
-
-        .card-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            width: 100%;
-        }
-
-        .card-tag {
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            background: rgba(42, 92, 170, 0.2);
-            border: 1px solid rgba(42, 92, 170, 0.4);
-            color: var(--secondary-color);
-            border-radius: 10px;
-        }
-
-        .card:hover {
-            border-color: var(--secondary-color);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0, 229, 255, 0.15);
-        }
-
-        .card.hiding {
-            animation: slideDown 900ms var(--smooth-bezier) forwards;
-        }
-
-        .card.returning {
-            animation: slideDownFromTop 700ms var(--elastic-bezier) forwards;
-        }
-
-        @keyframes slideDown {
-            to {
-                transform: translateY(120vh);
-                opacity: 0;
-            }
-        }
-
-        @keyframes slideDownFromTop {
-            0% {
-                transform: translateY(-100vh);
-                opacity: 0;
-            }
-            60% {
-                transform: translateY(10px);
-                opacity: 1;
-            }
-            80% {
-                transform: translateY(-5px);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        /* Floating Morphing Card */
-        .morph-card {
-            position: fixed;
-            z-index: 300;
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            cursor: default;
-            pointer-events: auto;
-            overflow: hidden;
-        }
-
-        /* Compact state (initial) */
-        .morph-card.compact {
-            width: 240px;
-            min-height: 90px;
-            padding: 15px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .morph-card .morph-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-        }
-
-        .morph-card .morph-icon {
-            font-size: 1.8rem;
-        }
-
-        .morph-card .morph-name {
-            flex: 1;
-            font-size: 1rem;
-            font-weight: 500;
-        }
-
-        .morph-card .morph-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            width: 100%;
-        }
-
-        .morph-card .morph-tag {
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            background: rgba(42, 92, 170, 0.2);
-            border: 1px solid rgba(42, 92, 170, 0.4);
-            color: var(--secondary-color);
-            border-radius: 10px;
-        }
-
-        /* Expanded state */
-        .morph-card.expanded {
-            width: 450px;
-            min-height: auto;
-            padding: 40px;
-            text-align: center;
-            border-color: var(--secondary-color);
-            box-shadow: 0 20px 60px rgba(0, 229, 255, 0.2);
-        }
-
-        .morph-card.expanded .morph-header,
-        .morph-card.expanded .morph-tags {
-            display: none;
-        }
-
-        .morph-card.expanded .morph-content {
-            display: block;
-        }
-
-        .morph-card .morph-content {
-            display: none;
-        }
-
-        .morph-card.expanded .morph-content .morph-big-icon {
-            font-size: 4.5rem;
-            margin-bottom: 20px;
-        }
-
-        .morph-card.expanded .morph-content h2 {
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-            color: var(--text-color);
-        }
-
-        .morph-card.expanded .morph-content p {
-            color: var(--text-muted);
-            font-size: 1rem;
-            line-height: 1.7;
-            margin-bottom: 25px;
-        }
-
-        .morph-card.expanded .morph-content .btn-explore {
-            display: inline-block;
-            padding: 12px 40px;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            color: white;
-            text-decoration: none;
-            border-radius: 25px;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .morph-card.expanded .morph-content .btn-explore:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(106, 0, 255, 0.3);
-        }
-
-        .morph-card .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-muted);
-            font-size: 1.3rem;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .morph-card.expanded .close-btn {
-            display: flex;
-        }
-
-        .morph-card .close-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: var(--text-color);
-        }
-
-        /* Backdrop */
-        .backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 250;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-
-        .backdrop.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        /* No results */
-        .no-results {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-muted);
-            font-size: 1.2rem;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .top-bar {
-                padding: 0 20px;
-            }
-
-            .search-box {
-                left: calc(100% - 180px);
-            }
-
-            .search-box input {
-                width: 140px;
-            }
-
-            .search-box input:focus {
-                width: 200px;
-            }
-
-            .hero {
-                padding-top: 80px;
-                padding-bottom: 60px;
-                min-height: auto;
-            }
-
-            .hero-icon {
-                font-size: 3.5rem;
-            }
-
-            .hero h1 {
-                font-size: 2.2rem;
-            }
-
-            .hero p {
-                font-size: 1rem;
-            }
-
-            .card-container {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 15px;
-                padding: 20px;
-                max-width: 95vw;
-            }
-
-            .card {
-                min-height: 80px;
-                padding: 12px 15px;
-                font-size: 0.95rem;
-            }
-
-            .card-icon {
-                font-size: 1.5rem;
-            }
-
-            .morph-card.expanded {
-                width: 90vw;
-                padding: 30px 20px;
-            }
-
-            .morph-card.expanded .morph-content h2 {
-                font-size: 1.4rem;
-            }
-
-            .morph-card.expanded .morph-content p {
-                font-size: 0.9rem;
-            }
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <title>AI Studio — Oscar Studio</title>
+    <link rel="stylesheet" href="app.css">
 </head>
-
 <body>
-    <!-- Top Bar -->
-    <header class="top-bar">
-        <div class="breadcrumb"><img src="logo.png" alt="" style="height:24px;vertical-align:middle;margin-right:8px;">Oscar Studio > <span>AI</span></div>
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="搜索">
+    <!-- ===== Top Nav ===== -->
+    <header class="top-nav">
+        <div class="top-nav-left">
+            <img src="logo.png" alt="Oscar Studio" class="top-nav-logo">
+            <span class="top-nav-eyebrow">AI STUDIO</span>
         </div>
-        <div id="userButtonContainer" style="margin-left:12px;flex-shrink:0;"></div>
+        <div class="top-nav-right">
+            <div class="quota-pill" id="quotaPill" title="今日剩余 Credits">
+                <span class="quota-label">CREDITS</span>
+                <span class="quota-value" id="quotaValue">—</span>
+            </div>
+            <div id="userButtonContainer"></div>
+        </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-icon">🤖</div>
-        <h1>AI 工具集</h1>
-        <p>Oscar Studio AI 工具集，让 AI 帮你学习和工作。集成多种 AI 模型，支持文本生成、语音合成等功能。</p>
-    </section>
+    <div class="layout">
+        <!-- ===== Left Sidebar ===== -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <button class="sidebar-item active" data-view="chat">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span>Chat</span>
+                </button>
+                <button class="sidebar-item" data-view="tts">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                    <span>TTS</span>
+                </button>
+            </nav>
 
-    <!-- Card Container -->
-    <main class="card-container" id="cardContainer"></main>
+            <div class="sidebar-footer">
+                <span class="sidebar-eyebrow">MODEL</span>
+                <button class="sidebar-model-btn" id="sidebarModelBtn" type="button" title="更换模型">
+                    <span class="sidebar-model-vendor" id="sidebarModelVendor">DeepSeek</span>
+                    <span class="sidebar-model-name" id="sidebarModelName">V4-Flash</span>
+                    <svg class="sidebar-model-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="9 6 15 12 9 18"/>
+                    </svg>
+                </button>
+            </div>
+        </aside>
 
-    <!-- Backdrop -->
-    <div class="backdrop" id="backdrop"></div>
-
-    <script>
-        const cardContainer = document.getElementById('cardContainer');
-        const backdrop = document.getElementById('backdrop');
-
-        let tools = [];
-        let morphCard = null;
-        let selectedTool = null;
-        let selectedCard = null;
-
-        // HTML escape helper
-        function escapeHTML(str) {
-            if (!str) return '';
-            return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
-        }
-
-        // Load tools
-        const abortCtrl = new AbortController();
-        const timeoutId = setTimeout(() => abortCtrl.abort(), 10000);
-        fetch('tools-config.json', { signal: abortCtrl.signal })
-            .then(response => response.json())
-            .then(data => {
-                clearTimeout(timeoutId);
-                tools = data.tools || [];
-                tools.sort((a, b) => {
-                    if (a.featured !== b.featured) return b.featured ? 1 : -1;
-                    return a.name.localeCompare(b.name);
-                });
-                renderCards(tools);
-            })
-            .catch(error => {
-                clearTimeout(timeoutId);
-                cardContainer.innerHTML = '<p class="no-results">加载工具失败</p>';
-            });
-
-        function renderCards(toolsToRender) {
-            cardContainer.innerHTML = '';
-            if (toolsToRender.length === 0) {
-                cardContainer.innerHTML = '<p class="no-results">没有找到匹配的工具</p>';
-                return;
-            }
-
-            toolsToRender.forEach(tool => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                const icon = escapeHTML(tool.icon || '🤖');
-                const name = escapeHTML(tool.name);
-                const tags = tool.tags ? tool.tags.slice(0, 3).map(t => `<span class="card-tag">${escapeHTML(t)}</span>`).join('') : '';
-                card.innerHTML = `
-                    <div class="card-header">
-                        <span class="card-icon">${icon}</span>
-                        <span class="card-name">${name}</span>
+        <!-- ===== Main View ===== -->
+        <main class="main">
+            <!-- ============ Chat View ============ -->
+            <section class="view view-chat active" data-view="chat">
+                <div class="chat-scroll" id="chatScroll">
+                    <div class="chat-welcome" id="chatWelcome">
+                        <span class="eyebrow-mono">TEXT GENERATION</span>
+                        <h1 class="display-headline">Ask anything.<br>Build anything.</h1>
+                        <p class="lead">多模型统一入口。深度思考、多模态理解、流式输出、Markdown + 公式渲染。</p>
                     </div>
-                    <div class="card-tags">${tags}</div>
-                `;
-                card.addEventListener('click', () => selectCard(card, tool));
-                cardContainer.appendChild(card);
-            });
-        }
-
-        function selectCard(cardElement, tool) {
-            if (morphCard) return;
-            selectedTool = tool;
-            selectedCard = cardElement;
-
-            const rect = cardElement.getBoundingClientRect();
-
-            // Create morph card at card's position
-            morphCard = document.createElement('div');
-            morphCard.className = 'morph-card compact';
-            const demoUrl = escapeHTML(tool.demoFile || `${tool.name}/index.html`);
-            const icon = escapeHTML(tool.icon || '🤖');
-            const name = escapeHTML(tool.name);
-            const description = escapeHTML(tool.description);
-            const tags = tool.tags ? tool.tags.slice(0, 3).map(t => `<span class="morph-tag">${escapeHTML(t)}</span>`).join('') : '';
-            morphCard.innerHTML = `
-                <div class="morph-header">
-                    <span class="morph-icon">${icon}</span>
-                    <span class="morph-name">${name}</span>
                 </div>
-                <div class="morph-tags">${tags}</div>
-                <div class="morph-content">
-                    <div class="morph-big-icon">${icon}</div>
-                    <h2>${name}</h2>
-                    <p>${description}</p>
-                    <a href="${demoUrl}" class="btn-explore">进入演示</a>
+
+                <div class="chat-input-panel">
+                    <div class="attach-preview" id="attachPreview"></div>
+                    <div class="input-row">
+                        <button class="attach-btn" id="attachBtn" type="button" title="添加图片或音频" aria-label="添加附件">+</button>
+                        <input type="file" id="fileInput" accept="image/*,audio/*" multiple hidden>
+                        <textarea id="chatInput" placeholder="输入消息，Shift+Enter 换行，Enter 发送..." rows="1"></textarea>
+                        <button class="send-btn" id="sendBtn" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <line x1="12" y1="19" x2="12" y2="5"/>
+                                <polyline points="5 12 12 5 19 12"/>
+                            </svg>
+                            <span id="sendLabel">发送</span>
+                        </button>
+                    </div>
+                    <div class="input-meta">
+                        <span class="token-counter" id="tokenCounter">累计 0 tokens</span>
+                        <button class="think-btn" id="thinkBtn" type="button" title="深度思考">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                            <span>深度思考</span>
+                        </button>
+                    </div>
                 </div>
-                <button class="close-btn">&times;</button>
-            `;
+            </section>
 
-            morphCard.style.left = rect.left + 'px';
-            morphCard.style.top = rect.top + 'px';
-            morphCard.style.width = rect.width + 'px';
-            morphCard.style.minHeight = rect.height + 'px';
-            document.body.appendChild(morphCard);
+            <!-- ============ TTS View ============ -->
+            <section class="view view-tts" data-view="tts">
+                <div class="tts-shell">
+                    <header class="tts-header">
+                        <span class="eyebrow-mono">VOICE SYNTHESIS</span>
+                        <h1 class="display-headline tts-headline">Bring text to life.</h1>
+                    </header>
 
-            // Hide original card
-            cardElement.style.visibility = 'hidden';
+                    <div class="tts-tabs" role="tablist">
+                        <button class="tts-tab active" role="tab" data-tts-mode="builtin">内置音色</button>
+                        <button class="tts-tab" role="tab" data-tts-mode="design">声音定制</button>
+                        <button class="tts-tab" role="tab" data-tts-mode="clone">声音克隆</button>
+                    </div>
 
-            // Show backdrop
-            backdrop.classList.add('active');
+                    <div class="tts-content">
+                        <!-- Built-in voices -->
+                        <div class="tts-panel active" data-tts-panel="builtin">
+                            <div class="form-field">
+                                <label class="field-label" for="builtinText">输入文本</label>
+                                <textarea class="field-textarea" id="builtinText" placeholder="请输入要转换为语音的文本..."></textarea>
+                            </div>
 
-            // Calculate target position
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const targetWidth = Math.min(450, viewportWidth * 0.9);
-            const targetHeight = 340;
-            const targetLeft = (viewportWidth - targetWidth) / 2;
-            const targetTop = (viewportHeight - targetHeight) / 2;
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label class="field-label" for="builtinVoice">选择音色</label>
+                                    <select class="field-select" id="builtinVoice">
+                                        <option value="冰糖">冰糖</option>
+                                        <option value="茉莉">茉莉</option>
+                                        <option value="苏打">苏打</option>
+                                        <option value="白桦">白桦</option>
+                                        <option value="Mia">Mia</option>
+                                        <option value="Chloe">Chloe</option>
+                                        <option value="Milo">Milo</option>
+                                        <option value="Dean">Dean</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label class="field-label" for="builtinStyle">风格描述（可选）</label>
+                                    <input class="field-input" type="text" id="builtinStyle" placeholder="如：开心、悲伤、东北话...">
+                                </div>
+                            </div>
 
-            // Animate to center
-            requestAnimationFrame(() => {
-                morphCard.style.transition = 'all 750ms cubic-bezier(0.34, 1.4, 0.64, 1)';
-                morphCard.style.left = targetLeft + 'px';
-                morphCard.style.top = targetTop + 'px';
-                morphCard.style.width = targetWidth + 'px';
-                morphCard.style.minHeight = targetHeight + 'px';
-            });
+                            <div class="style-tags" id="builtinStyleTags">
+                                <span class="style-tag" data-style="开心">开心</span>
+                                <span class="style-tag" data-style="悲伤">悲伤</span>
+                                <span class="style-tag" data-style="东北话">东北话</span>
+                                <span class="style-tag" data-style="粤语">粤语</span>
+                                <span class="style-tag" data-style="唱歌">唱歌</span>
+                                <span class="style-tag" data-style="悄悄话">悄悄话</span>
+                                <span class="style-tag" data-style="变快">变快</span>
+                                <span class="style-tag" data-style="变慢">变慢</span>
+                            </div>
 
-            // Other cards hide
-            const allCards = Array.from(cardContainer.querySelectorAll('.card'));
-            allCards.forEach(card => {
-                if (card === cardElement) return;
-                const cardRect = card.getBoundingClientRect();
-                const delay = Math.max(0, ((viewportHeight - cardRect.top) / viewportHeight) * 120);
-                card.style.animationDelay = `${delay}ms`;
-                card.classList.add('hiding');
-            });
+                            <div class="tts-examples">
+                                <span class="examples-eyebrow">示例文本</span>
+                                <div class="example-list" id="builtinExamples"></div>
+                            </div>
+                        </div>
 
-            // Expand to show content
-            setTimeout(() => {
-                morphCard.classList.add('expanded');
-            }, 200);
+                        <!-- Voice design -->
+                        <div class="tts-panel" data-tts-panel="design">
+                            <div class="form-field">
+                                <label class="field-label" for="designDescription">声音描述</label>
+                                <textarea class="field-textarea" id="designDescription" placeholder="请描述你想要的声音特征，如：温柔的年轻女性声音，带有轻微的南方口音..."></textarea>
+                            </div>
+                            <div class="form-field">
+                                <label class="field-label" for="designText">要合成的文本</label>
+                                <textarea class="field-textarea" id="designText" placeholder="请输入要转换为语音的文本..."></textarea>
+                                <span class="char-count"><span id="designCharCount">0</span> 字符</span>
+                            </div>
+                            <div class="tts-examples">
+                                <span class="examples-eyebrow">示例描述</span>
+                                <div class="example-list" id="designExamples"></div>
+                            </div>
+                        </div>
 
-            // Close handlers
-            morphCard.querySelector('.close-btn').addEventListener('click', closeMorphCard);
-            backdrop.addEventListener('click', closeMorphCard);
-        }
+                        <!-- Voice clone -->
+                        <div class="tts-panel" data-tts-panel="clone">
+                            <div class="form-field">
+                                <label class="field-label">上传音频样本</label>
+                                <div class="upload-area" id="cloneUpload">
+                                    <input type="file" id="cloneFile" accept=".mp3,.wav,audio/mpeg,audio/wav" hidden>
+                                    <div class="upload-icon">↑</div>
+                                    <div class="upload-text">点击或拖拽上传音频文件</div>
+                                    <div class="upload-hint">支持 MP3 / WAV，最大 10MB</div>
+                                </div>
+                                <div class="file-preview" id="cloneFilePreview">
+                                    <span class="file-preview-icon">♪</span>
+                                    <div class="file-preview-info">
+                                        <div class="file-preview-name" id="cloneFileName"></div>
+                                        <div class="file-preview-size" id="cloneFileSize"></div>
+                                    </div>
+                                    <button class="file-preview-remove" id="cloneFileRemove" type="button" aria-label="删除">✕</button>
+                                </div>
+                            </div>
+                            <div class="form-field">
+                                <label class="field-label" for="cloneStyle">风格指导（可选）</label>
+                                <input class="field-input" type="text" id="cloneStyle" placeholder="如：带有情感地朗读...">
+                            </div>
+                            <div class="form-field">
+                                <label class="field-label" for="cloneText">要合成的文本</label>
+                                <textarea class="field-textarea" id="cloneText" placeholder="请输入要转换为语音的文本..."></textarea>
+                                <span class="char-count"><span id="cloneCharCount">0</span> 字符</span>
+                            </div>
+                        </div>
+                    </div>
 
-        function closeMorphCard() {
-            if (!morphCard || !selectedCard) return;
+                    <div class="tts-action">
+                        <button class="primary-btn" id="ttsGenerateBtn" type="button">生成语音</button>
+                        <div class="tts-status" id="ttsStatus"></div>
+                    </div>
 
-            const originalRect = selectedCard.getBoundingClientRect();
+                    <div class="tts-audio" id="ttsAudioPlayer">
+                        <audio id="ttsAudioEl" controls></audio>
+                        <button class="ghost-btn" id="ttsDownloadBtn" type="button">下载 WAV</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
 
-            // Get all hiding cards
-            const hidingCards = Array.from(cardContainer.querySelectorAll('.card.hiding'));
+    <!-- ===== Model Picker Modal ===== -->
+    <div class="modal-overlay" id="modelModal" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modelModalTitle">
+            <header class="modal-header">
+                <h2 class="modal-title" id="modelModalTitle">选择模型</h2>
+                <button class="modal-close" id="modelModalClose" type="button" aria-label="关闭">✕</button>
+            </header>
 
-            // Start fading backdrop immediately
-            backdrop.style.opacity = '0';
+            <div class="modal-body">
+                <div class="modal-pane modal-pane-vendors">
+                    <span class="pane-eyebrow">VENDOR</span>
+                    <ul class="vendor-list" id="vendorList"></ul>
+                </div>
+                <div class="modal-pane modal-pane-models">
+                    <span class="pane-eyebrow">MODEL</span>
+                    <ul class="model-list" id="modelList"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            // Shrink morphCard back to original position
-            morphCard.classList.remove('expanded');
-            morphCard.style.transition = 'all 750ms cubic-bezier(0.34, 1.4, 0.64, 1)';
-            morphCard.style.left = originalRect.left + 'px';
-            morphCard.style.top = originalRect.top + 'px';
-            morphCard.style.width = originalRect.width + 'px';
-            morphCard.style.minHeight = originalRect.height + 'px';
+    <!-- 第三方依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
-            // Start returning all cards (from bottom to top)
-            requestAnimationFrame(() => {
-                hidingCards.reverse().forEach((card, i) => {
-                    card.classList.remove('hiding');
-                    card.style.transform = 'translateY(-100vh)';
-                    card.style.opacity = '0';
-                    card.getBoundingClientRect();
-                    setTimeout(() => {
-                        card.classList.add('returning');
-                    }, i * 40);
-                });
-            });
-
-            setTimeout(() => {
-                if (morphCard) {
-                    morphCard.remove();
-                    morphCard = null;
-                }
-                backdrop.classList.remove('active');
-                backdrop.style.opacity = '';
-
-                if (selectedCard) {
-                    selectedCard.style.visibility = 'visible';
-                }
-
-                // Clean up after animation
-                setTimeout(() => {
-                    hidingCards.forEach(card => {
-                        card.classList.remove('returning');
-                        card.style.transform = '';
-                        card.style.opacity = '';
-                    });
-                }, 800);
-
-                selectedCard = null;
-                selectedTool = null;
-            }, 800);
-        }
-
-        // Keyboard escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && morphCard) closeMorphCard();
-        });
-
-        // Search
-        searchInput.addEventListener('focus', () => {
-            document.querySelector('.search-box').classList.add('searching');
-        });
-
-        searchInput.addEventListener('blur', () => {
-            document.querySelector('.search-box').classList.remove('searching');
-        });
-
-        searchInput.addEventListener('input', (e) => {
-            const term = escapeHTML(e.target.value).toLowerCase().trim();
-            if (term) {
-                renderCards(tools.filter(t =>
-                    escapeHTML(t.name).toLowerCase().includes(term) ||
-                    (t.tags && t.tags.some(tag => escapeHTML(tag).toLowerCase().includes(term))) ||
-                    escapeHTML(t.description).toLowerCase().includes(term)
-                ));
-            } else {
-                renderCards(tools);
-            }
-        });
-    </script>
     <script src="user-button.js"></script>
+    <script src="chat.js"></script>
+    <script src="tts.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
