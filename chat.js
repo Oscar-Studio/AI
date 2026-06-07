@@ -533,6 +533,7 @@
         reasoningHeader.addEventListener('click', () => {
             const expanded = reasoningDiv.classList.toggle('expanded');
             reasoningHeader.classList.toggle('expanded', expanded);
+            _reasoningExpanded = expanded;
         });
         reasoningDiv.appendChild(reasoningHeader);
         reasoningDiv.appendChild(reasoningBody);
