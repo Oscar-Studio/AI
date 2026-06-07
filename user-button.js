@@ -343,6 +343,17 @@
                 document.documentElement.style.setProperty('--primary-dark', adjustColor(ui.primaryColor, -20));
             }
 
+            // 应用自定义头像
+            if (ui.avatar) {
+                const circle = document.querySelector('.user-avatar-circle');
+                if (circle) {
+                    circle.style.backgroundImage = `url(${UPLOAD_BASE}${ui.avatar})`;
+                    circle.style.backgroundSize = 'cover';
+                    circle.style.backgroundPosition = 'center';
+                    circle.textContent = '';
+                }
+            }
+
             // 应用背景图片 - 统一设置 body style
             if (ui.backgroundImage) {
                 const bgUrl = `${UPLOAD_BASE}${ui.backgroundImage}`;
