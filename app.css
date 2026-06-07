@@ -354,8 +354,6 @@ textarea, input, select {
     margin-bottom: var(--space-16);
 }
 
-.display-headline br + br { display: block; content: ''; }
-
 /* Chat messages */
 .msg {
     display: flex;
@@ -686,7 +684,7 @@ textarea, input, select {
 .attach-btn {
     width: 44px;
     height: 56px;
-    border-radius: var(--r-sm);
+    border-radius: var(--r-pill);
     background: var(--canvas-soft);
     color: var(--body-mid);
     border: 1px solid var(--hairline);
@@ -739,9 +737,9 @@ textarea, input, select {
 
 .send-btn {
     height: 56px;
-    min-width: 72px;
+    min-width: 88px;
     padding: 0 var(--space-16);
-    border-radius: var(--r-sm);
+    border-radius: var(--r-pill);
     background: var(--primary);
     color: var(--on-primary);
     border: none;
@@ -1005,7 +1003,7 @@ textarea, input, select {
     padding: 8px 12px;
     background: var(--canvas-card);
     border: 1px solid var(--hairline);
-    border-radius: var(--r-sm);
+    border-radius: var(--r-pill);
     font-size: 12px;
     color: var(--body);
     cursor: pointer;
@@ -1019,7 +1017,7 @@ textarea, input, select {
 
 .upload-area {
     border: 1px dashed var(--hairline);
-    border-radius: var(--r-sm);
+    border-radius: var(--r-pill);
     padding: var(--space-24);
     text-align: center;
     cursor: pointer;
@@ -1059,10 +1057,10 @@ textarea, input, select {
 .file-preview {
     display: none;
     margin-top: var(--space-8);
-    padding: var(--space-12);
+    padding: var(--space-12) var(--space-16);
     background: var(--canvas-card);
     border: 1px solid var(--hairline);
-    border-radius: var(--r-sm);
+    border-radius: var(--r-pill);
     align-items: center;
     gap: var(--space-12);
 }
@@ -1228,7 +1226,6 @@ textarea, input, select {
     max-height: 80vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     animation: modalIn 0.18s ease;
 }
 
@@ -1438,8 +1435,8 @@ textarea, input, select {
     .sidebar-model-chevron { display: none; }
     .sidebar-footer { padding-top: var(--space-12); }
 
-    .display-headline { font-size: 32px; line-height: 36px; letter-spacing: -0.6px; }
-    .tts-headline { font-size: 28px; line-height: 32px; }
+    /* design 规定 hero 在 mobile 缩到 48px；display-md 也是 48px，不变 */
+    .tts-headline { font-size: 32px; line-height: 36px; letter-spacing: -0.6px; }
 
     .chat-scroll { padding: var(--space-16); }
     .chat-input-panel { padding: var(--space-8) var(--space-16) var(--space-12); }
