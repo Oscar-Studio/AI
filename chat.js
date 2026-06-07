@@ -718,7 +718,7 @@
                         if (d._type === 'usage') {
                             usageReceived = true;
                             applyUsage(d);
-                        } else if (d.usage) {
+                        } else if (d.usage && !usageReceived) {
                             applyUsage(d.usage);
                         }
                     } catch (e) {
