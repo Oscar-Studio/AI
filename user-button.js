@@ -168,6 +168,15 @@
                 color: white;
                 font-weight: 600;
                 font-size: 14px;
+                overflow: hidden;
+            }
+
+            .user-avatar-img {
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                object-fit: cover;
+                display: block;
             }
 
             .user-dropdown {
@@ -347,10 +356,12 @@
             if (ui.avatar) {
                 const circle = document.querySelector('.user-avatar-circle');
                 if (circle) {
-                    circle.style.backgroundImage = `url(${UPLOAD_BASE}${ui.avatar})`;
-                    circle.style.backgroundSize = 'cover';
-                    circle.style.backgroundPosition = 'center';
                     circle.textContent = '';
+                    const img = document.createElement('img');
+                    img.src = `${UPLOAD_BASE}${ui.avatar}`;
+                    img.alt = '';
+                    img.className = 'user-avatar-img';
+                    circle.appendChild(img);
                 }
             }
 
