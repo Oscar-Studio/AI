@@ -659,7 +659,7 @@
                                     outputChars += rt.length;
                                     reasoningBody.textContent = fullReasoning;
                                     reasoningDiv.style.display = 'block';
-                                    reasoningDiv.classList.remove('expanded');
+                                    if (!_reasoningExpanded) reasoningDiv.classList.remove('expanded');
                                     scrollBottom();
                                 }
                             }
@@ -697,7 +697,7 @@
                             outputChars += d.choices[0].delta.reasoning_content.length;
                             reasoningBody.textContent = fullReasoning;
                             reasoningDiv.style.display = 'block';
-                            reasoningDiv.classList.remove('expanded');
+                            if (!_reasoningExpanded) reasoningDiv.classList.remove('expanded');
                             scrollBottom();
                         }
 
