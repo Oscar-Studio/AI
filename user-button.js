@@ -19,24 +19,50 @@
         return `https://api.oscarstudio.cn/auth.html?return=${encodeURIComponent(window.location.href)}`;
     }
 
+    // 解码 JWT payload 检查是否过期（不验证签名，仅前端判断）
+    function isTokenExpired(token) {
+        try {
+            const parts = token.split('.');
+            if (parts.length !== 3) return true;
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            if (!payload.exp) return true;
+            return Date.now() >= payload.exp * 1000;
+        } catch (e) {
+            return true;
+        }
+    }
+
+    // 清除本地登录状态
+    function clearLoginState() {
+        localStorage.removeItem('ai_token');
+        localStorage.removeItem('ai_user');
+        document.cookie = 'userToken=; max-age=0; path=/; domain=.oscarstudio.cn';
+    }
+
     // 检查登录状态
     function checkLoginStatus() {
         const token = localStorage.getItem('ai_token');
         const userStr = localStorage.getItem('ai_user');
         if (!token || !userStr) return null;
 
-        // 双重验证：Cookie 必须也存在（跨域登出同步）
+        // 1. 检查 JWT 是否已过期（避免过期 token 仍显示已登录）
+        if (isTokenExpired(token)) {
+            console.log('[用户] Token 已过期，清除登录状态');
+            clearLoginState();
+            return null;
+        }
+
+        // 2. 双重验证：Cookie 必须也存在（跨域登出同步）
         // 如果用户在别的子站退出了登录，Cookie 会被清掉
         const cookieToken = document.cookie.split('; ').find(c => c.startsWith('userToken='));
         if (!cookieToken) {
-            // Cookie 已不存在 → 用户在别处退出登录了
-            localStorage.removeItem('ai_token');
-            localStorage.removeItem('ai_user');
+            console.log('[用户] Cookie 已不存在，清除登录状态');
+            clearLoginState();
             return null;
         }
 
         try { return JSON.parse(userStr); }
-        catch (e) { console.error('解析用户数据失败:', e); return null; }
+        catch (e) { console.error('解析用户数据失败:', e); clearLoginState(); return null; }
     }
 
     // 从跨域 Cookie 同步登录状态到 localStorage
@@ -100,10 +126,7 @@
             });
 
             document.getElementById('logoutBtn').addEventListener('click', function() {
-                localStorage.removeItem('ai_token');
-                localStorage.removeItem('ai_user');
-                // 清除跨域 Cookie（和登录时设置的一致）
-                document.cookie = 'userToken=; max-age=0; path=/; domain=.oscarstudio.cn';
+                clearLoginState();
                 location.reload();
             });
 
