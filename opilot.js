@@ -262,6 +262,17 @@
             <div class="opilot-tool-list">${tools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: ctx.site })).join('')}</div>
           </div>
         `;
+      } else if (intent === 'chat') {
+        // AI 把它当成通用对话 — 但如果关键词列命中了工具，附加"或许你想用"建议
+        if (lastKeywordResults && lastKeywordResults.length) {
+          const top = lastKeywordResults[0];
+          html += `
+            <div class="opilot-section">
+              <div class="opilot-section-label">或许你想用</div>
+              <div class="opilot-tool-list">${renderToolCard(top, { reason: '基于你的查询', confidence: 0.7, site: ctx.site })}</div>
+            </div>
+          `;
+        }
       }
 
       if (reply) {
