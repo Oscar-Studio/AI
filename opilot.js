@@ -350,18 +350,14 @@
     }
 
     function bindOpilotActions() {
-      const btns = dropdown.querySelectorAll('.opilot-launch-btn');
-      console.log('[Opilot] bindOpilotActions found', btns.length, 'buttons');
-      btns.forEach(btn => {
+      dropdown.querySelectorAll('.opilot-launch-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-          console.log('[Opilot] launch button clicked');
           e.stopPropagation();
           const toolName = btn.dataset.tool;
           let prefill = {};
           try { prefill = JSON.parse(btn.dataset.prefill || '{}'); } catch {}
           const site = ctx.site || 'tools';
           const r = await callLaunch(site, toolName, prefill);
-          console.log('[Opilot] launch result:', r);
           if (r.success && r.url) {
             recordHistory({ q: currentQuery, intent: 'launch', toolName });
             window.location.href = r.url;
