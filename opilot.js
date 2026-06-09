@@ -591,7 +591,7 @@
           `).join('')}
         </div>`;
       });
-      results.innerHTML = html || `<div class="opilot-palette-empty">无匹配工具 · 试试在 AI Studio 中聊：<br><em>${escapeHtml(q)}</em><br><button class="opilot-palette-chat-btn" data-q="${escapeHtml(q)}">💬 打开 AI 对话</button></div>`;
+      results.innerHTML = html || `<div class="opilot-palette-empty">无匹配工具 · 试试在 AI Studio 中聊：<br><em>${escapeHtml(q)}</em><br><a class="opilot-palette-chat-btn" href="https://ai.oscarstudio.cn/?q=${encodeURIComponent(q)}" target="_blank" rel="noopener">💬 打开 AI 对话</a></div>`;
       currentItems = items;
       activeIndex = 0;
       updateActiveItem();
@@ -609,9 +609,16 @@
     function activateItem(el) {
       if (!el) return;
       if (el.classList.contains('opilot-palette-chat-btn')) {
-        const q = el.dataset.q;
-        window.open('https://ai.oscarstudio.cn/?q=' + encodeURIComponent(q), '_blank');
+        // <a> 元素：浏览器原生处理 target=_blank，无需 JS 跳转
         close();
+        return;
+      }
+      // 历史项：把 query 填回输入框，重新搜索
+      if (el.classList.contains('opilot-palette-history')) {
+        const q = el.dataset.q || '';
+        input.value = q;
+        renderFiltered(q);
+        input.focus();
         return;
       }
       const site = el.dataset.site;
@@ -626,14 +633,30 @@
     }
 
     function bindResultsEvents() {
+      // 工具项
       results.querySelectorAll('.opilot-palette-item').forEach((el, i) => {
-        el.addEventListener('click', () => {
+        // 阻止 mousedown 抢 input focus（input 是 autofocus，可能导致 input 失焦）
+        el.addEventListener('mousedown', (e) => { e.preventDefault(); });
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           activeIndex = i;
           activateItem(el);
         });
         el.addEventListener('mouseenter', () => {
           activeIndex = i;
           updateActiveItem();
+        });
+      });
+      // "打开 AI 对话" 按钮（无匹配时出现）
+      results.querySelectorAll('.opilot-palette-chat-btn').forEach(btn => {
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); });
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const q = btn.dataset.q || '';
+          close();
+          window.open('https://ai.oscarstudio.cn/?q=' + encodeURIComponent(q), '_blank');
         });
       });
     }
