@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opilot</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="opilot-panel.css">
+  <link rel="stylesheet" href="opilot.css">
+</head>
+<body>
+  <div class="opilot-panel" id="opilotPanel">
+    <div class="opilot-panel-header" id="panelHeader">
+      <span class="opilot-panel-title">
+        <span class="opilot-panel-icon">✨</span>
+        <span>Opilot</span>
+      </span>
+      <div class="opilot-panel-actions">
+        <button class="opilot-panel-btn" id="newChatBtn" title="新对话">+</button>
+        <button class="opilot-panel-btn" id="minimizeBtn" title="最小化">—</button>
+        <button class="opilot-panel-btn opilot-panel-close" id="closeBtn" title="关闭">✕</button>
+      </div>
+    </div>
+
+    <div class="opilot-panel-body" id="panelBody">
+      <div class="opilot-panel-welcome" id="welcomeScreen">
+        <span class="opilot-welcome-eyebrow">AI COPILOT</span>
+        <h1 class="opilot-welcome-title">Ask anything.<br>Build anything.</h1>
+        <div class="opilot-welcome-suggestions">
+          <div class="opilot-suggestion-card" data-q="适合高中生的数学工具">📐 适合高中生的数学工具</div>
+          <div class="opilot-suggestion-card" data-q="配平 H2+O2">🧪 配平 H2+O2</div>
+          <div class="opilot-suggestion-card" data-q="什么是勾股定理">📜 什么是勾股定理</div>
+          <div class="opilot-suggestion-card" data-q="推荐一个抽签器">🎯 推荐一个抽签器</div>
+        </div>
+      </div>
+
+      <div class="opilot-panel-messages" id="messagesScroll"></div>
+    </div>
+
+    <div class="opilot-panel-input-area">
+      <div class="opilot-panel-input-row">
+        <textarea
+          id="panelInput"
+          class="opilot-panel-input"
+          placeholder="问我任何问题，或描述你要找的工具..."
+          rows="1"></textarea>
+        <button class="opilot-panel-send" id="sendBtn" title="发送 (Enter)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"/>
+            <polyline points="5 12 12 5 19 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="opilot-panel-footer">
+        <span class="opilot-panel-model">
+          <span class="opilot-panel-model-dot"></span>
+          <span id="modelLabel">Opilot · 免费</span>
+        </span>
+        <a class="opilot-panel-cta" href="https://ai.oscarstudio.cn/" target="_blank" rel="noopener">
+          ↗ 前往 AI Studio 获得更好回答
+        </a>
+      </div>
+    </div>
+
+    <div class="opilot-panel-resize" id="resizeHandle" title="拖动缩放"></div>
+  </div>
+
+  <script src="opilot-panel.js"></script>
+</body>
+</html>

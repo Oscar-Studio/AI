@@ -746,22 +746,68 @@
     }
   })();
 
+  // ============ 悬浮面板（Opilot Panel）============
+  // 共享 iframe 实例：同一站只创建一次
+  let panelInstance = null;
+  function openPanel() {
+    if (panelInstance && document.body.contains(panelInstance)) {
+      // 已存在：显示
+      panelInstance.style.display = 'block';
+      try { panelInstance.contentWindow.OpilotPanel.open(); } catch (e) {}
+      return panelInstance;
+    }
+    // 创建 iframe
+    const iframe = document.createElement('iframe');
+    iframe.src = 'https://ai.oscarstudio.cn/opilot-panel.html';
+    iframe.allow = 'clipboard-read; clipboard-write';
+    iframe.style.cssText = [
+      'position:fixed',
+      'right:24px',
+      'bottom:24px',
+      'width:480px',
+      'height:600px',
+      'min-width:320px',
+      'min-height:400px',
+      'max-width:95vw',
+      'max-height:95vh',
+      'border:none',
+      'background:transparent',
+      'z-index:99998',
+      'box-shadow:none',
+      'border-radius:16px',
+      'overflow:hidden',
+      'transition:opacity 0.2s'
+    ].join(';');
+    iframe.setAttribute('allowtransparency', 'true');
+    document.body.appendChild(iframe);
+    panelInstance = iframe;
+
+    // 监听 iframe 内的关闭消息
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'opilot-close') {
+        if (panelInstance) panelInstance.style.display = 'none';
+      }
+    });
+    return iframe;
+  }
+
+  // 全局快捷键 ⌘K / Ctrl+K（默认开面板）
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      openPanel();
+    }
+  });
+
   // ============ 公开 API ============
   window.Opilot = {
     enhance: createDropdown,
     openPalette: openPalette,
+    openPanel: openPanel,
     toast: toast,
     recordHistory: recordHistory,
     getHistory: getHistory,
     shouldUseOpilot: shouldUseOpilot,
     version: '1.0.0'
   };
-
-  // 全局快捷键 ⌘K / Ctrl+K（主站已显式绑定；其他站也提供）
-  document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-      // 主站按钮已显式触发；这里不重复触发避免双开
-      // 留给各站点的 Opilot 触发按钮主动调用
-    }
-  });
 })();
