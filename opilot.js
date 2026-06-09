@@ -339,7 +339,12 @@
     // 事件绑定
     function bindCardClicks() {
       dropdown.querySelectorAll('.opilot-tool-card').forEach(card => {
-        card.addEventListener('click', () => {
+        // 阻止 mousedown 抢 focus
+        card.addEventListener('mousedown', (e) => { e.preventDefault(); });
+        card.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropdown.classList.remove('open');
           const toolName = card.dataset.tool;
           const cardSite = card.dataset.site || ctx.site;
           const tool = (ctx.tools || []).find(t => t.name === toolName);
@@ -362,8 +367,13 @@
 
     function bindOpilotActions() {
       dropdown.querySelectorAll('.opilot-launch-btn').forEach(btn => {
+        // 阻止 mousedown 让 button 抢 focus（否则 searchInput blur 触发，dropdown 收起）
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); });
         btn.addEventListener('click', async (e) => {
+          e.preventDefault();
           e.stopPropagation();
+          // 立即关闭 dropdown，避免和 location.href 跳转冲突
+          dropdown.classList.remove('open');
           const toolName = btn.dataset.tool;
           let prefill = {};
           try { prefill = JSON.parse(btn.dataset.prefill || '{}'); } catch {}
@@ -378,8 +388,12 @@
         });
       });
       dropdown.querySelectorAll('.opilot-chat-btn').forEach(btn => {
+        // 同上：阻止 mousedown 抢 focus
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); });
         btn.addEventListener('click', (e) => {
+          e.preventDefault();
           e.stopPropagation();
+          dropdown.classList.remove('open');
           const q = btn.dataset.q || currentQuery;
           window.open('https://ai.oscarstudio.cn/?q=' + encodeURIComponent(q), '_blank');
         });
@@ -388,7 +402,10 @@
 
     function bindHistoryClicks() {
       dropdown.querySelectorAll('.opilot-history-item').forEach(item => {
-        item.addEventListener('click', () => {
+        item.addEventListener('mousedown', (e) => { e.preventDefault(); });
+        item.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           searchInput.value = item.dataset.q || '';
           currentQuery = searchInput.value;
           runKeywordSearch(currentQuery);
