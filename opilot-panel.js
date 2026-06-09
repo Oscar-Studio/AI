@@ -380,6 +380,7 @@
       // 渲染回复
       const reply = searchResult.reply || '';
       const intent = searchResult.intent || 'chat';
+      const aiPrefill = (searchResult.prefill && typeof searchResult.prefill === 'object') ? searchResult.prefill : {};
       const tools = (searchResult.tools || []).map(t => {
         const local = allTools.find(x => x.name === t.name);
         return local ? { ...local, ...t, _site: local._site } : { ...t, _site: t._site || null };
@@ -390,9 +391,11 @@
 
       if (intent === 'launch' && tools.length) {
         html += renderToolsBlock(tools, { label: '推荐' });
-        const top = tools[0];
-        if (top && top.prefill) {
-          html += renderLaunchButton(top, top.prefill);
+        // 用 AI 返回的具体 prefill 值（如 {"equation": "H2+O2"}），
+        // 而不是 tools-config.json 里的 prefill schema（如 {params, description}）
+        const topName = tools[0] && tools[0].name;
+        if (topName && aiPrefill && Object.keys(aiPrefill).length) {
+          html += renderLaunchButton({ name: topName, _site: tools[0]._site }, aiPrefill);
         }
       } else if (intent === 'search' && tools.length) {
         html += renderToolsBlock(tools, { label: '相关工具' });
