@@ -49,4 +49,25 @@
 
     // ---- Init chat module ----
     if (window.ChatModule) window.ChatModule.init();
+
+    // ---- Auto-fill chat input from ?q= (Opilot integration) ----
+    (function autoFillFromQuery() {
+        const params = new URLSearchParams(location.search);
+        const q = params.get('q');
+        if (!q) return;
+        // 等 ChatModule 加载完
+        const tryFill = () => {
+            const input = document.getElementById('chatInput');
+            if (!input) {
+                setTimeout(tryFill, 100);
+                return;
+            }
+            input.value = q;
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+            input.focus();
+            // 不自动发送 — 让用户审阅后再按 Enter
+        };
+        tryFill();
+    })();
 })();
