@@ -638,7 +638,7 @@
         // 阻止 mousedown 抢 input focus（input 是 autofocus，可能导致 input 失焦）
         el.addEventListener('mousedown', (e) => { e.preventDefault(); });
         el.addEventListener('click', (e) => {
-          e.preventDefault();
+          // 不要 preventDefault —— <a> 的 href 默认行为需要保留
           e.stopPropagation();
           activeIndex = i;
           activateItem(el);
@@ -648,15 +648,15 @@
           updateActiveItem();
         });
       });
-      // "打开 AI 对话" 按钮（无匹配时出现）
+      // "打开 AI 对话" 按钮（无匹配时出现）—— <a> 元素，依靠 target=_blank 默认行为
       results.querySelectorAll('.opilot-palette-chat-btn').forEach(btn => {
+        // mousedown preventDefault 防止 input 失焦（input 是 autofocus）
         btn.addEventListener('mousedown', (e) => { e.preventDefault(); });
+        // click 不要 preventDefault —— 浏览器会按 target=_blank 自动开新 tab
         btn.addEventListener('click', (e) => {
-          e.preventDefault();
           e.stopPropagation();
-          const q = btn.dataset.q || '';
-          close();
-          window.open('https://ai.oscarstudio.cn/?q=' + encodeURIComponent(q), '_blank');
+          // 关闭当前 palette（在新 tab 打开后）
+          setTimeout(close, 0);
         });
       });
     }
