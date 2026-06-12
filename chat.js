@@ -123,7 +123,7 @@
     // ---- Free models loader ----
     (async function loadFreeModels() {
         try {
-            const r = await fetch('https://cdn.jsdelivr.net/gh/Oscarwang1222/openrouter-free-models@main/models-global.json');
+            const r = await fetch('https://cdn.jsdelivr.net/gh/Oscarwang1222/openrouter-free-models@main/models-cn.json');
             const d = await r.json();
             MODEL_CONFIG.free.models = (d.models || []).map(m => ({
                 id: m.id,
