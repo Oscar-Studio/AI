@@ -166,6 +166,9 @@
     const wrapper = searchInput.closest('.search-box') || searchInput.parentElement;
     if (!wrapper) return null;
 
+    // 默认 placeholder
+    searchInput.placeholder = ctx.placeholder || 'Chat with Opilot';
+
     // 容器
     let dropdown = wrapper.querySelector('.opilot-dropdown');
     if (!dropdown) {
@@ -178,6 +181,8 @@
     let lastKeywordResults = [];
     let isLoading = false;
     let currentQuery = '';
+    let aiResult = null;       // 最近一次 AI 结果
+    let aiSearched = false;    // 是否已主动搜索过（用于渲染模式判断）
 
     // 渲染
     function render() {
@@ -192,18 +197,18 @@
                <h4>最近搜索</h4>
                <div class="opilot-history-list">${history.map(renderHistoryItem).join('')}</div>
              </div>`
-          : `<div class="opilot-col opilot-col-full opilot-empty">输入关键词或自然语言查询</div>`;
+          : `<div class="opilot-col opilot-col-full opilot-empty">输入关键词 · 按 <kbd>Enter</kbd> 让 Opilot 帮你找</div>`;
         bindHistoryClicks();
         dropdown.classList.add('open');
         return;
       }
 
-      // 短词 + 有关键词命中：只显示关键词
-      if (keywordHits.length && !shouldUseOpilot(q, keywordHits.length)) {
+      // 关键词命中：单列
+      if (keywordHits.length) {
         dropdown.innerHTML = `
           <div class="opilot-col opilot-col-full">
             <h4>工具 (${keywordHits.length})</h4>
-            <div class="opilot-tool-list">${keywordHits.map(t => renderToolCard(t)).join('')}</div>
+            <div class="opilot-tool-list">${keywordHits.map(t => renderToolCard(t, { site: ctx.site })).join('')}</div>
           </div>
         `;
         bindCardClicks();
@@ -211,15 +216,34 @@
         return;
       }
 
-      // 长句 / 无关键词命中：双列
-      const opilotHtml = isLoading
-        ? `<div class="opilot-loading">✨ Opilot 思考中...</div>`
-        : (currentOpilotResult ? renderOpilotColumn(currentOpilotResult) : '');
+      // 无关键词命中
+      dropdown.innerHTML = `<div class="opilot-col opilot-col-full opilot-empty">无关键词匹配 · 按 <kbd>Enter</kbd> 让 Opilot 帮你找</div>`;
+      dropdown.classList.add('open');
+    }
 
+    // 渲染 AI 结果（按 Enter 触发后）
+    function renderAIResult() {
+      const q = currentQuery.trim();
+      const keywordHits = lastKeywordResults;
+
+      if (isLoading) {
+        dropdown.innerHTML = `<div class="opilot-col opilot-col-full opilot-loading">✨ Opilot 思考中...</div>`;
+        dropdown.classList.add('open');
+        return;
+      }
+
+      if (!aiResult) {
+        render();
+        return;
+      }
+
+      const opilotHtml = renderOpilotColumn(aiResult);
+
+      // 双列：左关键词 + 右 AI
       dropdown.innerHTML = `
         <div class="opilot-col opilot-col-keyword">
           <h4>工具 ${keywordHits.length ? `(${keywordHits.length})` : ''}</h4>
-          <div class="opilot-tool-list">${keywordHits.map(t => renderToolCard(t)).join('') || '<div class="opilot-empty-mini">无关键词匹配</div>'}</div>
+          <div class="opilot-tool-list">${keywordHits.map(t => renderToolCard(t, { site: ctx.site })).join('') || '<div class="opilot-empty-mini">无关键词匹配</div>'}</div>
         </div>
         <div class="opilot-col opilot-col-ai">
           <h4>✨ Opilot</h4>
@@ -247,11 +271,11 @@
 
       if (intent === 'launch' && tools.length) {
         const top = tools[0];
-        const launchBtn = `<button class="opilot-launch-btn" data-tool="${escapeHtml(top.name)}" data-prefill='${escapeHtml(JSON.stringify(prefill))}'>🚀 启动并预填</button>`;
+        const launchBtn = `<button class="opilot-launch-btn" data-tool="${escapeHtml(top.name)}" data-site="${escapeHtml(top._site || ctx.site || '')}" data-prefill='${escapeHtml(JSON.stringify(prefill))}'>🚀 启动并预填 (${escapeHtml(top.name)})</button>`;
         html += `
           <div class="opilot-section">
             <div class="opilot-section-label">推荐</div>
-            <div class="opilot-tool-list">${tools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: ctx.site })).join('')}</div>
+            <div class="opilot-tool-list">${tools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: t._site || ctx.site })).join('')}</div>
             ${launchBtn}
           </div>
         `;
@@ -259,7 +283,7 @@
         html += `
           <div class="opilot-section">
             <div class="opilot-section-label">相关工具</div>
-            <div class="opilot-tool-list">${tools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: ctx.site })).join('')}</div>
+            <div class="opilot-tool-list">${tools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: t._site || ctx.site })).join('')}</div>
           </div>
         `;
       } else if (intent === 'chat') {
@@ -308,33 +332,32 @@
       );
     }
 
-    // Opilot 搜索
-    let currentOpilotResult = null;
-    const runOpilot = debounce(async (q) => {
-      if (!q || !shouldUseOpilot(q, lastKeywordResults.length)) {
-        currentOpilotResult = null;
-        render();
-        return;
-      }
+    // Opilot 搜索（按 Enter 才触发，不再 debounce 输入事件）
+    async function runOpilot() {
+      const q = currentQuery.trim();
+      if (!q) return;
       isLoading = true;
-      render();
+      aiSearched = true;
+      renderAIResult();
       const result = await callSearch(q, ctx.tools || [], getHistory(3));
       isLoading = false;
-      currentOpilotResult = result;
+      aiResult = result;
       // 降级 toast
       if (result && result._fallback) {
         toast('Opilot 备用模型 · 可能消耗 credits', { type: 'warn' });
       }
       // 记录历史
-      const top = (result && result.tools && result.tools[0]) || null;
-      recordHistory({
-        q,
-        intent: result.intent || 'chat',
-        toolName: top ? top.name : null,
-        fallback: !!(result && result._fallback)
-      });
-      render();
-    }, DEBOUNCE_MS);
+      if (result && result.success) {
+        const top = (result.tools && result.tools[0]) || null;
+        recordHistory({
+          q,
+          intent: result.intent || 'chat',
+          toolName: top ? top.name : null,
+          fallback: !!(result && result._fallback)
+        });
+      }
+      renderAIResult();
+    }
 
     // 事件绑定
     function bindCardClicks() {
@@ -344,7 +367,7 @@
         card.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          dropdown.classList.remove('open');
+          // 注意：不收起 dropdown，input 也不 blur，让用户能继续操作
           const toolName = card.dataset.tool;
           const cardSite = card.dataset.site || ctx.site;
           const tool = (ctx.tools || []).find(t => t.name === toolName);
@@ -372,12 +395,10 @@
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          // 立即关闭 dropdown，避免和 location.href 跳转冲突
-          dropdown.classList.remove('open');
           const toolName = btn.dataset.tool;
+          const site = btn.dataset.site || ctx.site || 'tools';
           let prefill = {};
           try { prefill = JSON.parse(btn.dataset.prefill || '{}'); } catch {}
-          const site = ctx.site || 'tools';
           const r = await callLaunch(site, toolName, prefill);
           if (r.success && r.url) {
             recordHistory({ q: currentQuery, intent: 'launch', toolName });
@@ -393,7 +414,6 @@
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          dropdown.classList.remove('open');
           const q = btn.dataset.q || currentQuery;
           window.open('https://ai.oscarstudio.cn/?q=' + encodeURIComponent(q), '_blank');
         });
@@ -409,39 +429,53 @@
           searchInput.value = item.dataset.q || '';
           currentQuery = searchInput.value;
           runKeywordSearch(currentQuery);
-          runOpilot(currentQuery);
+          aiSearched = false;
+          aiResult = null;
+          render();
           searchInput.focus();
         });
       });
     }
 
-    // 主输入事件
+    // 主输入事件 —— 只做关键词过滤（不再实时调 AI）
     const onInput = debounce((e) => {
       currentQuery = e.target.value;
       runKeywordSearch(currentQuery);
-      runOpilot(currentQuery);
+      // 用户重新输入时，清空旧 AI 结果
+      if (aiSearched) {
+        aiSearched = false;
+        aiResult = null;
+      }
+      render();
     }, 50);
 
     searchInput.addEventListener('input', onInput);
     searchInput.addEventListener('focus', () => {
       currentQuery = searchInput.value;
       runKeywordSearch(currentQuery);
-      render();
+      if (aiSearched) {
+        renderAIResult();
+      } else {
+        render();
+      }
     });
     searchInput.addEventListener('blur', () => {
       // 延迟关闭，允许点击
       setTimeout(() => dropdown.classList.remove('open'), 200);
     });
 
-    // ESC 关闭
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && dropdown.classList.contains('open')) {
+    // Enter 触发 AI 搜索
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runOpilot();
+      } else if (e.key === 'Escape') {
         dropdown.classList.remove('open');
         searchInput.blur();
       }
     });
 
-    return { refresh: render };
+    return { refresh: render, runOpilot };
   }
 
   // ============ 主站命令面板 ============
