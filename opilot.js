@@ -118,12 +118,27 @@
       const resp = await fetch(OPILOT_API + '/launch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site, toolName, prefill: prefill || {} })
+        body: JSON.stringify({ site, toolName, prefill: transformPrefill(site, toolName, prefill) })
       });
       return await resp.json();
     } catch (e) {
       return { success: false, message: e.message };
     }
+  }
+
+  // 把 AI 返回的 prefill 转成实际 input 需要的格式
+  // 例子：化学方程式配平需要 {reactants, products}，但 AI 通常给 {equation: 'H2+O2 → H2O'}
+  function transformPrefill(site, toolName, prefill) {
+    const p = { ...(prefill || {}) };
+    if (site === 'tools' && toolName === '化学方程式配平' && typeof p.equation === 'string' && (p.reactants == null || p.products == null)) {
+      const m = p.equation.split(/\s*(?:→|->|=)\s*/);
+      if (m.length >= 2) {
+        p.reactants = m[0].trim();
+        p.products  = m.slice(1).join(' ').trim();
+        delete p.equation;
+      }
+    }
+    return p;
   }
 
   // ============ 渲染：工具卡片 ============
