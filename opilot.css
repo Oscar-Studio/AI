@@ -307,6 +307,7 @@
 }
 .opilot-palette-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(99, 102, 241, 0.04);
 }
 .opilot-palette-input {
   width: 100%;
@@ -338,10 +339,10 @@
 }
 .opilot-palette-eyebrow {
   font-size: 11px;
-  color: #64748b;
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 4px 20px;
+  padding: 6px 20px 4px;
   font-weight: 600;
 }
 .opilot-palette-item {
@@ -360,45 +361,98 @@
   font-size: 18px;
   flex-shrink: 0;
 }
+.opilot-palette-item-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .opilot-palette-site {
   margin-left: auto;
   font-size: 11px;
-  color: #64748b;
-  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.06);
   padding: 2px 8px;
   border-radius: 4px;
+  flex-shrink: 0;
+}
+.opilot-palette-conf {
+  font-size: 10px;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 .opilot-palette-history {
-  font-style: italic;
   color: #94a3b8;
 }
 .opilot-palette-empty {
   text-align: center;
-  padding: 40px 20px;
+  padding: 30px 20px;
   color: #64748b;
   font-size: 13px;
+  line-height: 1.6;
 }
-.opilot-palette-chat-btn {
+.opilot-palette-empty kbd {
   display: inline-block;
-  margin-top: 12px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #6366f1, #ec4899);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  text-decoration: none;
-  font-family: inherit;
-}
-.opilot-palette-chat-btn:hover {
-  opacity: 0.9;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  font: 11px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+  color: #cbd5e1;
+  margin: 0 2px;
 }
 .opilot-palette-loading {
   text-align: center;
   padding: 30px;
-  color: #64748b;
+  color: #a78bfa;
   font-size: 13px;
+  animation: opilot-pulse 1.4s ease-in-out infinite;
+}
+.opilot-palette-reply {
+  margin: 8px 20px 4px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #cbd5e1;
+  background: rgba(99, 102, 241, 0.08);
+  border-left: 2px solid #a78bfa;
+  border-radius: 4px;
+}
+.opilot-palette-degraded {
+  margin: 8px 20px 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border-radius: 6px;
+  text-align: center;
+}
+.opilot-palette-launch-btn {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 8px 20px 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #6366f1, #ec4899);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.opilot-palette-launch-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.opilot-palette-launch-btn:active {
+  transform: translateY(0);
 }
 
 /* ============ 预填横幅 + 输入高亮 ============ */

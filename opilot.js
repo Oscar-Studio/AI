@@ -493,7 +493,7 @@
       { site: 'ppt',   origin: 'https://ppt.oscarstudio.cn',   configUrl: 'https://ppt.oscarstudio.cn/tools-config.json' }
     ];
 
-    // 移除已存在的
+    // 移除已存在
     const existing = document.getElementById('opilot-palette');
     if (existing) existing.remove();
 
@@ -503,10 +503,9 @@
     overlay.innerHTML = `
       <div class="opilot-palette">
         <div class="opilot-palette-header">
-          <input type="text" class="opilot-palette-input" placeholder="搜索工具、游戏、PPT（⌘K）" autofocus>
+          <input type="text" class="opilot-palette-input" placeholder="Chat with Opilot" autofocus>
           <div class="opilot-palette-hint">
-            <span>↑↓ 选择</span>
-            <span>⏎ 打开</span>
+            <span>⏎ 发送</span>
             <span>ESC 关闭</span>
           </div>
         </div>
@@ -520,64 +519,77 @@
     let allTools = [];
     let activeIndex = 0;
     let currentItems = [];
+    let lastMode = 'home'; // 'home' | 'keyword' | 'ai'
 
-    // 加载配置
+    // 加载多源工具配置
     results.innerHTML = '<div class="opilot-palette-loading">加载工具中...</div>';
     loadMultiConfig(sources).then(data => {
-      const sites = Object.keys(data);
-      const history = getHistory(5);
-      let html = '';
+      Object.values(data).forEach(cfg => {
+        if (cfg && cfg.tools) {
+          cfg.tools.forEach(t => allTools.push({ ...t, _site: cfg.site, _origin: cfg.origin }));
+        }
+      });
+      renderHome();
+    });
 
+    // ============ 渲染：首页（历史 + 工具分类）============
+    function renderHome() {
+      lastMode = 'home';
+      const history = getHistory(5);
+      const siteNames = { tools: '教学工具', games: '益智游戏', ppt: 'HTML-PPT' };
+      const grouped = {};
+      allTools.forEach(t => {
+        if (!grouped[t._site]) grouped[t._site] = [];
+        grouped[t._site].push(t);
+      });
+
+      let html = '';
       if (history.length) {
         html += `<div class="opilot-palette-section"><div class="opilot-palette-eyebrow">最近</div>${
           history.map((h, i) => `
-            <div class="opilot-palette-item opilot-palette-history" data-q="${escapeHtml(h.q)}">
+            <div class="opilot-palette-item opilot-palette-history" data-q="${escapeHtml(h.q)}" data-idx="${i}">
               <span class="opilot-palette-icon">🕘</span>
-              <span>${escapeHtml(h.q)}</span>
+              <span class="opilot-palette-item-name">${escapeHtml(h.q)}</span>
             </div>
           `).join('')
         }</div>`;
       }
-
-      sites.forEach(site => {
-        const cfg = data[site];
-        if (!cfg || !cfg.tools || !cfg.tools.length) return;
+      Object.keys(grouped).forEach(site => {
         html += `<div class="opilot-palette-section">
-          <div class="opilot-palette-eyebrow">${site === 'tools' ? '教学工具' : site === 'games' ? '益智游戏' : 'HTML-PPT'}</div>
-          ${cfg.tools.slice(0, 8).map(t => `
-            <div class="opilot-palette-item" data-site="${site}" data-name="${escapeHtml(t.name)}">
+          <div class="opilot-palette-eyebrow">${siteNames[site] || site} (${grouped[site].length})</div>
+          ${grouped[site].slice(0, 8).map((t, i) => `
+            <div class="opilot-palette-item" data-site="${site}" data-name="${escapeHtml(t.name)}" data-idx="${i}">
               <span class="opilot-palette-icon">${escapeHtml(t.icon || '📄')}</span>
-              <span>${escapeHtml(t.name)}</span>
+              <span class="opilot-palette-item-name">${escapeHtml(t.name)}</span>
               <span class="opilot-palette-site">${site}</span>
             </div>
           `).join('')}
         </div>`;
-        cfg.tools.forEach(t => allTools.push({ ...t, _site: site, _origin: cfg.origin }));
       });
-
       results.innerHTML = html || '<div class="opilot-palette-empty">暂无工具</div>';
+      currentItems = Array.from(results.querySelectorAll('.opilot-palette-item'));
+      activeIndex = 0;
+      updateActiveItem();
       bindResultsEvents();
-      // 输入框聚焦
-      setTimeout(() => input.focus(), 50);
-    });
+    }
 
-    function renderFiltered(q) {
+    // ============ 渲染：关键词过滤结果（实时）============
+    function renderKeyword(q) {
+      lastMode = 'keyword';
       const lower = q.toLowerCase().trim();
-      let items = allTools;
-      if (lower) {
-        items = allTools.filter(t =>
-          (t.name && t.name.toLowerCase().includes(lower)) ||
-          (t.description && t.description.toLowerCase().includes(lower)) ||
-          (t.tags && t.tags.some(tag => String(tag).toLowerCase().includes(lower)))
-        );
-      }
-      // 按 site 分组
+      const items = allTools.filter(t =>
+        (t.name && t.name.toLowerCase().includes(lower)) ||
+        (t.description && t.description.toLowerCase().includes(lower)) ||
+        (t.tags && t.tags.some(tag => String(tag).toLowerCase().includes(lower)))
+      );
+      currentItems = items;
+
+      const siteNames = { tools: '教学工具', games: '益智游戏', ppt: 'HTML-PPT' };
       const grouped = {};
       items.forEach(t => {
         if (!grouped[t._site]) grouped[t._site] = [];
         grouped[t._site].push(t);
       });
-      const siteNames = { tools: '教学工具', games: '益智游戏', ppt: 'HTML-PPT' };
       let html = '';
       Object.keys(grouped).forEach(site => {
         html += `<div class="opilot-palette-section">
@@ -585,17 +597,124 @@
           ${grouped[site].slice(0, 20).map((t, i) => `
             <div class="opilot-palette-item" data-site="${site}" data-name="${escapeHtml(t.name)}" data-idx="${i}">
               <span class="opilot-palette-icon">${escapeHtml(t.icon || '📄')}</span>
-              <span>${escapeHtml(t.name)}</span>
+              <span class="opilot-palette-item-name">${escapeHtml(t.name)}</span>
               <span class="opilot-palette-site">${site}</span>
             </div>
           `).join('')}
         </div>`;
       });
-      results.innerHTML = html || `<div class="opilot-palette-empty">无匹配工具 · 试试在 AI Studio 中聊：<br><em>${escapeHtml(q)}</em><br><a class="opilot-palette-chat-btn" href="https://ai.oscarstudio.cn/?q=${encodeURIComponent(q)}" target="_blank" rel="noopener">💬 打开 AI 对话</a></div>`;
-      currentItems = items;
+      if (!html) {
+        html = `<div class="opilot-palette-empty">无匹配工具 · 按 <kbd>Enter</kbd> 让 Opilot 帮你找</div>`;
+      }
+      results.innerHTML = html;
       activeIndex = 0;
       updateActiveItem();
       bindResultsEvents();
+    }
+
+    // ============ 渲染：AI 结果（按 Enter 后）============
+    async function runAISearch() {
+      const q = input.value.trim();
+      if (!q) return;
+      results.innerHTML = `<div class="opilot-palette-loading">✨ Opilot 思考中...</div>`;
+      currentItems = [];
+      activeIndex = 0;
+      const toolsForAI = allTools.map(t => ({
+        name: t.name, description: t.description, tags: t.tags, subject: t.subject, prefill: t.prefill
+      }));
+      const result = await callSearch(q, toolsForAI, getHistory(3));
+      lastMode = 'ai';
+      renderAIResult(result);
+      if (result && result.success) {
+        const top = (result.tools && result.tools[0]) || null;
+        recordHistory({
+          q,
+          intent: result.intent || 'chat',
+          toolName: top ? top.name : null,
+          fallback: !!(result && result._fallback)
+        });
+      }
+    }
+
+    function renderAIResult(result) {
+      if (!result || !result.success) {
+        if (result && result._degraded) {
+          results.innerHTML = `
+            <div class="opilot-palette-degraded">Opilot 暂不可用，仅显示关键词结果</div>
+          `;
+          renderKeyword(input.value);
+          return;
+        }
+        results.innerHTML = '<div class="opilot-palette-empty">出错了，请稍后再试</div>';
+        return;
+      }
+      const tools = (result.tools || []).map(t => {
+        const local = allTools.find(x => x.name === t.name);
+        return local ? { ...local, ...t, _site: local._site } : { ...t, _site: t._site || null };
+      }).filter(t => t._site);
+      const reply = result.reply || '';
+      const intent = result.intent || 'chat';
+      const prefill = (result.prefill && typeof result.prefill === 'object') ? result.prefill : {};
+
+      let html = '';
+      if (reply) {
+        html += `<div class="opilot-palette-reply">${escapeHtml(reply)}</div>`;
+      }
+
+      if ((intent === 'launch' || intent === 'search' || (intent === 'chat' && tools.length)) && tools.length) {
+        const label = intent === 'launch' ? '推荐 (AI)' : intent === 'search' ? '相关工具' : '或许你想用';
+        html += `<div class="opilot-palette-section">
+          <div class="opilot-palette-eyebrow">${label}</div>
+          ${tools.map((t, i) => `
+            <div class="opilot-palette-item" data-site="${escapeHtml(t._site)}" data-name="${escapeHtml(t.name)}" data-idx="${i}">
+              <span class="opilot-palette-icon">${escapeHtml(t.icon || '📄')}</span>
+              <span class="opilot-palette-item-name">${escapeHtml(t.name)}</span>
+              ${t.confidence != null ? `<span class="opilot-palette-conf">${Math.round(t.confidence * 100)}%</span>` : ''}
+              <span class="opilot-palette-site">${escapeHtml(t._site)}</span>
+            </div>
+          `).join('')}
+        </div>`;
+        // launch 模式：额外显示"启动并预填"按钮
+        if (intent === 'launch' && tools[0] && Object.keys(prefill).length) {
+          html += renderLaunchButton(tools[0], prefill);
+        }
+      } else {
+        html += `<div class="opilot-palette-empty">无结果 · 试试其他关键词</div>`;
+      }
+
+      results.innerHTML = html;
+      currentItems = Array.from(results.querySelectorAll('.opilot-palette-item'));
+      activeIndex = 0;
+      updateActiveItem();
+      bindResultsEvents();
+      bindLaunchButton();
+    }
+
+    function renderLaunchButton(tool, prefill) {
+      const prefillJson = JSON.stringify(prefill || {});
+      return `<button class="opilot-palette-launch-btn" data-tool="${escapeHtml(tool.name)}" data-site="${escapeHtml(tool._site)}" data-prefill='${escapeHtml(prefillJson)}'>🚀 启动并预填 (${escapeHtml(tool.name)})</button>`;
+    }
+
+    function bindLaunchButton() {
+      results.querySelectorAll('.opilot-palette-launch-btn').forEach(btn => {
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); });
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const toolName = btn.dataset.tool;
+          const site = btn.dataset.site;
+          let prefill = {};
+          try { prefill = JSON.parse(btn.dataset.prefill || '{}'); } catch {}
+          const r = await callLaunch(site, toolName, prefill);
+          if (r.success && r.url) {
+            recordHistory({ q: input.value, intent: 'launch', toolName });
+            close();
+            window.location.href = r.url;
+          } else {
+            toast(r.message || '启动失败', { type: 'error' });
+          }
+        });
+      });
     }
 
     function updateActiveItem() {
@@ -608,16 +727,10 @@
 
     function activateItem(el) {
       if (!el) return;
-      if (el.classList.contains('opilot-palette-chat-btn')) {
-        // <a> 元素：浏览器原生处理 target=_blank，无需 JS 跳转
-        close();
-        return;
-      }
-      // 历史项：把 query 填回输入框，重新搜索
       if (el.classList.contains('opilot-palette-history')) {
         const q = el.dataset.q || '';
         input.value = q;
-        renderFiltered(q);
+        renderKeyword(q);
         input.focus();
         return;
       }
@@ -626,19 +739,15 @@
       if (!site || !name) return;
       const tool = allTools.find(t => t._site === site && t.name === name);
       if (!tool) return;
-      // 关闭面板再跳转
       close();
       recordHistory({ q: input.value, intent: 'launch', toolName: name });
       window.location.href = buildLaunchUrl(tool._origin, tool, {});
     }
 
     function bindResultsEvents() {
-      // 工具项
       results.querySelectorAll('.opilot-palette-item').forEach((el, i) => {
-        // 阻止 mousedown 抢 input focus（input 是 autofocus，可能导致 input 失焦）
         el.addEventListener('mousedown', (e) => { e.preventDefault(); });
         el.addEventListener('click', (e) => {
-          // 不要 preventDefault —— <a> 的 href 默认行为需要保留
           e.stopPropagation();
           activeIndex = i;
           activateItem(el);
@@ -648,21 +757,15 @@
           updateActiveItem();
         });
       });
-      // "打开 AI 对话" 按钮（无匹配时出现）—— <a> 元素，依靠 target=_blank 默认行为
-      results.querySelectorAll('.opilot-palette-chat-btn').forEach(btn => {
-        // mousedown preventDefault 防止 input 失焦（input 是 autofocus）
-        btn.addEventListener('mousedown', (e) => { e.preventDefault(); });
-        // click 不要 preventDefault —— 浏览器会按 target=_blank 自动开新 tab
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          // 关闭当前 palette（在新 tab 打开后）
-          setTimeout(close, 0);
-        });
-      });
     }
 
-    // 输入事件
-    const onInput = debounce((e) => renderFiltered(e.target.value), 100);
+    // ============ 事件 ============
+    // 输入：实时只做关键词过滤（不调 AI）
+    const onInput = debounce((e) => {
+      const q = e.target.value;
+      if (!q.trim()) renderHome();
+      else renderKeyword(q);
+    }, 100);
     input.addEventListener('input', onInput);
 
     // 键盘
@@ -680,17 +783,29 @@
         updateActiveItem();
       } else if (e.key === 'Enter') {
         e.preventDefault();
+        // 优先激活高亮项（如果有），否则触发 AI 搜索
         const active = results.querySelector('.opilot-palette-item.active');
-        activateItem(active);
+        if (active && lastMode !== 'ai') {
+          activateItem(active);
+        } else if (active && lastMode === 'ai') {
+          // AI 模式：点击高亮项也启动工具
+          activateItem(active);
+        } else {
+          // 无高亮项 → 调 AI
+          runAISearch();
+        }
       } else if (e.key === 'Escape') {
         close();
       }
     });
 
-    // 点击外部关闭
+    // 点击 overlay 背景关闭（点击 palette 内部不关闭）
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) close();
     });
+
+    // 自动聚焦
+    setTimeout(() => input.focus(), 50);
 
     function close() {
       overlay.classList.add('hide');
