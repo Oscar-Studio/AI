@@ -966,8 +966,10 @@
   const PANEL_W = 480, PANEL_H = 600;
   const PANEL_MARGIN = 24;
 
-  // 父窗口接管拖动/缩放状态
+  // 父窗口接管拖动/缩放状态（用 JS 跟踪位置，避免 getBoundingClientRect 在 rAF 后滞后）
   let dragState = null; // { lastX, lastY, mode: 'move' | 'resize' }
+  // 用 JS 变量跟踪 panel 位置，与 DOM 同步，避免每帧 getBoundingClientRect
+  let panelLeft = 0, panelTop = 0, panelW = PANEL_W, panelH = PANEL_H;
 
   function loadPanelRect() {
     try {
@@ -979,10 +981,9 @@
   }
   function savePanelRect() {
     if (!panelInstance) return;
-    const rect = panelInstance.getBoundingClientRect();
     try {
       localStorage.setItem(PANEL_RECT_KEY, JSON.stringify({
-        left: rect.left, top: rect.top, w: rect.width, h: rect.height
+        left: panelLeft, top: panelTop, w: panelW, h: panelH
       }));
     } catch (e) {}
   }
@@ -1001,19 +1002,22 @@
     };
   }
 
-  // 同步覆盖层位置（iframe 移动/resize 后调用）
+  // 同步 iframe + 覆盖层位置（基于 JS 变量，无 getBoundingClientRect）
   function syncOverlayPositions() {
     if (!panelInstance) return;
-    const r = panelInstance.getBoundingClientRect();
+    panelInstance.style.left = panelLeft + 'px';
+    panelInstance.style.top  = panelTop + 'px';
+    panelInstance.style.width  = panelW + 'px';
+    panelInstance.style.height = panelH + 'px';
     if (panelDragHandle) {
-      panelDragHandle.style.left = r.left + 'px';
-      panelDragHandle.style.top  = r.top + 'px';
-      panelDragHandle.style.width = r.width + 'px';
+      panelDragHandle.style.left  = panelLeft + 'px';
+      panelDragHandle.style.top   = panelTop + 'px';
+      panelDragHandle.style.width = panelW + 'px';
       panelDragHandle.style.height = panelHeaderHeight + 'px';
     }
     if (panelResizeHandle) {
-      panelResizeHandle.style.left = (r.right - 16) + 'px';
-      panelResizeHandle.style.top  = (r.bottom - 16) + 'px';
+      panelResizeHandle.style.left = (panelLeft + panelW - 16) + 'px';
+      panelResizeHandle.style.top  = (panelTop  + panelH - 16) + 'px';
     }
   }
 
@@ -1025,7 +1029,7 @@
     panelDragHandle.style.cssText = [
       'position:fixed',
       'left:0;top:0;width:0;height:0',
-      'z-index:99999',         // 高于 iframe (99998)
+      'z-index:99999',
       'cursor:move',
       'background:transparent'
     ].join(';');
@@ -1057,32 +1061,22 @@
     if (panelResizeHandle) { panelResizeHandle.remove(); panelResizeHandle = null; }
   }
 
-  // 父窗口的 mousemove：使用 rAF 节流
-  let moveRaf = 0;
-  function flushMove() {
-    moveRaf = 0;
-    if (!dragState || !panelInstance) return;
-    const cur = panelInstance.getBoundingClientRect();
-    if (dragState.mode === 'move') {
-      const next = clampPanelPos(cur.left + dragState.dx, cur.top + dragState.dy, cur.width, cur.height);
-      panelInstance.style.left = next.left + 'px';
-      panelInstance.style.top  = next.top + 'px';
-    } else if (dragState.mode === 'resize') {
-      const newW = Math.max(320, Math.min(window.innerWidth * 0.95, cur.width + dragState.dx));
-      const newH = Math.max(400, Math.min(window.innerHeight * 0.95, cur.height + dragState.dy));
-      panelInstance.style.width = newW + 'px';
-      panelInstance.style.height = newH + 'px';
-    }
-    syncOverlayPositions();
-  }
-
+  // mousemove：直接同步位置（不经过 rAF，彻底消除 delta 丢失）
   function onHostMouseMove(e) {
     if (!dragState) return;
-    dragState.dx = e.clientX - dragState.lastX;
-    dragState.dy = e.clientY - dragState.lastY;
+    const dx = e.clientX - dragState.lastX;
+    const dy = e.clientY - dragState.lastY;
     dragState.lastX = e.clientX;
     dragState.lastY = e.clientY;
-    if (!moveRaf) moveRaf = requestAnimationFrame(flushMove);
+    if (dragState.mode === 'move') {
+      const clamped = clampPanelPos(panelLeft + dx, panelTop + dy, panelW, panelH);
+      panelLeft = clamped.left;
+      panelTop  = clamped.top;
+    } else if (dragState.mode === 'resize') {
+      panelW = Math.max(320, Math.min(window.innerWidth  * 0.95, panelW + dx));
+      panelH = Math.max(400, Math.min(window.innerHeight * 0.95, panelH + dy));
+    }
+    syncOverlayPositions();
   }
   function onHostMouseUp() {
     if (!dragState) return;
@@ -1093,10 +1087,9 @@
   }
 
   function startHostDrag(screenX, screenY, mode) {
-    // 如果已有 dragState（iframe 内 + 覆盖层同时发），先清掉旧监听
     document.removeEventListener('mousemove', onHostMouseMove);
     document.removeEventListener('mouseup', onHostMouseUp);
-    dragState = { lastX: screenX, lastY: screenY, dx: 0, dy: 0, mode };
+    dragState = { lastX: screenX, lastY: screenY, mode };
     document.addEventListener('mousemove', onHostMouseMove);
     document.addEventListener('mouseup', onHostMouseUp);
   }
@@ -1126,12 +1119,18 @@
     const w = (rect && rect.w) || PANEL_W;
     const h = (rect && rect.h) || PANEL_H;
 
+    // 初始化 JS 位置状态
+    panelLeft = pos.left;
+    panelTop  = pos.top;
+    panelW = w;
+    panelH = h;
+
     iframe.style.cssText = [
       'position:fixed',
-      `left:${pos.left}px`,
-      `top:${pos.top}px`,
-      `width:${w}px`,
-      `height:${h}px`,
+      `left:${panelLeft}px`,
+      `top:${panelTop}px`,
+      `width:${panelW}px`,
+      `height:${panelH}px`,
       'min-width:320px',
       'min-height:400px',
       'max-width:95vw',
@@ -1159,31 +1158,24 @@
         if (panelDragHandle) panelDragHandle.style.display = 'none';
         if (panelResizeHandle) panelResizeHandle.style.display = 'none';
       } else if (e.data.type === 'opilot-move' && panelInstance) {
-        // 兼容旧版：iframe 内部 mousemove 增量消息
-        const cur = panelInstance.getBoundingClientRect();
-        const next = clampPanelPos(cur.left + (e.data.dx || 0), cur.top + (e.data.dy || 0), cur.width, cur.height);
-        panelInstance.style.left = next.left + 'px';
-        panelInstance.style.top  = next.top + 'px';
+        const clamped = clampPanelPos(panelLeft + (e.data.dx || 0), panelTop + (e.data.dy || 0), panelW, panelH);
+        panelLeft = clamped.left;
+        panelTop  = clamped.top;
         syncOverlayPositions();
       } else if (e.data.type === 'opilot-resize' && panelInstance) {
-        // 兼容旧版：iframe 内部 resize 增量消息
-        const cur = panelInstance.getBoundingClientRect();
-        const newW = Math.max(320, Math.min(window.innerWidth * 0.95, cur.width + (e.data.dw || 0)));
-        const newH = Math.max(400, Math.min(window.innerHeight * 0.95, cur.height + (e.data.dh || 0)));
-        panelInstance.style.width = newW + 'px';
-        panelInstance.style.height = newH + 'px';
+        panelW = Math.max(320, Math.min(window.innerWidth  * 0.95, panelW + (e.data.dw || 0)));
+        panelH = Math.max(400, Math.min(window.innerHeight * 0.95, panelH + (e.data.dh || 0)));
         syncOverlayPositions();
       }
     };
     window.addEventListener('message', panelMessageHandler);
 
-    // 窗口 resize 时重新 clamp + 同步覆盖层
+    // 窗口 resize 时重新 clamp
     window.addEventListener('resize', () => {
       if (!panelInstance) return;
-      const cur = panelInstance.getBoundingClientRect();
-      const next = clampPanelPos(cur.left, cur.top, cur.width, cur.height);
-      panelInstance.style.left = next.left + 'px';
-      panelInstance.style.top  = next.top + 'px';
+      const clamped = clampPanelPos(panelLeft, panelTop, panelW, panelH);
+      panelLeft = clamped.left;
+      panelTop  = clamped.top;
       syncOverlayPositions();
     });
 
