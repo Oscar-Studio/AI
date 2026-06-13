@@ -64,39 +64,106 @@
     ];
   }
 
-  // ============ 拖动 ============
-  // 关键：iframe 自身的 mousemove 在鼠标拖出 iframe 边界时就停止触发，
-  // 造成"拖出 → 停下 → 拖回 → 又跟"的抖动。
-  // 正确做法：mousedown 时把屏幕坐标 postMessage 给父窗口，
-  // 由父窗口在 document 上接管 mousemove/mouseup，不受 iframe 边界限制。
-  function makeDraggable(el, handle) {
-    handle.addEventListener('mousedown', (e) => {
-      if (e.target.closest('.opilot-panel-btn')) return;
-      if (e.target.closest('.opilot-panel-resize')) return;
-      e.preventDefault();
-      const frameEl = window.frameElement;
-      const iframeRect = frameEl ? frameEl.getBoundingClientRect() : { left: 0, top: 0 };
-      const screenX = iframeRect.left + e.clientX;
-      const screenY = iframeRect.top + e.clientY;
-      try {
-        window.parent.postMessage({ type: 'opilot-drag-start', screenX, screenY }, '*');
-      } catch (err) {}
-    });
+  // ============ 拖动 / 缩放 ============
+  // 关键：所有事件都在 iframe 自身的 document 上处理（mousemove / mouseup / pointerup 等
+  // 在 iframe 内部触发完全没问题）。父窗口只通过 postMessage 接收最终位置并
+  // 更新 iframe.style —— 这样：
+  // 1) header 内的 +/—/✕ 按钮可正常点击（不需要 pointer-events: none）
+  // 2) 不受跨域 iframe 事件不冒泡的限制
+  // 3) 鼠标拖出 iframe 边界也不丢事件（useCapture: true + window）
+  function getFrameOrigin() {
+    try {
+      const href = window.location.href;
+      return href.startsWith('http') ? '*' : '*';
+    } catch { return '*'; }
+  }
+  function postRect(left, top, w, h) {
+    try {
+      window.parent.postMessage({ type: 'opilot-set-rect', left, top, w, h }, '*');
+    } catch (err) {}
   }
 
-  // ============ 缩放 ============
-  function makeResizable(el, handle) {
-    handle.addEventListener('mousedown', (e) => {
+  // 拖动 header
+  function makeDraggable(handle) {
+    let dragging = false;
+    let startX = 0, startY = 0;
+    let startLeft = 0, startTop = 0;
+
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.opilot-panel-btn')) return;       // 按钮不触发拖动
+      if (e.target.closest('.opilot-panel-resize')) return;
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const frameEl = window.frameElement;
+      if (!frameEl) return;
+      const rect = frameEl.getBoundingClientRect();
+      startX = e.clientX; startY = e.clientY;
+      startLeft = rect.left; startTop = rect.top;
+      dragging = true;
+      try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+
+    function onMove(e) {
+      if (!dragging) return;
+      const frameEl = window.frameElement;
+      if (!frameEl) return;
+      const cur = frameEl.getBoundingClientRect();
+      const newLeft = startLeft + (e.clientX - startX);
+      const newTop  = startTop  + (e.clientY - startY);
+      postRect(newLeft, newTop, cur.width, cur.height);
+    }
+    function onUp(e) {
+      if (!dragging) return;
+      dragging = false;
+      try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
+      try { window.parent.postMessage({ type: 'opilot-save-rect' }, '*'); } catch (err) {}
+    }
+    // useCapture: true 保证即使子元素 stopPropagation 也能收到
+    handle.addEventListener('pointermove', onMove, true);
+    handle.addEventListener('pointerup', onUp, true);
+    handle.addEventListener('pointercancel', onUp, true);
+    // 兜底：监听 window 上的 mouseleave / blur，防止拖到 iframe 外丢失
+    window.addEventListener('blur', () => { dragging = false; });
+  }
+
+  // 缩放 resize handle
+  function makeResizable(handle) {
+    let resizing = false;
+    let startX = 0, startY = 0;
+    let startW = 0, startH = 0;
+
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
       const frameEl = window.frameElement;
-      const iframeRect = frameEl ? frameEl.getBoundingClientRect() : { left: 0, top: 0 };
-      const screenX = iframeRect.left + e.clientX;
-      const screenY = iframeRect.top + e.clientY;
-      try {
-        window.parent.postMessage({ type: 'opilot-resize-start', screenX, screenY }, '*');
-      } catch (err) {}
+      if (!frameEl) return;
+      const rect = frameEl.getBoundingClientRect();
+      startX = e.clientX; startY = e.clientY;
+      startW = rect.width; startH = rect.height;
+      resizing = true;
+      try { handle.setPointerCapture(e.pointerId); } catch (err) {}
     });
+
+    function onMove(e) {
+      if (!resizing) return;
+      const frameEl = window.frameElement;
+      if (!frameEl) return;
+      const cur = frameEl.getBoundingClientRect();
+      const newW = startW + (e.clientX - startX);
+      const newH = startH + (e.clientY - startY);
+      postRect(cur.left, cur.top, newW, newH);
+    }
+    function onUp(e) {
+      if (!resizing) return;
+      resizing = false;
+      try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
+      try { window.parent.postMessage({ type: 'opilot-save-rect' }, '*'); } catch (err) {}
+    }
+    handle.addEventListener('pointermove', onMove, true);
+    handle.addEventListener('pointerup', onUp, true);
+    handle.addEventListener('pointercancel', onUp, true);
+    window.addEventListener('blur', () => { resizing = false; });
   }
 
   // ============ 位置持久化 ============
@@ -396,8 +463,8 @@
   // ============ 事件绑定 ============
   function bindEvents() {
     // 拖动 + 缩放
-    makeDraggable(panel, header);
-    makeResizable(panel, resizeHandle);
+    makeDraggable(header);
+    makeResizable(resizeHandle);
 
     // 发送
     sendBtn.addEventListener('click', () => sendMessage());

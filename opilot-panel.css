@@ -59,9 +59,8 @@ body {
   transform: scale(0.95) translateY(20px);
 }
 
-/* ============ 头部（视觉用，拖动由父窗口覆盖层处理）============ */
-/* pointer-events:none 让鼠标事件穿透到父窗口的 #opilotPanelDragHandle 覆盖层，
-   这样拖动 mousemove 始终在父窗口 document 触发，不受跨域 iframe 边界限制。 */
+/* ============ 头部（拖动在 iframe 内部处理，父窗口只接收 postMessage 位置）============ */
+/* 不再需要 pointer-events: none —— +/—/✕ 按钮必须能正常点击 */
 .opilot-panel-header {
   display: flex;
   align-items: center;
@@ -70,7 +69,6 @@ body {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(236, 72, 153, 0.12));
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   cursor: grab;
-  pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
   flex-shrink: 0;
