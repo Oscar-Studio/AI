@@ -59,15 +59,18 @@ body {
   transform: scale(0.95) translateY(20px);
 }
 
-/* ============ 头部（可拖动）============ */
+/* ============ 头部（视觉用，拖动由父窗口覆盖层处理）============ */
+/* pointer-events:none 让鼠标事件穿透到父窗口的 #opilotPanelDragHandle 覆盖层，
+   这样拖动 mousemove 始终在父窗口 document 触发，不受跨域 iframe 边界限制。 */
 .opilot-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  background: rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(236, 72, 153, 0.12));
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   cursor: grab;
+  pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
   flex-shrink: 0;
@@ -205,8 +208,8 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 .opilot-msg-avatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -214,6 +217,7 @@ body {
   font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 .opilot-msg.user .opilot-msg-avatar {
   background: linear-gradient(135deg, #64748b, #475569);
@@ -231,6 +235,16 @@ body {
   color: #e2e8f0;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.opilot-msg.user .opilot-msg-body {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.15);
+  color: #cbd5e1;
+  padding-top: 8px;
 }
 .opilot-msg.user .opilot-msg-body {
   color: #cbd5e1;
@@ -292,10 +306,13 @@ body {
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 .opilot-panel-tool-card:hover {
   background: rgba(99, 102, 241, 0.15);
   border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
 }
 .opilot-panel-tool-icon {
   font-size: 20px;
