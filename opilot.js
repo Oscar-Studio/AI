@@ -295,10 +295,15 @@
           </div>
         `;
       } else if (intent === 'search' && aiTools.length) {
+        // 探索模式：也给一个 launch 入口（top 工具的智能 prefill）
+        const top = aiTools[0];
+        const finalPrefill = Object.keys(prefill).length ? prefill : autoExtractPrefill(currentQuery, top);
+        const launchBtn = `<button class="opilot-launch-btn" data-tool="${escapeHtml(top.name)}" data-site="${escapeHtml(top._site || ctx.site || '')}" data-prefill='${escapeHtml(JSON.stringify(finalPrefill))}'>🚀 启动并预填 (${escapeHtml(top.name)})</button>`;
         html += `
           <div class="opilot-section">
             <div class="opilot-section-label">相关工具</div>
             <div class="opilot-tool-list">${aiTools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: t._site || ctx.site })).join('')}</div>
+            ${launchBtn}
           </div>
         `;
       } else {
