@@ -1067,8 +1067,10 @@
     if (panelResizeHandle) { panelResizeHandle.remove(); panelResizeHandle = null; }
   }
 
-  // mousemove：直接同步位置（不经过 rAF，彻底消除 delta 丢失）
-  function onHostMouseMove(e) {
+  // 拖动中：监听 pointermove/pointerup（pointer 事件不受 pointerdown 的 preventDefault 影响）
+  // mouse 事件是 pointer 事件的兼容层，pointerdown 调用 preventDefault 后 mousemove/mouseup
+  // 就不会再触发了，所以必须用 pointer 系列事件。
+  function onHostPointerMove(e) {
     if (!dragState) return;
     const dx = e.clientX - dragState.lastX;
     const dy = e.clientY - dragState.lastY;
@@ -1087,20 +1089,17 @@
   function endDrag() {
     if (!dragState) return;
     dragState = null;
-    document.removeEventListener('mousemove', onHostMouseMove);
-    document.removeEventListener('mouseup', onHostMouseUp);
-    document.removeEventListener('pointerup', onHostMouseUp);
-    document.removeEventListener('pointercancel', onHostMouseUp);
+    document.removeEventListener('pointermove', onHostPointerMove);
+    document.removeEventListener('pointerup', onHostPointerUp);
+    document.removeEventListener('pointercancel', onHostPointerUp);
     window.removeEventListener('blur', onWindowBlur);
-    // mouseleave 用 capture 装的，单独 remove
     document.removeEventListener('mouseleave', onDocMouseLeave, true);
     savePanelRect();
   }
-  function onHostMouseUp() { endDrag(); }
+  function onHostPointerUp() { endDrag(); }
   // 窗口失焦（alt-tab / 切屏）兜底清状态
   function onWindowBlur() { endDrag(); }
   // 鼠标离开文档（拖到地址栏 / DevTools / 屏幕外）兜底清状态
-  // 用 capture 阶段 + documentElement，避免被其他 stopPropagation 吞掉
   function onDocMouseLeave(e) {
     if (e.relatedTarget || e.toElement) return; // 不是真的离开窗口
     endDrag();
@@ -1108,19 +1107,18 @@
 
   function startHostDrag(screenX, screenY, mode) {
     // 先清掉旧的（防覆盖层 + iframe 旧消息同时发）
-    document.removeEventListener('mousemove', onHostMouseMove);
-    document.removeEventListener('mouseup', onHostMouseUp);
-    document.removeEventListener('pointerup', onHostMouseUp);
-    document.removeEventListener('pointercancel', onHostMouseUp);
+    document.removeEventListener('pointermove', onHostPointerMove);
+    document.removeEventListener('pointerup', onHostPointerUp);
+    document.removeEventListener('pointercancel', onHostPointerUp);
     window.removeEventListener('blur', onWindowBlur);
     document.removeEventListener('mouseleave', onDocMouseLeave, true);
     dragState = { lastX: screenX, lastY: screenY, mode };
-    // 监听 mousemove / mouseup + pointerup / pointercancel + 失焦兜底
-    // 用 document（setPointerCapture 已保证事件一定回来）
-    document.addEventListener('mousemove', onHostMouseMove);
-    document.addEventListener('mouseup', onHostMouseUp);
-    document.addEventListener('pointerup', onHostMouseUp);
-    document.addEventListener('pointercancel', onHostMouseUp);
+    // 监听 pointermove / pointerup / pointercancel + 失焦兜底
+    // setPointerCapture 已经把所有 pointer 事件路由到 handle，所以这里监听 document
+    // 也能收到（pointer 事件会冒泡到 document）
+    document.addEventListener('pointermove', onHostPointerMove);
+    document.addEventListener('pointerup', onHostPointerUp);
+    document.addEventListener('pointercancel', onHostPointerUp);
     window.addEventListener('blur', onWindowBlur);
     document.addEventListener('mouseleave', onDocMouseLeave, true);
   }
