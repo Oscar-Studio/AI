@@ -84,33 +84,34 @@
   }
 
   // 拖动 header
+  // 注意：跨域 iframe 下 window.frameElement 为 null（安全限制），
+  // 所以不能在 iframe 内用 frameEl.getBoundingClientRect() 拿当前位置。
+  // 改用 JS 变量跟踪 rect，初始值由父窗口通过 'opilot-init-rect' postMessage 传入。
+  let panelRect = { left: 0, top: 0, w: 480, h: 600 };
+
   function makeDraggable(handle) {
     let dragging = false;
     let startX = 0, startY = 0;
     let startLeft = 0, startTop = 0;
 
     handle.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.opilot-panel-btn')) return;       // 按钮不触发拖动
+      if (e.target.closest('.opilot-panel-btn')) return;
       if (e.target.closest('.opilot-panel-resize')) return;
       if (e.button !== 0) return;
       e.preventDefault();
-      const frameEl = window.frameElement;
-      if (!frameEl) return;
-      const rect = frameEl.getBoundingClientRect();
       startX = e.clientX; startY = e.clientY;
-      startLeft = rect.left; startTop = rect.top;
+      startLeft = panelRect.left; startTop = panelRect.top;
       dragging = true;
       try { handle.setPointerCapture(e.pointerId); } catch (err) {}
     });
 
     function onMove(e) {
       if (!dragging) return;
-      const frameEl = window.frameElement;
-      if (!frameEl) return;
-      const cur = frameEl.getBoundingClientRect();
       const newLeft = startLeft + (e.clientX - startX);
       const newTop  = startTop  + (e.clientY - startY);
-      postRect(newLeft, newTop, cur.width, cur.height);
+      panelRect.left = newLeft;
+      panelRect.top  = newTop;
+      postRect(newLeft, newTop, panelRect.w, panelRect.h);
     }
     function onUp(e) {
       if (!dragging) return;
@@ -118,11 +119,9 @@
       try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
       try { window.parent.postMessage({ type: 'opilot-save-rect' }, '*'); } catch (err) {}
     }
-    // useCapture: true 保证即使子元素 stopPropagation 也能收到
     handle.addEventListener('pointermove', onMove, true);
     handle.addEventListener('pointerup', onUp, true);
     handle.addEventListener('pointercancel', onUp, true);
-    // 兜底：监听 window 上的 mouseleave / blur，防止拖到 iframe 外丢失
     window.addEventListener('blur', () => { dragging = false; });
   }
 
@@ -136,23 +135,19 @@
       if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
-      const frameEl = window.frameElement;
-      if (!frameEl) return;
-      const rect = frameEl.getBoundingClientRect();
       startX = e.clientX; startY = e.clientY;
-      startW = rect.width; startH = rect.height;
+      startW = panelRect.w; startH = panelRect.h;
       resizing = true;
       try { handle.setPointerCapture(e.pointerId); } catch (err) {}
     });
 
     function onMove(e) {
       if (!resizing) return;
-      const frameEl = window.frameElement;
-      if (!frameEl) return;
-      const cur = frameEl.getBoundingClientRect();
-      const newW = startW + (e.clientX - startX);
-      const newH = startH + (e.clientY - startY);
-      postRect(cur.left, cur.top, newW, newH);
+      const newW = Math.max(320, startW + (e.clientX - startX));
+      const newH = Math.max(400, startH + (e.clientY - startY));
+      panelRect.w = newW;
+      panelRect.h = newH;
+      postRect(panelRect.left, panelRect.top, newW, newH);
     }
     function onUp(e) {
       if (!resizing) return;
@@ -165,6 +160,18 @@
     handle.addEventListener('pointercancel', onUp, true);
     window.addEventListener('blur', () => { resizing = false; });
   }
+
+  // 监听父窗口消息：接收初始 rect / 接收父窗口 clamp 后的 rect
+  window.addEventListener('message', (e) => {
+    if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'opilot-init-rect' || e.data.type === 'opilot-set-rect') {
+      // 父窗口发回的最终 rect（已 clamp 到视口内）
+      if (typeof e.data.left === 'number') panelRect.left = e.data.left;
+      if (typeof e.data.top === 'number')  panelRect.top  = e.data.top;
+      if (typeof e.data.w === 'number')    panelRect.w    = e.data.w;
+      if (typeof e.data.h === 'number')    panelRect.h    = e.data.h;
+    }
+  });
 
   // ============ 位置持久化 ============
   // 持久化逻辑搬到父窗口（它能拿到 iframe 实际屏幕位置）。
@@ -542,6 +549,9 @@
   applyRect();
   bindEvents();
   bindSuggestionCards();
+
+  // 通知父窗口：iframe 已就绪，父窗口会回传当前 rect
+  try { window.parent.postMessage({ type: 'opilot-ready' }, '*'); } catch (err) {}
 
   // 暴露给父窗口调用
   window.OpilotPanel = {

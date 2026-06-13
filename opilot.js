@@ -1059,7 +1059,7 @@
       if (e.data.type === 'opilot-close') {
         if (panelInstance) panelInstance.style.display = 'none';
       } else if (e.data.type === 'opilot-set-rect' && panelInstance) {
-        // iframe 内部拖动 / 缩放 触发
+        // iframe 内部拖动 / 缩放 触发 —— clamp 到视口内后回显
         const w = Math.max(320, Math.min(window.innerWidth  * 0.95, e.data.w || panelW));
         const h = Math.max(400, Math.min(window.innerHeight * 0.95, e.data.h || panelH));
         const clamped = clampPanelPos(e.data.left, e.data.top, w, h);
@@ -1068,9 +1068,24 @@
         panelW = w;
         panelH = h;
         applyRect();
+        // 把 clamp 后的 rect 回传给 iframe，让它同步 JS 状态
+        try {
+          panelInstance.contentWindow.postMessage({
+            type: 'opilot-set-rect',
+            left: panelLeft, top: panelTop, w: panelW, h: panelH
+          }, '*');
+        } catch (err) {}
       } else if (e.data.type === 'opilot-save-rect') {
         // 拖动结束，保存到 localStorage
         savePanelRect();
+      } else if (e.data.type === 'opilot-ready' && panelInstance) {
+        // iframe 加载完成，回传当前 rect（首次定位）
+        try {
+          panelInstance.contentWindow.postMessage({
+            type: 'opilot-init-rect',
+            left: panelLeft, top: panelTop, w: panelW, h: panelH
+          }, '*');
+        } catch (err) {}
       }
     };
     window.addEventListener('message', panelMessageHandler);
