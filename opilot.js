@@ -13,13 +13,6 @@
 (function () {
   'use strict';
 
-  // ============ 同源魔法 ============
-  // 父页面可能是 oscarstudio.cn / tools.oscarstudio.cn / games.oscarstudio.cn / ...，
-  // iframe 在 ai.oscarstudio.cn —— 跨域。设置 document.domain = 'oscarstudio.cn' 后
-  // 两者变成同源，可以直接互相访问 DOM（window.frameElement, iframe.contentDocument
-  // 等全部可用），所有跨域事件 / postMessage 异步问题瞬间消失。
-  try { document.domain = 'oscarstudio.cn'; } catch (e) {}
-
   // ============ 常量 ============
   const OPILOT_API   = 'https://api.oscarstudio.cn/api/opilot';
   const DEBOUNCE_MS  = 400;
@@ -1022,10 +1015,10 @@
       try { panelInstance.contentWindow.OpilotPanel.open(); } catch (e) {}
       return panelInstance;
     }
-    // 创建 iframe
+    // 创建 iframe（加 cache buster 避免 CDN 缓存旧版本造成跨版本 bug）
     const iframe = document.createElement('iframe');
     iframe.id = 'opilotPanelIframe';
-    iframe.src = 'https://ai.oscarstudio.cn/opilot-panel.html';
+    iframe.src = 'https://ai.oscarstudio.cn/opilot-panel.html?v=' + Date.now();
     iframe.allow = 'clipboard-read; clipboard-write';
     iframe.setAttribute('allowtransparency', 'true');
 
@@ -1060,53 +1053,33 @@
     document.body.appendChild(iframe);
     panelInstance = iframe;
 
-    // 监听 iframe 消息（document.domain 模式下同源，postMessage 主要用于跨 window 通知）
+    // 监听 iframe 消息
     panelMessageHandler = (e) => {
       if (!e.data || typeof e.data !== 'object') return;
       if (e.data.type === 'opilot-close') {
         if (panelInstance) panelInstance.style.display = 'none';
-      }
-      // opilot-delta / opilot-resize 旧消息保留兼容：父窗口累加 clamp
-      else if (e.data.type === 'opilot-delta' && panelInstance) {
+      } else if (e.data.type === 'opilot-delta' && panelInstance) {
+        // 拖动增量：父窗口累加并 clamp
         panelLeft += (e.data.dx || 0);
         panelTop  += (e.data.dy || 0);
         const clamped = clampPanelPos(panelLeft, panelTop, panelW, panelH);
         panelLeft = clamped.left;
         panelTop  = clamped.top;
         applyRect();
-      }
-      else if (e.data.type === 'opilot-resize' && panelInstance) {
+      } else if (e.data.type === 'opilot-resize' && panelInstance) {
+        // 缩放增量
         panelW = Math.max(320, Math.min(window.innerWidth  * 0.95, panelW + (e.data.dw || 0)));
         panelH = Math.max(400, Math.min(window.innerHeight * 0.95, panelH + (e.data.dh || 0)));
         applyRect();
-      }
-      // opilot-save-rect 兜底（iframe 内部拖动直接写 style，结束时通过此消息通知父窗口保存）
-      else if (e.data.type === 'opilot-save-rect') {
-        // 同步父窗口的 panelLeft/Top 状态（从 iframe 读）
-        try {
-          if (panelInstance) {
-            panelLeft = parseInt(panelInstance.style.left) || panelLeft;
-            panelTop  = parseInt(panelInstance.style.top)  || panelTop;
-            panelW    = panelInstance.offsetWidth  || panelW;
-            panelH    = panelInstance.offsetHeight || panelH;
-          }
-        } catch (e) {}
+      } else if (e.data.type === 'opilot-save-rect') {
+        // 拖动结束，保存到 localStorage
         savePanelRect();
+      } else if (e.data.type === 'opilot-ready' && panelInstance) {
+        // 兼容性兜底：新代码不再需要 init-rect（位置由父窗口自己维护）
+        // 但保留这个分支以防旧版本 iframe 仍发送 init-rect
       }
     };
     window.addEventListener('message', panelMessageHandler);
-
-    // 监听 iframe 派发的自定义事件（document.domain 模式下更可靠）
-    window.addEventListener('opilot-panel-save-rect', () => {
-      if (!panelInstance) return;
-      try {
-        panelLeft = parseInt(panelInstance.style.left) || panelLeft;
-        panelTop  = parseInt(panelInstance.style.top)  || panelTop;
-        panelW    = panelInstance.offsetWidth  || panelW;
-        panelH    = panelInstance.offsetHeight || panelH;
-      } catch (e) {}
-      savePanelRect();
-    });
 
     // 窗口 resize 时重新 clamp（保持位置合理）
     window.addEventListener('resize', () => {

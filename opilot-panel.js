@@ -65,52 +65,18 @@
   }
 
   // ============ 拖动 / 缩放 ============
-  // document.domain = 'oscarstudio.cn' 让 iframe 与父页面同源，
-  // 所以 window.frameElement 正常返回 iframe 元素，可以直接读写它的 style。
-  // 不再需要 postMessage 同步位置，零异步、零抖动、零 race condition。
-  const frameEl = window.frameElement;
-
-  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-  function clampPos(left, top, w, h) {
-    if (!frameEl) return { left, top };
-    const maxLeft = Math.max(0, window.parent.innerWidth  - Math.min(w, window.parent.innerWidth));
-    const maxTop  = Math.max(0, window.parent.innerHeight - Math.min(h, window.parent.innerHeight));
-    return {
-      left: clamp(left, 24, maxLeft - 24),
-      top:  clamp(top,  24, maxTop  - 24)
-    };
+  // 关键：所有事件都在 iframe 自身的 document 上处理。
+  // 关键 2：iframe 只发送增量 (dx, dy) / 尺寸增量 (dw, dh) 给父窗口，父窗口累加并 clamp。
+  // 这样避免每帧 postMessage 双向往返（iframe→parent→iframe）造成的 state 滞后和抖动。
+  // 父窗口是 position 状态的唯一权威，iframe 只需要在 pointerdown 时记录 lastX/Y。
+  function postDelta(dx, dy) {
+    try { window.parent.postMessage({ type: 'opilot-delta', dx, dy }, '*'); } catch (err) {}
   }
-  function readPos() {
-    if (!frameEl) return { left: 0, top: 0, w: 480, h: 600 };
-    return {
-      left: parseInt(frameEl.style.left) || 0,
-      top:  parseInt(frameEl.style.top)  || 0,
-      w:    frameEl.offsetWidth  || 480,
-      h:    frameEl.offsetHeight || 600
-    };
+  function postResize(dw, dh) {
+    try { window.parent.postMessage({ type: 'opilot-resize', dw, dh }, '*'); } catch (err) {}
   }
-  function writePos(left, top) {
-    if (!frameEl) return;
-    const p = readPos();
-    const c = clampPos(left, top, p.w, p.h);
-    frameEl.style.left = c.left + 'px';
-    frameEl.style.top  = c.top  + 'px';
-  }
-  function writeSize(w, h) {
-    if (!frameEl) return;
-    const p = readPos();
-    const newW = clamp(w, 320, window.parent.innerWidth  * 0.95);
-    const newH = clamp(h, 400, window.parent.innerHeight * 0.95);
-    const c = clampPos(p.left, p.top, newW, newH);
-    frameEl.style.width  = newW + 'px';
-    frameEl.style.height = newH + 'px';
-    frameEl.style.left   = c.left + 'px';
-    frameEl.style.top    = c.top  + 'px';
-  }
-  function saveRect() {
-    if (!frameEl || !window.parent.Opilot) return;
-    // 通过 Opilot 公共 API 触发父窗口保存
-    try { window.parent.dispatchEvent(new CustomEvent('opilot-panel-save-rect')); } catch (e) {}
+  function postSave() {
+    try { window.parent.postMessage({ type: 'opilot-save-rect' }, '*'); } catch (err) {}
   }
 
   // 拖动 header
@@ -133,14 +99,13 @@
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       lastX = e.clientX; lastY = e.clientY;
-      const p = readPos();
-      writePos(p.left + dx, p.top + dy);
+      postDelta(dx, dy);
     }
     function onUp(e) {
       if (!dragging) return;
       dragging = false;
       try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
-      saveRect();
+      postSave();
     }
     handle.addEventListener('pointermove', onMove, true);
     handle.addEventListener('pointerup', onUp, true);
@@ -167,14 +132,13 @@
       const dw = e.clientX - lastX;
       const dh = e.clientY - lastY;
       lastX = e.clientX; lastY = e.clientY;
-      const p = readPos();
-      writeSize(p.w + dw, p.h + dh);
+      postResize(dw, dh);
     }
     function onUp(e) {
       if (!resizing) return;
       resizing = false;
       try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
-      saveRect();
+      postSave();
     }
     handle.addEventListener('pointermove', onMove, true);
     handle.addEventListener('pointerup', onUp, true);
@@ -559,8 +523,8 @@
   bindEvents();
   bindSuggestionCards();
 
-  // 通知父窗口：iframe 已就绪（旧代码兼容保留；document.domain 模式下父窗口可
-  // 直接通过 frameElement 访问本窗口，不再需要 init-rect 消息来回传位置）
+  // 通知父窗口：iframe 已就绪，父窗口会回传当前 rect
+  // 用 setTimeout(..., 0) 等到下一个 tick，确保父窗口的 message handler 已经注册
   setTimeout(() => {
     try { window.parent.postMessage({ type: 'opilot-ready' }, '*'); } catch (err) {}
   }, 0);
