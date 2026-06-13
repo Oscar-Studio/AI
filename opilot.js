@@ -1031,10 +1031,14 @@
       'left:0;top:0;width:0;height:0',
       'z-index:99999',
       'cursor:move',
-      'background:transparent'
+      'background:transparent',
+      'touch-action:none'  // 防止移动端手势拦截
     ].join(';');
-    panelDragHandle.addEventListener('mousedown', (e) => {
+    // 用 pointerdown + setPointerCapture：拖动期间所有鼠标事件都路由到该元素，
+    // 即使鼠标移到 iframe 外部或窗口外也能正确接收 mouseup
+    panelDragHandle.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      try { panelDragHandle.setPointerCapture(e.pointerId); } catch (err) {}
       startHostDrag(e.clientX, e.clientY, 'move');
     });
     document.body.appendChild(panelDragHandle);
@@ -1046,11 +1050,13 @@
       'left:0;top:0;width:16px;height:16px',
       'z-index:99999',
       'cursor:nwse-resize',
-      'background:linear-gradient(135deg,transparent 50%,rgba(167,139,250,0.6) 50%,rgba(167,139,250,0.6) 60%,transparent 60%,transparent 70%,rgba(167,139,250,0.6) 70%,rgba(167,139,250,0.6) 80%,transparent 80%)'
+      'background:linear-gradient(135deg,transparent 50%,rgba(167,139,250,0.6) 50%,rgba(167,139,250,0.6) 60%,transparent 60%,transparent 70%,rgba(167,139,250,0.6) 70%,rgba(167,139,250,0.6) 80%,transparent 80%)',
+      'touch-action:none'
     ].join(';');
-    panelResizeHandle.addEventListener('mousedown', (e) => {
+    panelResizeHandle.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      try { panelResizeHandle.setPointerCapture(e.pointerId); } catch (err) {}
       startHostDrag(e.clientX, e.clientY, 'resize');
     });
     document.body.appendChild(panelResizeHandle);
@@ -1078,20 +1084,45 @@
     }
     syncOverlayPositions();
   }
-  function onHostMouseUp() {
+  function endDrag() {
     if (!dragState) return;
     dragState = null;
     document.removeEventListener('mousemove', onHostMouseMove);
     document.removeEventListener('mouseup', onHostMouseUp);
+    document.removeEventListener('pointerup', onHostMouseUp);
+    document.removeEventListener('pointercancel', onHostMouseUp);
+    window.removeEventListener('blur', onWindowBlur);
+    // mouseleave 用 capture 装的，单独 remove
+    document.removeEventListener('mouseleave', onDocMouseLeave, true);
     savePanelRect();
+  }
+  function onHostMouseUp() { endDrag(); }
+  // 窗口失焦（alt-tab / 切屏）兜底清状态
+  function onWindowBlur() { endDrag(); }
+  // 鼠标离开文档（拖到地址栏 / DevTools / 屏幕外）兜底清状态
+  // 用 capture 阶段 + documentElement，避免被其他 stopPropagation 吞掉
+  function onDocMouseLeave(e) {
+    if (e.relatedTarget || e.toElement) return; // 不是真的离开窗口
+    endDrag();
   }
 
   function startHostDrag(screenX, screenY, mode) {
+    // 先清掉旧的（防覆盖层 + iframe 旧消息同时发）
     document.removeEventListener('mousemove', onHostMouseMove);
     document.removeEventListener('mouseup', onHostMouseUp);
+    document.removeEventListener('pointerup', onHostMouseUp);
+    document.removeEventListener('pointercancel', onHostMouseUp);
+    window.removeEventListener('blur', onWindowBlur);
+    document.removeEventListener('mouseleave', onDocMouseLeave, true);
     dragState = { lastX: screenX, lastY: screenY, mode };
+    // 监听 mousemove / mouseup + pointerup / pointercancel + 失焦兜底
+    // 用 document（setPointerCapture 已保证事件一定回来）
     document.addEventListener('mousemove', onHostMouseMove);
     document.addEventListener('mouseup', onHostMouseUp);
+    document.addEventListener('pointerup', onHostMouseUp);
+    document.addEventListener('pointercancel', onHostMouseUp);
+    window.addEventListener('blur', onWindowBlur);
+    document.addEventListener('mouseleave', onDocMouseLeave, true);
   }
 
   function openPanel() {
