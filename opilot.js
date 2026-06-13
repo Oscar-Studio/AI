@@ -963,6 +963,9 @@
   const PANEL_W = 480, PANEL_H = 600;
   const PANEL_MARGIN = 24;
 
+  // 父窗口接管拖动/缩放状态（不在 iframe 内部监听 mousemove，避免出边界停）
+  let dragState = null; // { lastX, lastY, mode: 'move' | 'resize' }
+
   function loadPanelRect() {
     try {
       const r = JSON.parse(localStorage.getItem(PANEL_RECT_KEY) || 'null');
@@ -993,6 +996,46 @@
       left: Math.max(PANEL_MARGIN, window.innerWidth - PANEL_W - PANEL_MARGIN),
       top:  Math.max(PANEL_MARGIN, window.innerHeight - PANEL_H - PANEL_MARGIN)
     };
+  }
+
+  // 父窗口的 mousemove：使用 rAF 节流，避免每帧多次 layout
+  let moveRaf = 0;
+  function flushMove() {
+    moveRaf = 0;
+    if (!dragState || !panelInstance) return;
+    const cur = panelInstance.getBoundingClientRect();
+    if (dragState.mode === 'move') {
+      const next = clampPanelPos(cur.left + dragState.dx, cur.top + dragState.dy, cur.width, cur.height);
+      panelInstance.style.left = next.left + 'px';
+      panelInstance.style.top  = next.top + 'px';
+    } else if (dragState.mode === 'resize') {
+      const newW = Math.max(320, Math.min(window.innerWidth * 0.95, cur.width + dragState.dx));
+      const newH = Math.max(400, Math.min(window.innerHeight * 0.95, cur.height + dragState.dy));
+      panelInstance.style.width = newW + 'px';
+      panelInstance.style.height = newH + 'px';
+    }
+  }
+
+  function onHostMouseMove(e) {
+    if (!dragState) return;
+    dragState.dx = e.clientX - dragState.lastX;
+    dragState.dy = e.clientY - dragState.lastY;
+    dragState.lastX = e.clientX;
+    dragState.lastY = e.clientY;
+    if (!moveRaf) moveRaf = requestAnimationFrame(flushMove);
+  }
+  function onHostMouseUp() {
+    if (!dragState) return;
+    dragState = null;
+    document.removeEventListener('mousemove', onHostMouseMove);
+    document.removeEventListener('mouseup', onHostMouseUp);
+    savePanelRect();
+  }
+
+  function startHostDrag(screenX, screenY, mode) {
+    dragState = { lastX: screenX, lastY: screenY, dx: 0, dy: 0, mode };
+    document.addEventListener('mousemove', onHostMouseMove);
+    document.addEventListener('mouseup', onHostMouseUp);
   }
 
   function openPanel() {
@@ -1038,26 +1081,16 @@
     document.body.appendChild(iframe);
     panelInstance = iframe;
 
-    // 监听 iframe 内的消息：关闭 / 移动 / 缩放
+    // 监听 iframe 内的消息：关闭 / 接管拖动 / 接管缩放
     panelMessageHandler = (e) => {
       if (!e.data || typeof e.data !== 'object') return;
       if (e.data.type === 'opilot-close') {
         if (panelInstance) panelInstance.style.display = 'none';
-      } else if (e.data.type === 'opilot-move' && panelInstance) {
-        // dx/dy 是 iframe 内部 panel header 拖动增量
-        const cur = panelInstance.getBoundingClientRect();
-        const next = clampPanelPos(cur.left + e.data.dx, cur.top + e.data.dy, cur.width, cur.height);
-        panelInstance.style.left = next.left + 'px';
-        panelInstance.style.top  = next.top + 'px';
-      } else if (e.data.type === 'opilot-resize' && panelInstance) {
-        // { type, dw, dh } iframe 内部 resize
-        const cur = panelInstance.getBoundingClientRect();
-        const newW = Math.max(320, Math.min(window.innerWidth * 0.95, cur.width + e.data.dw));
-        const newH = Math.max(400, Math.min(window.innerHeight * 0.95, cur.height + e.data.dh));
-        panelInstance.style.width = newW + 'px';
-        panelInstance.style.height = newH + 'px';
+      } else if (e.data.type === 'opilot-drag-start') {
+        startHostDrag(e.data.screenX, e.data.screenY, 'move');
+      } else if (e.data.type === 'opilot-resize-start') {
+        startHostDrag(e.data.screenX, e.data.screenY, 'resize');
       } else if (e.data.type === 'opilot-save-rect') {
-        // iframe 内部 saveRect 已尝试，但 iframe 看不到外部尺寸，所以由外部存
         savePanelRect();
       }
     };

@@ -65,30 +65,22 @@
   }
 
   // ============ 拖动 ============
-  // 关键：iframe 自身大小固定，移动 panel 会被 iframe overflow:hidden 裁掉。
-  // 改成把增量 postMessage 给父窗口，由父窗口移动整个 iframe。
+  // 关键：iframe 自身的 mousemove 在鼠标拖出 iframe 边界时就停止触发，
+  // 造成"拖出 → 停下 → 拖回 → 又跟"的抖动。
+  // 正确做法：mousedown 时把屏幕坐标 postMessage 给父窗口，
+  // 由父窗口在 document 上接管 mousemove/mouseup，不受 iframe 边界限制。
   function makeDraggable(el, handle) {
     handle.addEventListener('mousedown', (e) => {
       if (e.target.closest('.opilot-panel-btn')) return;
       if (e.target.closest('.opilot-panel-resize')) return;
       e.preventDefault();
-      let lastX = e.clientX, lastY = e.clientY;
-      const onMove = (ev) => {
-        const dx = ev.clientX - lastX;
-        const dy = ev.clientY - lastY;
-        lastX = ev.clientX;
-        lastY = ev.clientY;
-        try {
-          window.parent.postMessage({ type: 'opilot-move', dx, dy }, '*');
-        } catch (err) {}
-      };
-      const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        try { window.parent.postMessage({ type: 'opilot-save-rect' }, '*'); } catch (err) {}
-      };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      const frameEl = window.frameElement;
+      const iframeRect = frameEl ? frameEl.getBoundingClientRect() : { left: 0, top: 0 };
+      const screenX = iframeRect.left + e.clientX;
+      const screenY = iframeRect.top + e.clientY;
+      try {
+        window.parent.postMessage({ type: 'opilot-drag-start', screenX, screenY }, '*');
+      } catch (err) {}
     });
   }
 
@@ -97,23 +89,13 @@
     handle.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      let lastX = e.clientX, lastY = e.clientY;
-      const onMove = (ev) => {
-        const dw = ev.clientX - lastX;
-        const dh = ev.clientY - lastY;
-        lastX = ev.clientX;
-        lastY = ev.clientY;
-        try {
-          window.parent.postMessage({ type: 'opilot-resize', dw, dh }, '*');
-        } catch (err) {}
-      };
-      const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        try { window.parent.postMessage({ type: 'opilot-save-rect' }, '*'); } catch (err) {}
-      };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      const frameEl = window.frameElement;
+      const iframeRect = frameEl ? frameEl.getBoundingClientRect() : { left: 0, top: 0 };
+      const screenX = iframeRect.left + e.clientX;
+      const screenY = iframeRect.top + e.clientY;
+      try {
+        window.parent.postMessage({ type: 'opilot-resize-start', screenX, screenY }, '*');
+      } catch (err) {}
     });
   }
 
