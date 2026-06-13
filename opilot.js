@@ -958,6 +958,43 @@
   // ============ 悬浮面板（Opilot Panel）============
   // 共享 iframe 实例：同一站只创建一次
   let panelInstance = null;
+  let panelMessageHandler = null;
+  const PANEL_RECT_KEY = 'opilot_panel_rect';
+  const PANEL_W = 480, PANEL_H = 600;
+  const PANEL_MARGIN = 24;
+
+  function loadPanelRect() {
+    try {
+      const r = JSON.parse(localStorage.getItem(PANEL_RECT_KEY) || 'null');
+      if (r && typeof r.left === 'number' && typeof r.top === 'number' &&
+          r.w >= 320 && r.h >= 400) return r;
+    } catch (e) {}
+    return null;
+  }
+  function savePanelRect() {
+    if (!panelInstance) return;
+    const rect = panelInstance.getBoundingClientRect();
+    try {
+      localStorage.setItem(PANEL_RECT_KEY, JSON.stringify({
+        left: rect.left, top: rect.top, w: rect.width, h: rect.height
+      }));
+    } catch (e) {}
+  }
+  function clampPanelPos(left, top, w, h) {
+    const maxLeft = Math.max(0, window.innerWidth - Math.min(w, window.innerWidth));
+    const maxTop  = Math.max(0, window.innerHeight - Math.min(h, window.innerHeight));
+    return {
+      left: Math.max(PANEL_MARGIN, Math.min(left, maxLeft - PANEL_MARGIN)),
+      top:  Math.max(PANEL_MARGIN, Math.min(top,  maxTop  - PANEL_MARGIN))
+    };
+  }
+  function defaultPanelPos() {
+    return {
+      left: Math.max(PANEL_MARGIN, window.innerWidth - PANEL_W - PANEL_MARGIN),
+      top:  Math.max(PANEL_MARGIN, window.innerHeight - PANEL_H - PANEL_MARGIN)
+    };
+  }
+
   function openPanel() {
     if (panelInstance && document.body.contains(panelInstance)) {
       // 已存在：显示
@@ -967,14 +1004,25 @@
     }
     // 创建 iframe
     const iframe = document.createElement('iframe');
+    iframe.id = 'opilotPanelIframe';
     iframe.src = 'https://ai.oscarstudio.cn/opilot-panel.html';
     iframe.allow = 'clipboard-read; clipboard-write';
+    iframe.setAttribute('allowtransparency', 'true');
+
+    // 优先用 localStorage 中保存的位置；否则默认右下角
+    const rect = loadPanelRect();
+    const pos = rect
+      ? clampPanelPos(rect.left, rect.top, rect.w || PANEL_W, rect.h || PANEL_H)
+      : defaultPanelPos();
+    const w = (rect && rect.w) || PANEL_W;
+    const h = (rect && rect.h) || PANEL_H;
+
     iframe.style.cssText = [
       'position:fixed',
-      'right:24px',
-      'bottom:24px',
-      'width:480px',
-      'height:600px',
+      `left:${pos.left}px`,
+      `top:${pos.top}px`,
+      `width:${w}px`,
+      `height:${h}px`,
       'min-width:320px',
       'min-height:400px',
       'max-width:95vw',
@@ -987,16 +1035,43 @@
       'overflow:hidden',
       'transition:opacity 0.2s'
     ].join(';');
-    iframe.setAttribute('allowtransparency', 'true');
     document.body.appendChild(iframe);
     panelInstance = iframe;
 
-    // 监听 iframe 内的关闭消息
-    window.addEventListener('message', (e) => {
-      if (e.data && e.data.type === 'opilot-close') {
+    // 监听 iframe 内的消息：关闭 / 移动 / 缩放
+    panelMessageHandler = (e) => {
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type === 'opilot-close') {
         if (panelInstance) panelInstance.style.display = 'none';
+      } else if (e.data.type === 'opilot-move' && panelInstance) {
+        // dx/dy 是 iframe 内部 panel header 拖动增量
+        const cur = panelInstance.getBoundingClientRect();
+        const next = clampPanelPos(cur.left + e.data.dx, cur.top + e.data.dy, cur.width, cur.height);
+        panelInstance.style.left = next.left + 'px';
+        panelInstance.style.top  = next.top + 'px';
+      } else if (e.data.type === 'opilot-resize' && panelInstance) {
+        // { type, dw, dh } iframe 内部 resize
+        const cur = panelInstance.getBoundingClientRect();
+        const newW = Math.max(320, Math.min(window.innerWidth * 0.95, cur.width + e.data.dw));
+        const newH = Math.max(400, Math.min(window.innerHeight * 0.95, cur.height + e.data.dh));
+        panelInstance.style.width = newW + 'px';
+        panelInstance.style.height = newH + 'px';
+      } else if (e.data.type === 'opilot-save-rect') {
+        // iframe 内部 saveRect 已尝试，但 iframe 看不到外部尺寸，所以由外部存
+        savePanelRect();
       }
+    };
+    window.addEventListener('message', panelMessageHandler);
+
+    // 窗口 resize 时重新 clamp
+    window.addEventListener('resize', () => {
+      if (!panelInstance) return;
+      const cur = panelInstance.getBoundingClientRect();
+      const next = clampPanelPos(cur.left, cur.top, cur.width, cur.height);
+      panelInstance.style.left = next.left + 'px';
+      panelInstance.style.top  = next.top + 'px';
     });
+
     return iframe;
   }
 

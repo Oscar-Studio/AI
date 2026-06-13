@@ -19,7 +19,7 @@
     games: 'https://games.oscarstudio.cn',
     ppt:   'https://ppt.oscarstudio.cn'
   };
-  const STORAGE_RECT = 'opilot_panel_rect';
+  const STORAGE_RECT = 'opilot_panel_rect'; // (位置持久化已搬到父窗口，保留以防其他引用)
   const MIN_W = 320, MIN_H = 400;
 
   // ============ DOM ============
@@ -65,27 +65,27 @@
   }
 
   // ============ 拖动 ============
+  // 关键：iframe 自身大小固定，移动 panel 会被 iframe overflow:hidden 裁掉。
+  // 改成把增量 postMessage 给父窗口，由父窗口移动整个 iframe。
   function makeDraggable(el, handle) {
     handle.addEventListener('mousedown', (e) => {
       if (e.target.closest('.opilot-panel-btn')) return;
       if (e.target.closest('.opilot-panel-resize')) return;
       e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      const startX = e.clientX, startY = e.clientY;
-      const startLeft = rect.left, startTop = rect.top;
+      let lastX = e.clientX, lastY = e.clientY;
       const onMove = (ev) => {
-        const newLeft = Math.max(0, Math.min(window.innerWidth - rect.width, startLeft + (ev.clientX - startX)));
-        const newTop  = Math.max(0, Math.min(window.innerHeight - 40, startTop + (ev.clientY - startY)));
-        el.style.position = 'fixed';
-        el.style.left = newLeft + 'px';
-        el.style.top  = newTop + 'px';
-        el.style.right = 'auto';
-        el.style.bottom = 'auto';
+        const dx = ev.clientX - lastX;
+        const dy = ev.clientY - lastY;
+        lastX = ev.clientX;
+        lastY = ev.clientY;
+        try {
+          window.parent.postMessage({ type: 'opilot-move', dx, dy }, '*');
+        } catch (err) {}
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
-        saveRect();
+        try { window.parent.postMessage({ type: 'opilot-save-rect' }, '*'); } catch (err) {}
       };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
@@ -97,19 +97,20 @@
     handle.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const rect = el.getBoundingClientRect();
-      const startW = rect.width, startH = rect.height;
-      const startX = e.clientX, startY = e.clientY;
+      let lastX = e.clientX, lastY = e.clientY;
       const onMove = (ev) => {
-        const newW = Math.max(MIN_W, Math.min(window.innerWidth * 0.95, startW + (ev.clientX - startX)));
-        const newH = Math.max(MIN_H, Math.min(window.innerHeight * 0.95, startH + (ev.clientY - startY)));
-        el.style.width = newW + 'px';
-        el.style.height = newH + 'px';
+        const dw = ev.clientX - lastX;
+        const dh = ev.clientY - lastY;
+        lastX = ev.clientX;
+        lastY = ev.clientY;
+        try {
+          window.parent.postMessage({ type: 'opilot-resize', dw, dh }, '*');
+        } catch (err) {}
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
-        saveRect();
+        try { window.parent.postMessage({ type: 'opilot-save-rect' }, '*'); } catch (err) {}
       };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
@@ -117,41 +118,14 @@
   }
 
   // ============ 位置持久化 ============
-  function loadRect() {
-    try {
-      const rect = JSON.parse(localStorage.getItem(STORAGE_RECT) || 'null');
-      if (rect && rect.w >= MIN_W && rect.h >= MIN_H) return rect;
-    } catch (e) {}
-    return null;
-  }
-  function saveRect() {
-    const rect = panel.getBoundingClientRect();
-    try {
-      localStorage.setItem(STORAGE_RECT, JSON.stringify({
-        left: rect.left, top: rect.top, w: rect.width, h: rect.height
-      }));
-    } catch (e) {}
-  }
+  // 持久化逻辑搬到父窗口（它能拿到 iframe 实际屏幕位置）。
+  // 这里只剩 applyRect() 用于初始渲染占位（实际位置由父窗口 iframe style 决定）。
   function applyRect() {
-    const rect = loadRect();
-    if (rect) {
-      panel.style.position = 'fixed';
-      panel.style.left = rect.left + 'px';
-      panel.style.top = rect.top + 'px';
-      panel.style.width = rect.w + 'px';
-      panel.style.height = rect.h + 'px';
-      panel.style.right = 'auto';
-      panel.style.bottom = 'auto';
-    } else {
-      // 默认右下角
-      panel.style.position = 'fixed';
-      panel.style.right = '24px';
-      panel.style.bottom = '24px';
-      panel.style.width = '480px';
-      panel.style.height = '600px';
-      panel.style.left = 'auto';
-      panel.style.top = 'auto';
-    }
+    // 不再在 iframe 内设置 left/top —— 父窗口会用 localStorage 的值定位 iframe
+    // iframe 内部 panel 仍保持 flex 右下对齐，作为视觉兜底
+    panel.style.position = 'relative';
+    panel.style.width = '100%';
+    panel.style.height = '100%';
   }
 
   // ============ 消息渲染 ============
