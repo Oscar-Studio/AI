@@ -1082,6 +1082,8 @@
     panelInstance = iframe;
 
     // 监听 iframe 内的消息：关闭 / 接管拖动 / 接管缩放
+    // 兼容老版本消息类型 opilot-move / opilot-resize（dx/dy 增量），
+    // 防止 iframe 内部加载旧版 opilot-panel.js 导致拖不动。
     panelMessageHandler = (e) => {
       if (!e.data || typeof e.data !== 'object') return;
       if (e.data.type === 'opilot-close') {
@@ -1090,6 +1092,19 @@
         startHostDrag(e.data.screenX, e.data.screenY, 'move');
       } else if (e.data.type === 'opilot-resize-start') {
         startHostDrag(e.data.screenX, e.data.screenY, 'resize');
+      } else if (e.data.type === 'opilot-move' && panelInstance) {
+        // 旧版：iframe 内部 mousemove 时发的增量消息
+        const cur = panelInstance.getBoundingClientRect();
+        const next = clampPanelPos(cur.left + (e.data.dx || 0), cur.top + (e.data.dy || 0), cur.width, cur.height);
+        panelInstance.style.left = next.left + 'px';
+        panelInstance.style.top  = next.top + 'px';
+      } else if (e.data.type === 'opilot-resize' && panelInstance) {
+        // 旧版：iframe 内部 resize 时发的增量消息
+        const cur = panelInstance.getBoundingClientRect();
+        const newW = Math.max(320, Math.min(window.innerWidth * 0.95, cur.width + (e.data.dw || 0)));
+        const newH = Math.max(400, Math.min(window.innerHeight * 0.95, cur.height + (e.data.dh || 0)));
+        panelInstance.style.width = newW + 'px';
+        panelInstance.style.height = newH + 'px';
       } else if (e.data.type === 'opilot-save-rect') {
         savePanelRect();
       }
