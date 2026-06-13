@@ -551,7 +551,10 @@
   bindSuggestionCards();
 
   // 通知父窗口：iframe 已就绪，父窗口会回传当前 rect
-  try { window.parent.postMessage({ type: 'opilot-ready' }, '*'); } catch (err) {}
+  // 用 setTimeout(..., 0) 等到下一个 tick，确保父窗口的 message handler 已经注册
+  setTimeout(() => {
+    try { window.parent.postMessage({ type: 'opilot-ready' }, '*'); } catch (err) {}
+  }, 0);
 
   // 暴露给父窗口调用
   window.OpilotPanel = {
