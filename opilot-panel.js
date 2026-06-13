@@ -65,10 +65,15 @@
   }
 
   // ============ 拖动 / 缩放 ============
-  // 关键：所有事件都在 iframe 自身的 document 上处理。
-  // 关键 2：iframe 只发送增量 (dx, dy) / 尺寸增量 (dw, dh) 给父窗口，父窗口累加并 clamp。
-  // 这样避免每帧 postMessage 双向往返（iframe→parent→iframe）造成的 state 滞后和抖动。
-  // 父窗口是 position 状态的唯一权威，iframe 只需要在 pointerdown 时记录 lastX/Y。
+  // 关键：用 e.movementX / e.movementY 不用 e.clientX - lastX
+  //
+  // e.clientX 是相对 iframe 视口的，iframe 移动后视口位置变了，
+  // 导致 clientX 变化 = 光标移动 - iframe 移动。
+  // 父窗口按 dx 移动 iframe → iframe 移动 → 下一帧 clientX 变化更小 → dx 更小
+  // 反馈循环导致 iframe 只移动光标距离的一半（2:1 bug）。
+  //
+  // e.movementX / e.movementY 是光标相对上一次事件的**屏幕空间**位移，
+  // 不受 iframe 视口位置影响。直接发给父窗口累加 = 1:1 跟手。
   function postDelta(dx, dy) {
     try { window.parent.postMessage({ type: 'opilot-delta', dx, dy }, '*'); } catch (err) {}
   }
@@ -82,24 +87,20 @@
   // 拖动 header
   function makeDraggable(handle) {
     let dragging = false;
-    let lastX = 0, lastY = 0;
 
     handle.addEventListener('pointerdown', (e) => {
       if (e.target.closest('.opilot-panel-btn')) return;
       if (e.target.closest('.opilot-panel-resize')) return;
       if (e.button !== 0) return;
       e.preventDefault();
-      lastX = e.clientX; lastY = e.clientY;
       dragging = true;
       try { handle.setPointerCapture(e.pointerId); } catch (err) {}
     });
 
     function onMove(e) {
       if (!dragging) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      lastX = e.clientX; lastY = e.clientY;
-      postDelta(dx, dy);
+      // movementX/Y 是屏幕空间位移，与 iframe 视口位置无关
+      postDelta(e.movementX || 0, e.movementY || 0);
     }
     function onUp(e) {
       if (!dragging) return;
@@ -113,26 +114,21 @@
     window.addEventListener('blur', () => { dragging = false; });
   }
 
-  // 缩放 resize handle
+  // 缩放 resize handle —— 同样用 movementX/Y
   function makeResizable(handle) {
     let resizing = false;
-    let lastX = 0, lastY = 0;
 
     handle.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
-      lastX = e.clientX; lastY = e.clientY;
       resizing = true;
       try { handle.setPointerCapture(e.pointerId); } catch (err) {}
     });
 
     function onMove(e) {
       if (!resizing) return;
-      const dw = e.clientX - lastX;
-      const dh = e.clientY - lastY;
-      lastX = e.clientX; lastY = e.clientY;
-      postResize(dw, dh);
+      postResize(e.movementX || 0, e.movementY || 0);
     }
     function onUp(e) {
       if (!resizing) return;
