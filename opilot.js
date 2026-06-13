@@ -277,38 +277,54 @@
         }
         return '';
       }
-      const tools = result.tools || [];
+      const aiTools = result.tools || [];
       const reply = result.reply || '';
       const intent = result.intent || 'chat';
-      const prefill = result.prefill || {};
+      let prefill = result.prefill || {};
 
       let html = '';
 
-      if (intent === 'launch' && tools.length) {
-        const top = tools[0];
+      if (intent === 'launch' && aiTools.length) {
+        const top = aiTools[0];
         const launchBtn = `<button class="opilot-launch-btn" data-tool="${escapeHtml(top.name)}" data-site="${escapeHtml(top._site || ctx.site || '')}" data-prefill='${escapeHtml(JSON.stringify(prefill))}'>🚀 启动并预填 (${escapeHtml(top.name)})</button>`;
         html += `
           <div class="opilot-section">
             <div class="opilot-section-label">推荐</div>
-            <div class="opilot-tool-list">${tools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: t._site || ctx.site })).join('')}</div>
+            <div class="opilot-tool-list">${aiTools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: t._site || ctx.site })).join('')}</div>
             ${launchBtn}
           </div>
         `;
-      } else if (intent === 'search' && tools.length) {
+      } else if (intent === 'search' && aiTools.length) {
         html += `
           <div class="opilot-section">
             <div class="opilot-section-label">相关工具</div>
-            <div class="opilot-tool-list">${tools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: t._site || ctx.site })).join('')}</div>
+            <div class="opilot-tool-list">${aiTools.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: t._site || ctx.site })).join('')}</div>
           </div>
         `;
-      } else if (intent === 'chat') {
-        // AI 把它当成通用对话 — 但如果关键词列命中了工具，附加"或许你想用"建议
-        if (lastKeywordResults && lastKeywordResults.length) {
-          const top = lastKeywordResults[0];
+      } else {
+        // intent === 'chat' 或 tools 为空：前端兜底
+        // 1. 从 reply 文本中扫描已注册的工具名
+        // 2. 如果 AI 提到了具体工具，强制显示"🚀 启动并预填"按钮
+        const mentioned = [];
+        if (reply && ctx.tools && ctx.tools.length) {
+          for (const t of ctx.tools) {
+            if (reply.includes(t.name)) {
+              mentioned.push({ ...t, reason: 'AI 提到此工具', confidence: 0.65 });
+            }
+          }
+        }
+        const fallback = mentioned.length ? mentioned : lastKeywordResults;
+        if (fallback && fallback.length) {
+          const top = fallback[0];
+          // 如果 AI 没给 prefill，从 query 智能提取
+          const finalPrefill = Object.keys(prefill).length ? prefill : autoExtractPrefill(currentQuery, top);
+          const launchBtn = `<button class="opilot-launch-btn" data-tool="${escapeHtml(top.name)}" data-site="${escapeHtml(top._site || ctx.site || '')}" data-prefill='${escapeHtml(JSON.stringify(finalPrefill))}'>🚀 启动并预填 (${escapeHtml(top.name)})</button>`;
+          const label = mentioned.length ? '或许你想用 (AI 提到)' : '或许你想用';
           html += `
             <div class="opilot-section">
-              <div class="opilot-section-label">或许你想用</div>
-              <div class="opilot-tool-list">${renderToolCard(top, { reason: '基于你的查询', confidence: 0.7, site: ctx.site })}</div>
+              <div class="opilot-section-label">${label}</div>
+              <div class="opilot-tool-list">${fallback.map(t => renderToolCard(t, { reason: t.reason, confidence: t.confidence, site: t._site || ctx.site })).join('')}</div>
+              ${launchBtn}
             </div>
           `;
         }
@@ -323,6 +339,30 @@
       }
 
       return html || '<div class="opilot-empty-mini">无结果</div>';
+    }
+
+    // 从 query 中按工具 prefill schema 智能提取值
+    function autoExtractPrefill(query, tool) {
+      const p = {};
+      if (!tool || !tool.prefill || !Array.isArray(tool.prefill.params) || !query) return p;
+      const params = tool.prefill.params;
+      if (params.includes('sentence-input')) {
+        // 提取引号 / 「」 / 『』 内的文本
+        const m = query.match(/[「"'『']([^「"'』'」"]+)[」"'』'』]/);
+        if (m) p['sentence-input'] = m[1];
+      }
+      if (params.includes('reactants') && params.includes('products')) {
+        // 提取完整的"反应物 → 生成物"
+        const m = query.match(/([^\s→\-=]+(?:\s*\+\s*[^\s→\-=]+)*)\s*[→\-=]+>\s*([^\s→\-=]+(?:\s*\+\s*[^\s→\-=]+)*)/);
+        if (m) {
+          p.reactants = m[1].trim();
+          p.products = m[2].trim();
+        } else {
+          // 整个 query 当作 equation，让 transformPrefill 处理
+          p.equation = query;
+        }
+      }
+      return p;
     }
 
     // 关键词搜索
