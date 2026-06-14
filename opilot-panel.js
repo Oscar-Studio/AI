@@ -459,10 +459,9 @@
     // 关闭
     closeBtn.addEventListener('click', () => {
       panel.classList.add('closing');
-      setTimeout(() => {
-        // 通知 parent
-        try { window.parent.postMessage({ type: 'opilot-close' }, '*'); } catch (e) {}
-      }, 200);
+      // 立即通知 parent 隐藏（不再 setTimeout 200ms，避免用户在动画期间点 trigger
+      // 重开时，面板先出现后被这条延迟消息再次隐藏的竞态）
+      try { window.parent.postMessage({ type: 'opilot-close' }, '*'); } catch (e) {}
     });
 
     // 最小化
