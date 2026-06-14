@@ -1012,7 +1012,8 @@
     if (panelInstance && document.body.contains(panelInstance)) {
       // 已存在：显示
       panelInstance.style.display = 'block';
-      try { panelInstance.contentWindow.OpilotPanel.open(); } catch (e) {}
+      // 通知 iframe 移除 'closing' class 等（跨域不能用 contentWindow.OpilotPanel）
+      try { panelInstance.contentWindow.postMessage({ type: 'opilot-open' }, '*'); } catch (e) {}
       return panelInstance;
     }
     // 创建 iframe（加 cache buster 避免 CDN 缓存旧版本造成跨版本 bug）

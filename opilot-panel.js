@@ -524,7 +524,7 @@
     try { window.parent.postMessage({ type: 'opilot-ready' }, '*'); } catch (err) {}
   }, 0);
 
-  // 暴露给父窗口调用
+  // 暴露给父窗口（同源场景下用）
   window.OpilotPanel = {
     open: () => {
       panel.classList.remove('closing', 'minimized');
@@ -533,4 +533,12 @@
     focus: () => input.focus(),
     send: (q) => sendMessage(q)
   };
+
+  // 监听父窗口消息（跨域主路径，替代直接访问 contentWindow.OpilotPanel）
+  window.addEventListener('message', (e) => {
+    if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'opilot-open') {
+      panel.classList.remove('closing', 'minimized');
+    }
+  });
 })();
