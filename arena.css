@@ -504,6 +504,26 @@
     background: var(--canvas-soft);
 }
 
+.arena-card-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.arena-card-model {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.6px;
+    color: var(--body);
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
 .arena-card-slot {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -770,6 +790,12 @@
     border-radius: var(--r-pill);
     color: var(--body);
     letter-spacing: 0.4px;
+}
+
+.arena-history-model-count {
+    color: var(--accent-twilight);
+    border-color: var(--accent-dusk);
+    background: var(--accent-midnight);
 }
 
 .arena-history-card-cost {

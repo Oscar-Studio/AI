@@ -448,13 +448,23 @@
         arenaFinalActions.hidden = true;
     }
 
-    function createCardElement(slot, modelMeta) {
+    function createCardElement(slot, modelMeta, hideModels) {
         const card = document.createElement('div');
         card.className = 'arena-card is-streaming';
         card.dataset.slot = slot;
+        // header 中的模型名：仅在非隐藏模式下显示
+        const modelLabel = (!hideModels && modelMeta)
+            ? `${modelMeta.vendor} · ${modelMeta.name}`
+            : '';
+        const headerRight = modelLabel
+            ? `<span class="arena-card-model" data-model-label>${escapeHtml(modelLabel)}</span>`
+            : '';
         card.innerHTML = `
             <div class="arena-card-header">
-                <span class="arena-card-slot">${slot}</span>
+                <div class="arena-card-header-left">
+                    <span class="arena-card-slot">${slot}</span>
+                    ${headerRight}
+                </div>
                 <span class="arena-card-status is-streaming" data-status>PREPARING</span>
             </div>
             <div class="arena-card-body typing" data-body>
@@ -579,10 +589,12 @@
         arenaEmpty.style.display = 'none';
         arenaGrid.innerHTML = '';
         arenaFinalActions.hidden = true;
-        currentBattle = { question_id: null, slots: {}, votes: {}, ok_count: 0, total: 0 };
+        // hideModels 用于控制卡片 header 是否显示模型名
+        const hideModels = arenaAnonymous.checked;
+        currentBattle = { question_id: null, slots: {}, votes: {}, ok_count: 0, total: 0, hide_models: hideModels };
 
         const slotLabels = ['A', 'B', 'C', 'D'];
-        // 随机打乱顺序（模型名对评分者隐藏 → slot 随机分配）
+        // 随机打乱顺序（slot 随机分配，模型名按 hideModels 决定是否暴露）
         const shuffled = [...selectedModels];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -590,7 +602,7 @@
         }
         shuffled.forEach((m, i) => {
             const slot = slotLabels[i];
-            const card = createCardElement(slot, m);
+            const card = createCardElement(slot, m, hideModels);
             currentBattle.slots[slot] = {
                 card,
                 model: m,
@@ -626,7 +638,7 @@
         const t = getToken();
         const body = {
             question: arenaQuestion.value,
-            is_anonymous: arenaAnonymous.checked,
+            hide_model_names: arenaAnonymous.checked,
             attachments: attachments.map(a => ({ type: a.type, url: a.url, name: a.name })),
             model_ids: Object.values(battle.slots).map(s => s.model.id),
             thinking: true,
@@ -853,16 +865,19 @@
 
             let models = [];
             try { models = JSON.parse(b.model_ids || '[]'); } catch {}
-            const modelTags = models.map(m => {
-                const meta = getModelMeta(m);
-                return `<span class="arena-history-model-tag">${escapeHtml(meta?.name || m)}</span>`;
-            }).join('');
+            // 隐藏模型名时：把 N 个 model 显示为「N 个模型」
+            const modelTags = b.hide_model_names
+                ? `<span class="arena-history-model-tag arena-history-model-count">${models.length} 个模型</span>`
+                : models.map(m => {
+                    const meta = getModelMeta(m);
+                    return `<span class="arena-history-model-tag">${escapeHtml(meta?.name || m)}</span>`;
+                }).join('');
 
             const time = new Date(b.created_at).toLocaleString('zh-CN', {
                 month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
             });
 
-            const anonTag = b.is_anonymous ? '<span class="arena-history-card-anon">匿名</span>' : '';
+            const anonTag = b.hide_model_names ? '<span class="arena-history-card-anon">隐藏模型名</span>' : '';
 
             card.innerHTML = `
                 <div class="arena-history-card-header">
@@ -906,10 +921,11 @@
         modal = document.createElement('div');
         modal.id = 'arenaDetailModal';
         modal.className = 'modal-overlay';
+        const hideModels = !!battle.hide_model_names;
         modal.innerHTML = `
             <div class="modal-card" role="dialog" aria-modal="true">
                 <header class="modal-header">
-                    <h2 class="modal-title">评测详情</h2>
+                    <h2 class="modal-title">评测详情${hideModels ? ' <span style="font-size: 12px; color: var(--accent-sunset); margin-left: 8px; font-family: var(--font-mono); letter-spacing: 0.6px;">已隐藏模型名</span>' : ''}</h2>
                     <button class="modal-close" id="arenaDetailClose" type="button" aria-label="关闭">✕</button>
                 </header>
                 <div class="arena-detail-body" style="padding: 20px 24px; max-height: 70vh; overflow-y: auto;">
@@ -918,7 +934,7 @@
                         <div style="margin-top:6px; padding:10px 12px; background: var(--canvas-soft); border-radius: var(--r-sm); color: var(--ink); font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(battle.content)}</div>
                     </div>
                     <div class="arena-detail-responses" style="margin-top: 20px; display: grid; gap: 14px;">
-                        ${responses.map(resp => renderDetailResponse(resp)).join('')}
+                        ${responses.map(resp => renderDetailResponse(resp, hideModels)).join('')}
                     </div>
                 </div>
             </div>
@@ -931,10 +947,20 @@
         document.getElementById('arenaDetailClose').addEventListener('click', () => modal.remove());
     }
 
-    function renderDetailResponse(resp) {
-        const meta = getModelMeta(resp.model_id);
-        const vendorName = meta?.vendor || resp.vendor;
-        const modelName = meta?.name || resp.model_id;
+    function renderDetailResponse(resp, hideModels) {
+        // 隐藏模型名时：用 slot 替代；后端已置 model_id=null（双重保险）
+        let labelHtml;
+        if (hideModels || !resp.model_id) {
+            labelHtml = `<span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-twilight); padding: 2px 8px; background: var(--accent-midnight); border: 1px solid var(--accent-dusk); border-radius: var(--r-pill); letter-spacing: 1.4px;">Response ${resp.slot}</span>`;
+        } else {
+            const meta = getModelMeta(resp.model_id);
+            const vendorName = meta?.vendor || resp.vendor;
+            const modelName = meta?.name || resp.model_id;
+            labelHtml = `
+                <span class="arena-chip-vendor" style="font-family: var(--font-mono); font-size: 10px; color: var(--body-mid); letter-spacing:0.6px; text-transform: uppercase;">${escapeHtml(vendorName)}</span>
+                <span style="margin-left: 8px; color: var(--ink); font-weight: 500;">${escapeHtml(modelName)}</span>
+            `;
+        }
         const errorBlock = resp.error
             ? `<div class="arena-card-error" style="margin-top:8px;">⚠ ${escapeHtml(resp.error)}</div>`
             : '';
@@ -944,10 +970,7 @@
         return `
             <div style="background: var(--canvas-card); border:1px solid var(--hairline); border-radius: var(--r-sm); padding: 14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <span class="arena-chip-vendor" style="font-family: var(--font-mono); font-size: 10px; color: var(--body-mid); letter-spacing:0.6px; text-transform: uppercase;">${escapeHtml(vendorName)}</span>
-                        <span style="margin-left: 8px; color: var(--ink); font-weight: 500;">${escapeHtml(modelName)}</span>
-                    </div>
+                    <div>${labelHtml}</div>
                     <div style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-sunset);">
                         ${resp.credits_used || 0} cr · ↑${resp.input_tokens || 0} ↓${resp.output_tokens || 0}
                     </div>
