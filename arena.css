@@ -1,0 +1,807 @@
+/* =====================================================
+   AI Studio — Arena 模型评测
+   设计语言与 app.css 一致（xAI 风）
+   ===================================================== */
+
+/* ============ 主布局 ============ */
+.arena-layout {
+    display: flex;
+    height: 100%;
+    background: var(--canvas);
+}
+
+.arena-composer {
+    width: 360px;
+    flex-shrink: 0;
+    padding: 28px 24px;
+    border-right: 1px solid var(--hairline);
+    overflow-y: auto;
+    background: var(--canvas);
+}
+
+.arena-stage {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--canvas);
+    overflow: hidden;
+}
+
+/* ============ Composer 头部 ============ */
+.arena-composer-header {
+    margin-bottom: 24px;
+}
+
+.arena-composer-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.8px;
+    color: var(--ink);
+    margin: 12px 0 8px;
+}
+
+.arena-composer-sub {
+    font-size: 13px;
+    color: var(--body-mid);
+    line-height: 1.5;
+}
+
+/* ============ Form ============ */
+.arena-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.arena-form .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.arena-form .field-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--body-mid);
+}
+
+.arena-form .field-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--canvas-soft);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 80px;
+    transition: border-color 0.15s;
+}
+
+.arena-form .field-textarea:focus {
+    outline: none;
+    border-color: var(--canvas-mid);
+}
+
+.arena-char-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--body-mid);
+    text-align: right;
+    margin-top: 2px;
+}
+
+.arena-char-count.over { color: #ff7b72; }
+
+/* ============ 模型选择按钮 ============ */
+.arena-pick-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--canvas-soft);
+    border: 1px dashed var(--canvas-mid);
+    border-radius: var(--r-sm);
+    color: var(--body);
+    font-size: 14px;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.arena-pick-btn:hover {
+    border-color: var(--accent-sunset);
+    background: var(--canvas-card);
+    color: var(--ink);
+}
+
+.arena-pick-btn-icon {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-sm);
+    background: var(--canvas-mid);
+    color: var(--accent-sunset);
+    font-size: 16px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.arena-pick-btn-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.arena-pick-counter {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.6px;
+    color: var(--accent-sunset);
+}
+
+.arena-pick-counter.full { color: #ff7b72; }
+
+/* ============ 已选模型 chips ============ */
+.arena-pick-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 0;
+}
+
+.arena-pick-chips:not(:empty) { margin-top: 8px; }
+
+.arena-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 4px 4px 10px;
+    background: var(--canvas-card);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-pill);
+    font-size: 12px;
+    color: var(--ink);
+    transition: border-color 0.15s;
+}
+
+.arena-chip:hover { border-color: var(--canvas-mid); }
+
+.arena-chip-name { font-weight: 500; }
+.arena-chip-vendor {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--body-mid);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.arena-chip-remove {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-radius: 50%;
+    color: var(--body-mid);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.arena-chip-remove:hover { background: var(--hairline); color: var(--ink); }
+
+/* ============ 附件 ============ */
+.arena-attach-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.arena-attach-btn {
+    padding: 6px 12px;
+    background: var(--canvas-soft);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    color: var(--body);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.arena-attach-btn:hover { border-color: var(--canvas-mid); color: var(--ink); }
+.arena-attach-btn span { color: var(--accent-sunset); margin-right: 4px; font-weight: 500; }
+
+.arena-attach-hint {
+    font-size: 12px;
+    color: var(--body-mid);
+}
+
+.arena-attach-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.arena-attach-thumb {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    background: var(--canvas-card);
+    border: 1px solid var(--hairline);
+}
+
+.arena-attach-thumb img,
+.arena-attach-thumb video,
+.arena-attach-thumb audio {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.arena-attach-thumb .attach-type {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--body);
+    background: var(--canvas-soft);
+}
+
+.arena-attach-thumb .remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    border-radius: 50%;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.arena-multimodal-warn {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: rgba(255, 122, 24, 0.08);
+    border: 1px solid rgba(255, 122, 24, 0.3);
+    border-radius: var(--r-sm);
+    font-size: 12px;
+    color: var(--accent-sunset);
+}
+
+/* ============ 匿名开关 ============ */
+.arena-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 0;
+}
+
+.arena-toggle input { display: none; }
+
+.arena-toggle-box {
+    width: 36px;
+    height: 20px;
+    background: var(--canvas-mid);
+    border-radius: var(--r-pill);
+    position: relative;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.arena-toggle-box::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.15s;
+}
+
+.arena-toggle input:checked + .arena-toggle-box {
+    background: var(--accent-sunset);
+}
+
+.arena-toggle input:checked + .arena-toggle-box::after {
+    transform: translateX(16px);
+}
+
+.arena-toggle-text {
+    font-size: 13px;
+    color: var(--body);
+}
+
+/* ============ 预估消耗 ============ */
+.arena-estimate {
+    padding: 12px 14px;
+    background: var(--canvas-soft);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.arena-estimate-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+}
+
+.arena-est-label { color: var(--body-mid); }
+
+.arena-est-val {
+    font-family: var(--font-mono);
+    color: var(--accent-sunset);
+    font-variant-numeric: tabular-nums;
+}
+
+.arena-est-val.is-low { color: #ff7b72; }
+
+.arena-estimate-warn {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--hairline);
+    font-size: 12px;
+    color: #ff7b72;
+}
+
+/* ============ 启动按钮 ============ */
+.arena-start-btn {
+    margin-top: 4px;
+    padding: 12px;
+    background: var(--accent-sunset);
+    color: var(--on-primary);
+    border: none;
+    border-radius: var(--r-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.05s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.arena-start-btn:hover:not(:disabled) { opacity: 0.9; }
+.arena-start-btn:active:not(:disabled) { transform: translateY(1px); }
+.arena-start-btn:disabled { background: var(--canvas-mid); color: var(--body-mid); cursor: not-allowed; }
+.arena-start-icon { font-size: 16px; }
+
+/* ============ 舞台工具栏 ============ */
+.arena-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--canvas);
+}
+
+.arena-toolbar-tabs { display: flex; gap: 4px; }
+
+.arena-tab {
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--r-sm);
+    color: var(--body-mid);
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.arena-tab:hover { color: var(--body); background: var(--canvas-soft); }
+.arena-tab.active {
+    color: var(--ink);
+    background: var(--canvas-soft);
+    border-color: var(--hairline);
+}
+
+.arena-toolbar-hint {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--body-mid);
+    letter-spacing: 0.4px;
+}
+
+/* ============ 内容区 ============ */
+.arena-content {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+}
+
+.arena-panel { display: none; padding: 24px; min-height: 100%; }
+.arena-panel.active { display: block; }
+
+/* ============ Empty ============ */
+.arena-empty {
+    max-width: 480px;
+    margin: 80px auto;
+    text-align: center;
+    padding: 40px 24px;
+}
+
+.arena-empty .eyebrow-mono { color: var(--body-mid); }
+
+.arena-empty-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--ink);
+    margin: 16px 0 12px;
+    line-height: 1.4;
+}
+
+.arena-empty-desc {
+    font-size: 13px;
+    color: var(--body-mid);
+    line-height: 1.6;
+}
+
+/* ============ Grid + Card ============ */
+.arena-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    align-items: start;
+}
+
+.arena-card {
+    background: var(--canvas-card);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    display: flex;
+    flex-direction: column;
+    min-height: 240px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+
+.arena-card.is-error { border-color: rgba(255, 123, 114, 0.4); }
+.arena-card.is-done { border-color: var(--hairline); }
+.arena-card.is-streaming { border-color: var(--accent-dusk); }
+
+.arena-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--canvas-soft);
+}
+
+.arena-card-slot {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.4px;
+    padding: 3px 8px;
+    background: var(--accent-midnight);
+    border: 1px solid var(--accent-dusk);
+    color: var(--accent-twilight);
+    border-radius: var(--r-pill);
+    font-weight: 600;
+}
+
+.arena-card-status {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--body-mid);
+}
+
+.arena-card-status.is-streaming { color: var(--accent-twilight); }
+.arena-card-status.is-done { color: var(--accent-sunset); }
+.arena-card-status.is-error { color: #ff7b72; }
+
+.arena-card-body {
+    flex: 1;
+    padding: 14px;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+    word-break: break-word;
+}
+
+.arena-card-body.typing::after {
+    content: '▍';
+    color: var(--accent-sunset);
+    animation: arenaBlink 1s steps(1) infinite;
+    margin-left: 2px;
+}
+
+@keyframes arenaBlink { 50% { opacity: 0; } }
+
+.arena-card-body p { margin-bottom: 10px; }
+.arena-card-body p:last-child { margin-bottom: 0; }
+.arena-card-body code {
+    background: var(--canvas-mid);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+.arena-card-body pre {
+    background: var(--canvas-mid);
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 8px 0;
+}
+.arena-card-body pre code { background: none; padding: 0; }
+
+.arena-card-body .arena-card-empty {
+    color: var(--body-mid);
+    font-style: italic;
+    font-size: 13px;
+}
+
+.arena-card-body .arena-card-error {
+    color: #ff7b72;
+    font-size: 13px;
+}
+
+.arena-card-footer {
+    padding: 10px 14px;
+    border-top: 1px solid var(--hairline);
+    background: var(--canvas-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.arena-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--body-mid);
+}
+
+.arena-card-meta-cost { color: var(--accent-sunset); }
+
+/* ============ 评分区 ============ */
+.arena-stars {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.arena-star {
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--canvas-mid);
+    transition: color 0.1s, transform 0.05s;
+    user-select: none;
+}
+
+.arena-star:hover { color: var(--accent-sunset); }
+.arena-star.active { color: var(--accent-sunset); }
+.arena-star:active { transform: scale(0.9); }
+
+.arena-vote-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--body-mid);
+    margin-bottom: 4px;
+}
+
+.arena-comment-input {
+    width: 100%;
+    padding: 6px 8px;
+    background: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 28px;
+    font-family: inherit;
+    transition: border-color 0.15s;
+}
+
+.arena-comment-input:focus {
+    outline: none;
+    border-color: var(--canvas-mid);
+}
+
+.arena-comment-input::placeholder { color: var(--body-mid); }
+
+/* ============ 完成后的操作 ============ */
+.arena-final-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+    padding: 20px;
+}
+
+.arena-final-actions .primary-btn:disabled {
+    background: var(--canvas-mid);
+    color: var(--body-mid);
+    cursor: not-allowed;
+}
+
+.arena-final-actions .primary-btn {
+    padding: 10px 24px;
+    background: var(--accent-sunset);
+    color: var(--on-primary);
+    border: none;
+    border-radius: var(--r-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.arena-final-actions .primary-btn:hover:not(:disabled) { opacity: 0.9; }
+
+.arena-final-actions .ghost-btn {
+    padding: 10px 24px;
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    color: var(--body);
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.arena-final-actions .ghost-btn:hover {
+    border-color: var(--canvas-mid);
+    color: var(--ink);
+}
+
+/* ============ 历史列表 ============ */
+.arena-history-list { display: flex; flex-direction: column; gap: 12px; }
+
+.arena-history-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--body-mid);
+    font-size: 13px;
+}
+
+.arena-history-card {
+    background: var(--canvas-card);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    padding: 16px 20px;
+    transition: border-color 0.15s;
+    cursor: pointer;
+}
+
+.arena-history-card:hover { border-color: var(--canvas-mid); }
+
+.arena-history-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    gap: 12px;
+}
+
+.arena-history-card-content {
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.5;
+    flex: 1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.arena-history-card-time {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--body-mid);
+    white-space: nowrap;
+}
+
+.arena-history-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--hairline);
+}
+
+.arena-history-card-models {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.arena-history-model-tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    background: var(--canvas-soft);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-pill);
+    color: var(--body);
+    letter-spacing: 0.4px;
+}
+
+.arena-history-card-cost {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-sunset);
+    letter-spacing: 0.4px;
+}
+
+.arena-history-card-status {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: var(--r-sm);
+}
+
+.arena-history-card-status.done { background: rgba(0, 200, 100, 0.1); color: #4ade80; }
+.arena-history-card-status.partial { background: rgba(255, 167, 38, 0.1); color: #fbbf24; }
+.arena-history-card-status.failed { background: rgba(255, 123, 114, 0.1); color: #ff7b72; }
+.arena-history-card-status.streaming { background: rgba(124, 58, 237, 0.1); color: var(--accent-twilight); }
+
+.arena-history-card-anon {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--body-mid);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+}
+
+/* ============ primary-btn 全局样式兼容 ============ */
+.primary-btn {
+    cursor: pointer;
+}

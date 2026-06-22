@@ -46,6 +46,17 @@
                     </svg>
                     <span>TTS</span>
                 </button>
+                <button class="sidebar-item" data-view="arena">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="7" cy="7" r="2.4"/>
+                        <circle cx="17" cy="17" r="2.4"/>
+                        <path d="M4 4l16 16"/>
+                        <path d="M9.2 7h7.6"/>
+                        <path d="M7 9.2v7.6"/>
+                        <path d="M17 14.8l-7.6-7.6"/>
+                    </svg>
+                    <span>Arena</span>
+                </button>
             </nav>
 
             <div class="sidebar-footer">
@@ -216,7 +227,152 @@
                     </div>
                 </div>
             </section>
+
+            <!-- ============ Arena View ============ -->
+            <section class="view view-arena" data-view="arena">
+                <div class="arena-layout">
+                    <!-- 左：编辑器 -->
+                    <aside class="arena-composer">
+                        <header class="arena-composer-header">
+                            <span class="eyebrow-mono">ARENA · 模型评测</span>
+                            <h2 class="arena-composer-title">Compare models.<br>Pick the best.</h2>
+                            <p class="arena-composer-sub">同一问题 · 多个模型 · 并行回答 · 匿名评分</p>
+                        </header>
+
+                        <div class="arena-form">
+                            <div class="form-field">
+                                <label class="field-label">
+                                    <span>选择模型</span>
+                                    <span class="arena-pick-counter" id="arenaPickCounter">0/4</span>
+                                </label>
+                                <button class="arena-pick-btn" id="arenaPickBtn" type="button">
+                                    <span class="arena-pick-btn-icon">+</span>
+                                    <span class="arena-pick-btn-label" id="arenaPickLabel">点击选择模型（最多 4 个）</span>
+                                </button>
+                                <div class="arena-pick-chips" id="arenaPickChips"></div>
+                            </div>
+
+                            <div class="form-field">
+                                <label class="field-label" for="arenaQuestion">评测问题</label>
+                                <textarea
+                                    id="arenaQuestion"
+                                    class="field-textarea"
+                                    placeholder="输入要评测的问题，所有选中的模型将收到完全相同的输入..."
+                                    rows="5"></textarea>
+                                <div class="arena-char-count">
+                                    <span id="arenaCharCount">0</span> 字符
+                                </div>
+                            </div>
+
+                            <div class="form-field">
+                                <label class="field-label">附件（可选）</label>
+                                <div class="arena-attach-row">
+                                    <button class="arena-attach-btn" id="arenaAttachBtn" type="button">
+                                        <span>+</span> 添加图片/音频
+                                    </button>
+                                    <span class="arena-attach-hint" id="arenaAttachHint">未选择附件</span>
+                                </div>
+                                <input type="file" id="arenaFileInput" accept="image/*,audio/*" multiple hidden>
+                                <div class="arena-attach-preview" id="arenaAttachPreview"></div>
+                                <div class="arena-multimodal-warn" id="arenaMultimodalWarn" hidden>
+                                    ⚠️ 已选模型中有 <strong id="arenaMultiCount">0</strong> 个不支持多模态，附件将被忽略
+                                </div>
+                            </div>
+
+                            <div class="form-field">
+                                <label class="arena-toggle">
+                                    <input type="checkbox" id="arenaAnonymous">
+                                    <span class="arena-toggle-box"></span>
+                                    <span class="arena-toggle-text">匿名提问（不显示用户名）</span>
+                                </label>
+                            </div>
+
+                            <div class="arena-estimate">
+                                <div class="arena-estimate-row">
+                                    <span class="arena-est-label">预估消耗</span>
+                                    <strong id="arenaEstCredits" class="arena-est-val">— credits</strong>
+                                </div>
+                                <div class="arena-estimate-row">
+                                    <span class="arena-est-label">剩余配额</span>
+                                    <strong id="arenaRemainingCredits" class="arena-est-val">—</strong>
+                                </div>
+                                <div class="arena-estimate-warn" id="arenaEstWarn" hidden></div>
+                            </div>
+
+                            <button class="primary-btn arena-start-btn" id="arenaStartBtn" type="button" disabled>
+                                <span class="arena-start-icon">🚀</span>
+                                <span>开始评测</span>
+                            </button>
+                        </div>
+                    </aside>
+
+                    <!-- 右：舞台 -->
+                    <main class="arena-stage">
+                        <div class="arena-toolbar">
+                            <div class="arena-toolbar-tabs">
+                                <button class="arena-tab active" data-tab="live" type="button">
+                                    <span>当前评测</span>
+                                </button>
+                                <button class="arena-tab" data-tab="history" type="button">
+                                    <span>我的历史</span>
+                                </button>
+                            </div>
+                            <div class="arena-toolbar-hint">
+                                <span id="arenaToolbarHint">模型名对评分者隐藏</span>
+                            </div>
+                        </div>
+
+                        <div class="arena-content">
+                            <!-- 当前评测 -->
+                            <div class="arena-panel active" data-tab="live">
+                                <div class="arena-empty" id="arenaEmpty">
+                                    <span class="eyebrow-mono">READY</span>
+                                    <h3 class="arena-empty-title">选择 1-4 个模型，输入问题，开始一次评测</h3>
+                                    <p class="arena-empty-desc">
+                                        所有模型会收到相同的问题。<br>
+                                        回答以 A / B / C / D 随机分配，模型名仅作者可见。
+                                    </p>
+                                </div>
+                                <div class="arena-grid" id="arenaGrid"></div>
+                                <div class="arena-final-actions" id="arenaFinalActions" hidden>
+                                    <button class="primary-btn" id="arenaSubmitVoteBtn" type="button" disabled>
+                                        提交评分（<span id="arenaVotedCount">0</span>/<span id="arenaTotalCount">0</span>）
+                                    </button>
+                                    <button class="ghost-btn" id="arenaResetBtn" type="button">再来一次</button>
+                                </div>
+                            </div>
+
+                            <!-- 我的历史 -->
+                            <div class="arena-panel" data-tab="history">
+                                <div class="arena-history-list" id="arenaHistoryList">
+                                    <div class="arena-history-empty">暂无评测历史</div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </section>
         </main>
+    </div>
+
+    <!-- ===== Arena Model Picker Modal ===== -->
+    <div class="modal-overlay" id="arenaModelModal" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="arenaModelModalTitle">
+            <header class="modal-header">
+                <h2 class="modal-title" id="arenaModelModalTitle">选择评测模型</h2>
+                <button class="modal-close" id="arenaModelModalClose" type="button" aria-label="关闭">✕</button>
+            </header>
+            <div class="modal-body">
+                <div class="modal-pane modal-pane-vendors">
+                    <span class="pane-eyebrow">VENDOR</span>
+                    <ul class="vendor-list" id="arenaVendorList"></ul>
+                </div>
+                <div class="modal-pane modal-pane-models">
+                    <span class="pane-eyebrow">MODEL</span>
+                    <ul class="model-list" id="arenaModelList"></ul>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ===== Model Picker Modal ===== -->
@@ -251,6 +407,7 @@
     <script src="chat.js"></script>
     <script src="tts.js"></script>
     <script src="opilot.js"></script>
+    <script src="arena.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

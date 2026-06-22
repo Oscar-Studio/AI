@@ -15,6 +15,10 @@
         sidebarItems.forEach(i => i.classList.toggle('active', i.dataset.view === target));
         views.forEach(v => v.classList.toggle('active', v.dataset.view === target));
         localStorage.setItem(STORAGE_VIEW, target);
+        // 进入特定 view 时触发模块钩子
+        if (target === 'arena' && window.ArenaModule && window.ArenaModule.onViewEnter) {
+            window.ArenaModule.onViewEnter();
+        }
     }
 
     sidebarItems.forEach(item => {
@@ -33,22 +37,24 @@
     newChatBtn.className = 'ghost-btn';
     newChatBtn.type = 'button';
     newChatBtn.textContent = '新对话';
-    newChatBtn.style.display = (localStorage.getItem(STORAGE_VIEW) === 'tts') ? 'none' : '';
+    newChatBtn.style.display = (localStorage.getItem(STORAGE_VIEW) === 'tts' || localStorage.getItem(STORAGE_VIEW) === 'arena') ? 'none' : '';
     newChatBtn.addEventListener('click', () => {
         if (window.ChatModule) window.ChatModule.newChat();
     });
     // Insert before the user button
     topNavRight.insertBefore(newChatBtn, document.getElementById('userButtonContainer'));
 
-    // Hide new-chat on TTS view
+    // Hide new-chat on TTS / Arena view
     const observer = new MutationObserver(() => {
-        const ttsActive = document.querySelector('.view-tts').classList.contains('active');
-        newChatBtn.style.display = ttsActive ? 'none' : '';
+        const activeView = document.querySelector('.view.active');
+        const isHidden = activeView && (activeView.classList.contains('view-tts') || activeView.classList.contains('view-arena'));
+        newChatBtn.style.display = isHidden ? 'none' : '';
     });
     views.forEach(v => observer.observe(v, { attributes: true, attributeFilter: ['class'] }));
 
     // ---- Init chat module ----
     if (window.ChatModule) window.ChatModule.init();
+    if (window.ArenaModule) window.ArenaModule.init();
 
     // ---- Auto-fill chat input from ?q= (Opilot integration) ----
     (function autoFillFromQuery() {

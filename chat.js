@@ -132,8 +132,15 @@
             }));
             // If currently on free, refresh
             if (provider === 'free') renderModelList();
+            // 通知外部模块（如 Arena）free 模型已就绪
+            window.dispatchEvent(new CustomEvent('chat:free-models-loaded', {
+                detail: { count: MODEL_CONFIG.free.models.length }
+            }));
         } catch (e) {
             console.warn('[chat] free models load failed:', e);
+            window.dispatchEvent(new CustomEvent('chat:free-models-loaded', {
+                detail: { count: 0, error: e.message }
+            }));
         }
     })();
 
@@ -806,6 +813,9 @@
             applyAttachBtn();
             refreshSidebarModel();
             fetchQuota();
-        }
+        },
+        // 暴露给 Arena 复用的模型目录
+        MODEL_CONFIG,
+        MULTIMODAL_MODELS,
     };
 })();
