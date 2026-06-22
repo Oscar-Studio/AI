@@ -640,6 +640,7 @@
 .arena-star:hover { color: var(--accent-sunset); }
 .arena-star.active { color: var(--accent-sunset); }
 .arena-star:active { transform: scale(0.9); }
+.arena-star.display { cursor: default; }
 
 .arena-vote-label {
     font-family: var(--font-mono);
@@ -671,6 +672,110 @@
 }
 
 .arena-comment-input::placeholder { color: var(--body-mid); }
+
+/* ============ AI 评判区 ============ */
+.arena-judge-extra {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--accent-sunset);
+    letter-spacing: 0.4px;
+    text-transform: none;
+}
+
+.arena-judge-info {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--body-mid);
+    line-height: 1.4;
+}
+
+.arena-judge-info.has-cost { color: var(--accent-sunset); }
+
+.arena-judge-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.arena-judge-status .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--canvas-mid);
+    flex-shrink: 0;
+}
+
+.arena-judge-status .dot.is-loading {
+    background: var(--accent-twilight);
+    animation: judgePulse 1.2s ease-in-out infinite;
+}
+
+.arena-judge-status .dot.is-done { background: var(--accent-sunset); }
+.arena-judge-status .dot.is-error { background: #ff7b72; }
+
+@keyframes judgePulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+.arena-judge-result {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.arena-judge-result-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.arena-judge-result-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--body-mid);
+    flex-shrink: 0;
+}
+
+.arena-judge-reasoning {
+    margin-top: 4px;
+    padding: 6px 8px;
+    background: var(--canvas);
+    border-left: 2px solid var(--accent-dusk);
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--body);
+    font-style: italic;
+    display: none;
+}
+
+.arena-judge-reasoning.show { display: block; }
+
+.arena-judge-reasoning-toggle {
+    font-size: 11px;
+    color: var(--body-mid);
+    cursor: pointer;
+    user-select: none;
+    margin-top: 2px;
+    text-decoration: underline;
+    text-decoration-color: var(--canvas-mid);
+    text-underline-offset: 2px;
+}
+
+.arena-judge-reasoning-toggle:hover { color: var(--accent-twilight); }
+
+.arena-final-actions .primary-btn.judge-btn {
+    background: var(--accent-dusk);
+}
+
+.arena-final-actions .primary-btn.judge-btn:disabled {
+    background: var(--canvas-mid);
+}
 
 /* ============ 完成后的操作 ============ */
 .arena-final-actions {

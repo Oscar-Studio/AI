@@ -48,6 +48,9 @@
     const arenaTotalCount    = $('arenaTotalCount');
     const arenaResetBtn      = $('arenaResetBtn');
     const arenaHistoryList   = $('arenaHistoryList');
+    const arenaJudgeSelect   = $('arenaJudgeSelect');
+    const arenaJudgeInfo     = $('arenaJudgeInfo');
+    const arenaJudgeExtra    = $('arenaJudgeExtra');
 
     const arenaModelModal    = $('arenaModelModal');
     const arenaModelModalClose = $('arenaModelModalClose');
@@ -61,7 +64,8 @@
     let attachments = [];                // [{type:'image'|'audio', url, name}]
     let remainingCredits = null;
     let battleAbortCtrl = null;         // 当前评测的 AbortController
-    let currentBattle = null;           // 当前评测状态：{question_id, slots: {A:{...}, B:{...}...}, votes: {}}
+    let judgeAbortCtrl = null;          // 当前 judge 的 AbortController
+    let currentBattle = null;           // 当前评测状态：{question_id, slots, judge_state, ...}
 
     // ============ 工具函数 ============
     function escapeHtml(s) {
@@ -163,17 +167,38 @@
             + attachments.reduce((s, a) => s + (a.url?.length || 0), 0);
         const outputEstimate = 1500; // 与后端常量对齐
 
-        let total = 0;
-        let hasPaid = false;
+        // 参赛模型部分
+        let modelsTotal = 0;
+        let hasPaidModel = false;
         for (const m of selectedModels) {
             const p = pricingCache[m.id];
             if (!p) continue;
-            if (p.is_free || p.input === 0) continue; // 免费模型不计
-            hasPaid = true;
+            if (p.is_free || p.input === 0) continue;
+            hasPaidModel = true;
             const inTok  = Math.ceil(inputChars / 4);
             const outTok = outputEstimate;
-            total += Math.ceil(inTok * p.input) + Math.ceil(outTok * p.output);
+            modelsTotal += Math.ceil(inTok * p.input) + Math.ceil(outTok * p.output);
         }
+
+        // judge 模型部分
+        const judgeId = arenaJudgeSelect.value;
+        let judgeTotal = 0;
+        let hasPaidJudge = false;
+        if (judgeId) {
+            const p = pricingCache[judgeId];
+            if (p && !p.is_free && p.input > 0) {
+                hasPaidJudge = true;
+                // 估算 judge 输入 = question + 各模型回答
+                // 这里无法精确预估回答长度，用 question 长度的 N 倍保守估计
+                const judgeInputChars = inputChars + (inputChars * selectedModels.length);
+                const judgeInTok = Math.ceil(judgeInputChars / 4);
+                const judgeOutTok = 400; // JSON 输出 + 简短理由
+                judgeTotal = Math.ceil(judgeInTok * p.input) + Math.ceil(judgeOutTok * p.output);
+            }
+        }
+
+        const total = modelsTotal + judgeTotal;
+        const hasPaid = hasPaidModel || hasPaidJudge;
 
         if (!hasPaid) {
             arenaEstCredits.textContent = '0 credits（均为免费模型）';
@@ -183,7 +208,11 @@
             arenaEstCredits.textContent = '加载中…';
             arenaEstWarn.hidden = true;
         } else {
-            arenaEstCredits.textContent = total.toLocaleString() + ' credits';
+            let label = total.toLocaleString() + ' credits';
+            if (judgeTotal > 0) {
+                label += ` (含评判 ${judgeTotal.toLocaleString()})`;
+            }
+            arenaEstCredits.textContent = label;
             const over = (remainingCredits !== null && total > remainingCredits);
             arenaEstCredits.classList.toggle('is-low', over);
             if (over) {
@@ -192,6 +221,20 @@
             } else {
                 arenaEstWarn.hidden = true;
             }
+        }
+
+        // judge info 文本
+        if (judgeId) {
+            const judgeMeta = getModelMeta(judgeId);
+            const name = judgeMeta ? `${judgeMeta.vendor} · ${judgeMeta.name}` : judgeId;
+            const costLabel = judgeTotal > 0 ? `约 ${judgeTotal.toLocaleString()} credits` : '免费';
+            arenaJudgeInfo.textContent = `由 ${name} 评判所有回答（${costLabel}）`;
+            arenaJudgeInfo.classList.toggle('has-cost', judgeTotal > 0);
+            arenaJudgeExtra.textContent = costLabel;
+        } else {
+            arenaJudgeInfo.textContent = '选定一个模型为所有回答打分（1-5 分 + 理由）';
+            arenaJudgeInfo.classList.remove('has-cost');
+            arenaJudgeExtra.textContent = '';
         }
 
         updateStartButton();
@@ -215,6 +258,16 @@
             if (!p || p.is_free || p.input === 0) continue;
             const inTok = Math.ceil(inputChars / 4);
             total += Math.ceil(inTok * p.input) + Math.ceil(1500 * p.output);
+        }
+        // 加上 judge 估算
+        const judgeId = arenaJudgeSelect.value;
+        if (judgeId) {
+            const p = pricingCache[judgeId];
+            if (p && !p.is_free && p.input > 0) {
+                const judgeInputChars = inputChars + (inputChars * selectedModels.length);
+                const judgeInTok = Math.ceil(judgeInputChars / 4);
+                total += Math.ceil(judgeInTok * p.input) + Math.ceil(400 * p.output);
+            }
         }
         return total;
     }
@@ -330,10 +383,33 @@
         if (Number.isInteger(idx)) {
             selectedModels.splice(idx, 1);
             renderPickChips();
+            renderJudgeOptions();
             recalcEstimate();
             updateMultiWarning();
         }
     });
+
+    // 监听 judge 切换
+    arenaJudgeSelect.addEventListener('change', recalcEstimate);
+
+    // ============ Judge 下拉：基于已选模型动态填充 ============
+    function renderJudgeOptions() {
+        const prev = arenaJudgeSelect.value;
+        arenaJudgeSelect.innerHTML = '<option value="">不评判（仅看回答）</option>';
+        for (const m of selectedModels) {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = `${m.vendor} · ${m.name}`;
+            arenaJudgeSelect.appendChild(opt);
+        }
+        // 保留之前的选择（如果仍有效）
+        if (prev && selectedModels.some(m => m.id === prev)) {
+            arenaJudgeSelect.value = prev;
+        } else {
+            arenaJudgeSelect.value = '';
+        }
+        recalcEstimate();
+    }
 
     arenaPickBtn.addEventListener('click', openModelModal);
     arenaModelModalClose.addEventListener('click', closeModelModal);
@@ -551,15 +627,61 @@
             body.innerHTML = `<div class="arena-card-error">⚠ ${escapeHtml(error || '回答失败')}</div>`;
         }
 
-        // 评分区（仅作者本人可以给自己题目评分？ 不可以。所以此处只展示收集，但不写入 vote 表）
-        // 按需求：作者不可自评。所以评分区仅在「等待他人评分」状态下显示为只读说明，不出现交互。
-        // MVP：作者查看自己的评测时，不显示评分 UI（避免歧义）。
+        // 评分区：等待 AI 评判 / 已评判 / 评判失败
         const voteArea = card.querySelector('[data-vote-area]');
-        voteArea.innerHTML = `
-            <div class="arena-vote-label" style="color: var(--body-mid); font-style: italic;">
-                你是出题人，无法自评
-            </div>
-        `;
+        const judgeStatus = card._judgeState; // {status, score, reasoning, judgeModel}
+        if (judgeStatus && judgeStatus.status === 'scored') {
+            const reasoning = judgeStatus.reasoning || '';
+            const stars = renderStarsDisplay(judgeStatus.score);
+            voteArea.innerHTML = `
+                <div class="arena-judge-result">
+                    <div class="arena-judge-result-row">
+                        <span class="arena-judge-result-label">AI 评分</span>
+                        <span class="arena-stars">${stars}</span>
+                        <span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-sunset);">${judgeStatus.score}/5</span>
+                    </div>
+                    ${reasoning ? `<div class="arena-judge-reasoning-toggle" data-reasoning-toggle>查看理由</div>
+                    <div class="arena-judge-reasoning" data-reasoning>${escapeHtml(reasoning)}</div>` : ''}
+                </div>
+            `;
+            const toggle = voteArea.querySelector('[data-reasoning-toggle]');
+            const reasonEl = voteArea.querySelector('[data-reasoning]');
+            if (toggle && reasonEl) {
+                toggle.addEventListener('click', () => {
+                    const showing = reasonEl.classList.toggle('show');
+                    toggle.textContent = showing ? '收起理由' : '查看理由';
+                });
+            }
+        } else if (judgeStatus && judgeStatus.status === 'judging') {
+            voteArea.innerHTML = `
+                <div class="arena-judge-status">
+                    <span class="dot is-loading"></span>
+                    <span style="font-size: 12px; color: var(--body);">AI 评判中…</span>
+                </div>
+            `;
+        } else if (judgeStatus && judgeStatus.status === 'judge-error') {
+            voteArea.innerHTML = `
+                <div class="arena-judge-status">
+                    <span class="dot is-error"></span>
+                    <span style="font-size: 12px; color: #ff7b72;">评判失败${judgeStatus.error ? '：' + escapeHtml(judgeStatus.error) : ''}</span>
+                </div>
+            `;
+        } else {
+            // 默认：等待评判（用户在底部点击启动）或未配置 judge
+            const hasJudge = currentBattle && currentBattle.judge_model_id;
+            voteArea.innerHTML = hasJudge
+                ? `<div class="arena-judge-status"><span class="dot"></span><span style="font-size: 12px; color: var(--body-mid);">等待 AI 评判</span></div>`
+                : `<div class="arena-judge-status"><span class="dot"></span><span style="font-size: 12px; color: var(--body-mid);">未配置 AI 评判</span></div>`;
+        }
+    }
+
+    function renderStarsDisplay(score) {
+        let html = '';
+        for (let i = 1; i <= 5; i++) {
+            const active = i <= score;
+            html += `<span class="arena-star display ${active ? 'active' : ''}">${active ? '★' : '☆'}</span>`;
+        }
+        return html;
     }
 
     // ============ 启动评测 ============
@@ -591,7 +713,16 @@
         arenaFinalActions.hidden = true;
         // hideModels 用于控制卡片 header 是否显示模型名
         const hideModels = arenaAnonymous.checked;
-        currentBattle = { question_id: null, slots: {}, votes: {}, ok_count: 0, total: 0, hide_models: hideModels };
+        const judgeModelId = arenaJudgeSelect.value || null;
+        currentBattle = {
+            question_id: null,
+            slots: {},
+            votes: {},
+            ok_count: 0,
+            total: 0,
+            hide_models: hideModels,
+            judge_model_id: judgeModelId,
+        };
 
         const slotLabels = ['A', 'B', 'C', 'D'];
         // 随机打乱顺序（slot 随机分配，模型名按 hideModels 决定是否暴露）
@@ -798,13 +929,166 @@
                     arenaSubmitVoteBtn.textContent = '所有模型都失败了';
                     arenaSubmitVoteBtn.disabled = true;
                 } else {
-                    arenaSubmitVoteBtn.innerHTML = '所有回答已生成（作者不可自评）';
+                    arenaSubmitVoteBtn.innerHTML = '所有回答已生成';
                     arenaSubmitVoteBtn.disabled = true;
+                }
+                // 自动启动 AI 评判（如果配置了 judge）
+                if (battle.judge_model_id && battle.ok_count > 0) {
+                    startJudge(battle);
                 }
                 break;
             }
             case 'battle_error': {
                 alert('评测失败: ' + (evt.message || '未知错误'));
+                break;
+            }
+        }
+    }
+
+    // ============ AI 评判 ============
+    async function startJudge(battle) {
+        if (!battle.question_id || !battle.judge_model_id) return;
+        const t = getToken();
+        if (!t) return;
+
+        // 标记所有卡为 judging 状态
+        for (const slot of Object.keys(battle.slots)) {
+            const s = battle.slots[slot];
+            s.card._judgeState = { status: 'judging' };
+            // 重新渲染 footer
+            finalizeCard(s.card, {
+                status: s.status === 'error' ? 'error' : 'done-no-vote',
+                modelMeta: s.model,
+                creditsUsed: s.credits,
+                latencyMs: s.latency,
+                inputTokens: s.input_tokens,
+                outputTokens: s.output_tokens,
+                error: s.error,
+            });
+        }
+
+        // 替换底部按钮为"评判中"
+        const oldHtml = arenaSubmitVoteBtn.innerHTML;
+        arenaSubmitVoteBtn.disabled = true;
+        arenaSubmitVoteBtn.textContent = 'AI 评判中…';
+
+        judgeAbortCtrl = new AbortController();
+        try {
+            const r = await fetch(API_BASE + '/judge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${t}`,
+                },
+                body: JSON.stringify({
+                    question_id: battle.question_id,
+                    judge_model: battle.judge_model_id,
+                }),
+                signal: judgeAbortCtrl.signal,
+            });
+
+            if (!r.ok) {
+                const ed = await r.json().catch(() => ({}));
+                throw new Error(ed.message || `HTTP ${r.status}`);
+            }
+            if (!r.body) throw new Error('空响应');
+
+            const reader = r.body.getReader();
+            const dec = new TextDecoder();
+            let buf = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += dec.decode(value, { stream: true });
+                const lines = buf.split(/\r\n|\r|\n/);
+                buf = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data:')) continue;
+                    const s = line.slice(5).trim();
+                    if (!s) continue;
+                    let evt;
+                    try { evt = JSON.parse(s); } catch { continue; }
+                    handleJudgeSSE(battle, evt);
+                }
+            }
+        } catch (err) {
+            console.error('[Arena] judge error:', err);
+            for (const slot of Object.keys(battle.slots)) {
+                const s = battle.slots[slot];
+                s.card._judgeState = { status: 'judge-error', error: err.message };
+                finalizeCard(s.card, {
+                    status: s.status === 'error' ? 'error' : 'done-no-vote',
+                    modelMeta: s.model,
+                    creditsUsed: s.credits,
+                    latencyMs: s.latency,
+                    inputTokens: s.input_tokens,
+                    outputTokens: s.output_tokens,
+                    error: s.error,
+                });
+            }
+            arenaSubmitVoteBtn.textContent = 'AI 评判失败，点击重试';
+            arenaSubmitVoteBtn.disabled = false;
+            // 允许重试：把点击事件临时改造成重新启动 judge
+            arenaSubmitVoteBtn.onclick = () => {
+                arenaSubmitVoteBtn.onclick = null;
+                startJudge(battle);
+            };
+        } finally {
+            judgeAbortCtrl = null;
+            fetchRemaining();
+        }
+    }
+
+    function handleJudgeSSE(battle, evt) {
+        switch (evt.type) {
+            case 'judge_start': {
+                console.log('[Arena] judge started, model=', evt.judge_model);
+                break;
+            }
+            case 'judge_delta': {
+                // judge 的原始输出（debug 用，不展示给用户）
+                break;
+            }
+            case 'judge_response_score': {
+                const s = battle.slots[evt.slot];
+                if (!s) return;
+                s.card._judgeState = {
+                    status: 'scored',
+                    score: evt.score,
+                    reasoning: evt.reasoning || '',
+                };
+                // 重新渲染 footer
+                finalizeCard(s.card, {
+                    status: 'done-no-vote',
+                    modelMeta: s.model,
+                    creditsUsed: s.credits,
+                    latencyMs: s.latency,
+                    inputTokens: s.input_tokens,
+                    outputTokens: s.output_tokens,
+                });
+                break;
+            }
+            case 'judge_complete': {
+                arenaSubmitVoteBtn.textContent = `AI 评判完成（${evt.saved || 0} 条评分，消耗 ${(evt.credits_used || 0).toLocaleString()} credits）`;
+                arenaSubmitVoteBtn.disabled = true;
+                break;
+            }
+            case 'judge_error': {
+                // 错误事件已在外层 catch 处理，这里只对未收到任何 score 的卡显示
+                for (const slot of Object.keys(battle.slots)) {
+                    const s = battle.slots[slot];
+                    if (!s.card._judgeState || s.card._judgeState.status === 'judging') {
+                        s.card._judgeState = { status: 'judge-error', error: evt.message };
+                        finalizeCard(s.card, {
+                            status: 'done-no-vote',
+                            modelMeta: s.model,
+                            creditsUsed: s.credits,
+                            latencyMs: s.latency,
+                            inputTokens: s.input_tokens,
+                            outputTokens: s.output_tokens,
+                        });
+                    }
+                }
                 break;
             }
         }
@@ -907,13 +1191,13 @@
             });
             const d = await r.json();
             if (!d.success) throw new Error(d.message || '加载失败');
-            showBattleDetailModal(d.battle, d.responses || []);
+            showBattleDetailModal(d.battle, d.responses || [], d.llm_votes || []);
         } catch (e) {
             alert('加载详情失败: ' + e.message);
         }
     }
 
-    function showBattleDetailModal(battle, responses) {
+    function showBattleDetailModal(battle, responses, llmVotes) {
         // 复用 modelModal 风格
         let modal = document.getElementById('arenaDetailModal');
         if (modal) modal.remove();
@@ -922,6 +1206,11 @@
         modal.id = 'arenaDetailModal';
         modal.className = 'modal-overlay';
         const hideModels = !!battle.hide_model_names;
+        // 按 response_id 索引 LLM 投票
+        const voteByResp = new Map();
+        for (const v of llmVotes) {
+            voteByResp.set(v.response_id, v);
+        }
         modal.innerHTML = `
             <div class="modal-card" role="dialog" aria-modal="true">
                 <header class="modal-header">
@@ -934,7 +1223,7 @@
                         <div style="margin-top:6px; padding:10px 12px; background: var(--canvas-soft); border-radius: var(--r-sm); color: var(--ink); font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(battle.content)}</div>
                     </div>
                     <div class="arena-detail-responses" style="margin-top: 20px; display: grid; gap: 14px;">
-                        ${responses.map(resp => renderDetailResponse(resp, hideModels)).join('')}
+                        ${responses.map(resp => renderDetailResponse(resp, hideModels, voteByResp.get(resp.id))).join('')}
                     </div>
                 </div>
             </div>
@@ -967,6 +1256,26 @@
         const body = resp.content
             ? `<div style="margin-top:8px; padding:10px 12px; background: var(--canvas); border:1px solid var(--hairline); border-radius: var(--r-sm); font-size:13px; line-height:1.6; color: var(--ink); white-space: pre-wrap;">${escapeHtml(resp.content)}</div>`
             : errorBlock;
+        // LLM 评判展示
+        let judgeHtml = '';
+        if (llmVote) {
+            const jm = getModelMeta(llmVote.judge_model_id);
+            const jmName = jm ? `${jm.vendor} · ${jm.name}` : llmVote.judge_model_id;
+            const stars = renderStarsDisplay(llmVote.score);
+            const reasoning = llmVote.comment
+                ? `<div class="arena-judge-reasoning show" style="margin-top:6px;">${escapeHtml(llmVote.comment)}</div>`
+                : '';
+            judgeHtml = `
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--hairline);">
+                    <div class="arena-judge-result-row">
+                        <span class="arena-judge-result-label">${escapeHtml(jmName)}</span>
+                        <span class="arena-stars">${stars}</span>
+                        <span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-sunset);">${llmVote.score}/5</span>
+                    </div>
+                    ${reasoning}
+                </div>
+            `;
+        }
         return `
             <div style="background: var(--canvas-card); border:1px solid var(--hairline); border-radius: var(--r-sm); padding: 14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -976,6 +1285,7 @@
                     </div>
                 </div>
                 ${body}
+                ${judgeHtml}
             </div>
         `;
     }
@@ -990,8 +1300,9 @@
     // ============ 公开 API ============
     window.ArenaModule = {
         init() {
-            // 初始化模型 chips
+            // 初始化模型 chips + judge 下拉
             renderPickChips();
+            renderJudgeOptions();
             recalcEstimate();
         },
         onViewEnter,
