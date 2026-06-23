@@ -392,21 +392,38 @@
     // 监听 judge 切换
     arenaJudgeSelect.addEventListener('change', recalcEstimate);
 
-    // ============ Judge 下拉：基于已选模型动态填充 ============
+    // ============ Judge 下拉：展示所有可用模型（不限参与模型）============
+    // Judge 可以是任何模型，包括非参与模型。例如：让 Claude 评判 GPT-4 vs Gemini 的回答
     function renderJudgeOptions() {
         const prev = arenaJudgeSelect.value;
         arenaJudgeSelect.innerHTML = '<option value="">不评判（仅看回答）</option>';
-        for (const m of selectedModels) {
-            const opt = document.createElement('option');
-            opt.value = m.id;
-            opt.textContent = `${m.vendor} · ${m.name}`;
-            arenaJudgeSelect.appendChild(opt);
+
+        // 把已选模型 ID 收集起来（用于高亮标记）
+        const selectedIds = new Set(selectedModels.map(m => m.id));
+
+        for (const [providerKey, cfg] of Object.entries(MODEL_CONFIG)) {
+            if (!cfg.models || !cfg.models.length) continue;
+            const og = document.createElement('optgroup');
+            og.label = cfg.name;
+            for (const m of cfg.models) {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                const badges = [];
+                if (m.free) badges.push('🆓');
+                else if (m.premium) badges.push('PRO');
+                if (selectedIds.has(m.id)) badges.push('●');
+                const badgeStr = badges.length ? ' ' + badges.join(' ') : '';
+                opt.textContent = `${m.name}${badgeStr}`;
+                if (m.premium) opt.style.color = 'var(--accent-sunset)';
+                og.appendChild(opt);
+            }
+            arenaJudgeSelect.appendChild(og);
         }
         // 保留之前的选择（如果仍有效）
-        if (prev && selectedModels.some(m => m.id === prev)) {
-            arenaJudgeSelect.value = prev;
-        } else {
-            arenaJudgeSelect.value = '';
+        if (prev) {
+            const exists = Array.from(arenaJudgeSelect.options).some(o => o.value === prev);
+            if (exists) arenaJudgeSelect.value = prev;
+            else arenaJudgeSelect.value = '';
         }
         recalcEstimate();
     }
@@ -422,12 +439,14 @@
         }
     });
 
-    // 监听 chat.js 的 free 模型加载完成事件，刷新 picker
+    // 监听 chat.js 的 free 模型加载完成事件，刷新 picker + judge 下拉
     window.addEventListener('chat:free-models-loaded', () => {
         if (arenaModelModal && !arenaModelModal.hidden) {
             renderVendorList();
             renderModelList();
         }
+        // 始终刷新 judge 下拉，让 Free 模型即时可用
+        renderJudgeOptions();
     });
 
     // ============ 问题输入联动 ============
