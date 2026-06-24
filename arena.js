@@ -586,33 +586,118 @@
         statusEl.textContent = label;
     }
 
-    function setCardBody(card, text, append = false) {
+    function setCardBody(card, text) {
         const body = card.querySelector('[data-body]');
         body.classList.add('typing');
-        // 简单 markdown 处理（粗体、行内代码、代码块）
-        let html = renderMarkdownLite(text);
-        if (append && body._rawText) {
-            body._rawText += text;
-        } else {
-            body._rawText = text;
+        // 累积原始文本（用于流式中每次 delta 都全量重渲染）
+        body._rawText = text || '';
+        body.innerHTML = renderMarkdown(body._rawText);
+        addCodeCopyBtns(body);
+        renderMathSafe(body);
+        scrollCardToBottom(body);
+    }
+
+    // ============ Markdown 渲染 ============
+    // 优先用 marked + DOMPurify（与 chat.js 一致），fallback 到简易实现。
+    // 使用 marked 可以正确处理嵌套反引号、GFM 表格、任务列表等，
+    // 避免正则误匹配代码块内部的反引号。
+    function renderMarkdown(text) {
+        if (!text) return '<span class="arena-card-empty">排队中...</span>';
+        try {
+            if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+                const html = marked.parse(text, { async: false, gfm: true, breaks: false });
+                return DOMPurify.sanitize(html);
+            }
+        } catch (e) {
+            // fall through
         }
-        // 因为每次 append 都重算整段 markdown 性能不好，但简单可靠
-        body.innerHTML = renderMarkdownLite(body._rawText);
-        scrollCardToBottom(card);
+        return renderMarkdownLite(text);
     }
 
     function renderMarkdownLite(text) {
-        if (!text) return '<span class="arena-card-empty">排队中...</span>';
+        // 简易回退：手工转义 + 行内替换
         let html = escapeHtml(text);
-        // 代码块
-        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+        // 代码块用占位符保护：先提取再恢复
+        const codeBlocks = [];
+        html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => {
+            const i = codeBlocks.length;
+            codeBlocks.push(`<pre><code>${code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')}</code></pre>`);
+            return `\u0000CODE${i}\u0000`;
+        });
         // 行内代码
-        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
         // 粗体
-        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+        // 链接 [text](url)
+        html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
         // 换行
         html = html.replace(/\n/g, '<br>');
+        // 恢复代码块
+        html = html.replace(/\u0000CODE(\d+)\u0000/g, (_, i) => codeBlocks[Number(i)]);
         return html;
+    }
+
+    // ============ 代码块复制按钮 ============
+    // 与 chat.js 的 addCodeCopyBtns 同款：每个 <pre> 右上角加复制按钮
+    function addCodeCopyBtns(el) {
+        el.querySelectorAll('pre').forEach(pre => {
+            if (pre.querySelector('.code-copy')) return;
+            // 让 pre 的 position 为 relative，便于按钮绝对定位
+            if (getComputedStyle(pre).position === 'static') {
+                pre.style.position = 'relative';
+            }
+            const btn = document.createElement('button');
+            btn.className = 'code-copy';
+            btn.type = 'button';
+            btn.textContent = '复制';
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const code = pre.querySelector('code')?.textContent || pre.textContent || '';
+                const onOk = () => {
+                    btn.textContent = '已复制';
+                    setTimeout(() => { btn.textContent = '复制'; }, 1500);
+                };
+                const onErr = () => {
+                    btn.textContent = '复制失败';
+                    setTimeout(() => { btn.textContent = '复制'; }, 1500);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(code).then(onOk).catch(() => {
+                        // 回退到 execCommand
+                        try {
+                            const ta = document.createElement('textarea');
+                            ta.value = code;
+                            ta.style.position = 'fixed';
+                            ta.style.opacity = '0';
+                            document.body.appendChild(ta);
+                            ta.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(ta);
+                            onOk();
+                        } catch { onErr(); }
+                    });
+                } else {
+                    onErr();
+                }
+            });
+            pre.appendChild(btn);
+        });
+    }
+
+    // KaTeX 公式渲染（如已加载）
+    function renderMathSafe(el) {
+        if (typeof renderMathInElement !== 'undefined') {
+            try {
+                renderMathInElement(el, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$',  right: '$',  display: false }
+                    ],
+                    throwOnError: false
+                });
+            } catch {}
+        }
     }
 
     function scrollCardToBottom(card) {
@@ -638,7 +723,13 @@
         const metaText = card.querySelector('[data-meta-text]');
         const metaCost = card.querySelector('[data-meta-cost]');
         if (status === 'done' || status === 'done-no-vote') {
-            metaText.textContent = `↑ ${inputTokens} · ↓ ${outputTokens}`;
+            // 完成耗时（秒），流式完成后才有意义
+            const latencyLabel = latencyMs > 0
+                ? (latencyMs >= 60000
+                    ? `${Math.floor(latencyMs / 60000)}m${Math.round((latencyMs % 60000) / 1000)}s`
+                    : `${(latencyMs / 1000).toFixed(1)}s`)
+                : '—';
+            metaText.textContent = `↑ ${inputTokens} · ↓ ${outputTokens} · ${latencyLabel}`;
             metaCost.textContent = `${creditsUsed.toLocaleString()} credits`;
         } else {
             metaText.textContent = '—';
@@ -1300,7 +1391,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>${labelHtml}</div>
                     <div style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-sunset);">
-                        ${resp.credits_used || 0} cr · ↑${resp.input_tokens || 0} ↓${resp.output_tokens || 0}
+                        ${resp.credits_used || 0} cr · ↑${resp.input_tokens || 0} ↓${resp.output_tokens || 0} · ${(resp.latency_ms || 0) > 0 ? ((resp.latency_ms / 1000).toFixed(1) + 's') : '—'}
                     </div>
                 </div>
                 ${body}

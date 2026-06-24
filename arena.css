@@ -585,8 +585,34 @@
     font-size: 12px;
     line-height: 1.5;
     margin: 8px 0;
+    position: relative;
 }
 .arena-card-body pre code { background: none; padding: 0; }
+.arena-card-body pre .code-copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 3px 8px;
+    background: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    color: var(--body);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+    user-select: none;
+}
+.arena-card-body pre:hover .code-copy,
+.arena-card-body pre .code-copy:focus {
+    opacity: 1;
+}
+.arena-card-body pre .code-copy:hover {
+    background: var(--canvas-soft);
+    color: var(--accent-sunset);
+}
 
 .arena-card-body .arena-card-empty {
     color: var(--body-mid);
