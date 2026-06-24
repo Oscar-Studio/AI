@@ -787,9 +787,17 @@
                         <span style="font-size: 12px; color: #ff7b72;">评判失败${judgeStatus.error ? '：' + escapeHtml(judgeStatus.error) : ''}</span>
                     </div>
                 `;
-                // AI 评判失败时，降级为人类评分入口
-                if (card._responseId) {
+                // AI 评判失败时，降级为人类评分入口（仅当底层回答成功）
+                const slotState = currentBattle && currentBattle.slots[card.dataset.slot];
+                if (card._responseId && slotState && slotState.status !== 'error' && slotState.text) {
                     renderHumanVoteUI(voteArea, card);
+                } else {
+                    voteArea.innerHTML = `
+                        <div class="arena-judge-status">
+                            <span class="dot is-error"></span>
+                            <span style="font-size: 12px; color: var(--body-mid);">${slotState && slotState.status === 'error' ? '回答失败，无法评分' : '评判失败'}</span>
+                        </div>
+                    `;
                 }
             } else {
                 voteArea.innerHTML = `
@@ -808,6 +816,17 @@
                 <div class="arena-judge-status">
                     <span class="dot"></span>
                     <span style="font-size: 12px; color: var(--body-mid);">无 response_id，无法评分</span>
+                </div>
+            `;
+            return;
+        }
+        // 失败的卡不允许评分（后端会拒绝）
+        const slotState = currentBattle && currentBattle.slots[card.dataset.slot];
+        if (slotState && (slotState.status === 'error' || !slotState.text)) {
+            voteArea.innerHTML = `
+                <div class="arena-judge-status">
+                    <span class="dot is-error"></span>
+                    <span style="font-size: 12px; color: var(--body-mid);">回答失败，无法评分</span>
                 </div>
             `;
             return;
@@ -882,6 +901,12 @@
 
     async function submitHumanVote(card, score) {
         if (!currentBattle || !currentBattle.question_id || !card._responseId) return;
+        // 防御：失败的卡不允许投票
+        const slot = currentBattle.slots[card.dataset.slot];
+        if (!slot || slot.status === 'error' || !slot.text) {
+            console.warn('[Arena] 拒绝给失败回答打分');
+            return;
+        }
         const t = getToken();
         if (!t) {
             alert('请先登录');
@@ -925,9 +950,12 @@
     function updateVotedCount() {
         if (!currentBattle) return;
         let voted = 0;
-        const total = Object.keys(currentBattle.slots).length;
+        let total = 0;
         for (const slot of Object.keys(currentBattle.slots)) {
             const s = currentBattle.slots[slot];
+            // 失败的卡不算入总分母
+            if (s.status === 'error') continue;
+            total++;
             if (s.card && s.card._userVote && s.card._userVote.saved) voted++;
         }
         if (arenaVotedCount) arenaVotedCount.textContent = String(voted);
