@@ -547,12 +547,16 @@
         const card = document.createElement('div');
         card.className = 'arena-card is-streaming';
         card.dataset.slot = slot;
-        // header 中的模型名：仅在非隐藏模式下显示
-        const modelLabel = (!hideModels && modelMeta)
+        // 模型名 label：始终渲染（评分完成后 reveal 用），
+        // hideModels 时加上 is-hidden class 让其不可见
+        const modelLabel = modelMeta
             ? `${modelMeta.vendor} · ${modelMeta.name}`
             : '';
-        const headerRight = modelLabel
-            ? `<span class="arena-card-model" data-model-label>${escapeHtml(modelLabel)}</span>`
+        const labelClass = (hideModels && modelMeta)
+            ? 'arena-card-model is-hidden'
+            : 'arena-card-model';
+        const headerRight = modelMeta
+            ? `<span class="${labelClass}" data-model-label>${escapeHtml(modelLabel)}</span>`
             : '';
         card.innerHTML = `
             <div class="arena-card-header">
@@ -909,6 +913,8 @@
             // 保存状态，重新渲染
             card._userVote = { score, saved: true };
             renderHumanVoteUI(voteArea, card);
+            // 用户打分完成 → 揭示该卡模型名（如果开了 hide_model_names）
+            revealCardModel(card);
             updateVotedCount();
         } catch (err) {
             console.error('[Arena] vote error:', err);
@@ -940,6 +946,22 @@
             html += `<span class="arena-star display ${active ? 'active' : ''}">${active ? '★' : '☆'}</span>`;
         }
         return html;
+    }
+
+    // ============ 揭示模型名 ============
+    // 开启 hide_model_names 时，每张卡评分完成后调用此函数揭示模型
+    function revealCardModel(card) {
+        if (!card) return;
+        const el = card.querySelector('[data-model-label]');
+        if (!el || !el.classList.contains('is-hidden')) return;
+        el.classList.remove('is-hidden');
+        el.classList.add('is-revealed');
+        // 1.2s 后去掉 flash class，保留正常显示色（CSS 中 .arena-card-model 默认色）
+        setTimeout(() => {
+            if (el.classList.contains('is-revealed')) {
+                el.classList.remove('is-revealed');
+            }
+        }, 1200);
     }
 
     // ============ 启动评测 ============
@@ -1334,6 +1356,8 @@
                     inputTokens: s.input_tokens,
                     outputTokens: s.output_tokens,
                 });
+                // LLM 完成评分 → 揭示该卡模型名（如果开了 hide_model_names）
+                revealCardModel(s.card);
                 break;
             }
             case 'judge_complete': {
@@ -1461,21 +1485,29 @@
             });
             const d = await r.json();
             if (!d.success) throw new Error(d.message || '加载失败');
-            showBattleDetailModal(d.battle, d.responses || [], d.llm_votes || []);
+            showBattleDetailModal(
+                d.battle,
+                d.responses || [],
+                d.llm_votes || [],
+                d.total_votes || 0
+            );
         } catch (e) {
             alert('加载详情失败: ' + e.message);
         }
     }
 
-    function showBattleDetailModal(battle, responses, llmVotes) {
+    function showBattleDetailModal(battle, responses, llmVotes, totalVotes) {
         // 复用 modelModal 风格
         let modal = document.getElementById('arenaDetailModal');
         if (modal) modal.remove();
 
+        // 评分完成 = totalVotes > 0 → 在 hide_model_names 时揭示模型名
+        const scoringComplete = totalVotes > 0;
+        const hideModels = !!battle.hide_model_names && !scoringComplete;
+
         modal = document.createElement('div');
         modal.id = 'arenaDetailModal';
         modal.className = 'modal-overlay';
-        const hideModels = !!battle.hide_model_names;
         // 按 response_id 索引 LLM 投票
         const voteByResp = new Map();
         for (const v of llmVotes) {
@@ -1484,7 +1516,7 @@
         modal.innerHTML = `
             <div class="modal-card" role="dialog" aria-modal="true">
                 <header class="modal-header">
-                    <h2 class="modal-title">评测详情${hideModels ? ' <span style="font-size: 12px; color: var(--accent-sunset); margin-left: 8px; font-family: var(--font-mono); letter-spacing: 0.6px;">已隐藏模型名</span>' : ''}</h2>
+                    <h2 class="modal-title">评测详情${battle.hide_model_names ? (scoringComplete ? ' <span style="font-size: 12px; color: var(--accent-sunset); margin-left: 8px; font-family: var(--font-mono); letter-spacing: 0.6px;">评分完成 · 已揭示模型名</span>' : ' <span style="font-size: 12px; color: var(--accent-twilight); margin-left: 8px; font-family: var(--font-mono); letter-spacing: 0.6px;">评分未完成 · 模型名已隐藏</span>') : ''}</h2>
                     <button class="modal-close" id="arenaDetailClose" type="button" aria-label="关闭">✕</button>
                 </header>
                 <div class="arena-detail-body" style="padding: 20px 24px; max-height: 70vh; overflow-y: auto;">

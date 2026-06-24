@@ -522,6 +522,28 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
+    transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.arena-card-model.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    /* 保留占位但不可见，layout 不变（用 opacity + width 0 彻底隐藏）*/
+}
+
+.arena-card-model.is-revealed {
+    color: var(--accent-sunset);
+    animation: arenaRevealFlash 1.2s ease;
+}
+
+@keyframes arenaRevealFlash {
+    0%   { color: var(--body); opacity: 0.4; }
+    20%  { color: var(--accent-sunset); opacity: 1; }
+    100% { color: var(--accent-sunset); opacity: 1; }
 }
 
 .arena-card-slot {
