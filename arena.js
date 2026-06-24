@@ -588,6 +588,7 @@
 
     function setCardBody(card, text) {
         const body = card.querySelector('[data-body]');
+        if (!body) return;
         body.classList.add('typing');
         // 累积原始文本（用于流式中每次 delta 都全量重渲染）
         body._rawText = text || '';
@@ -700,8 +701,8 @@
         }
     }
 
-    function scrollCardToBottom(card) {
-        const body = card.querySelector('[data-body]');
+    function scrollCardToBottom(body) {
+        if (!body) return;
         body.scrollTop = body.scrollHeight;
     }
 
