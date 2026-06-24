@@ -738,51 +738,198 @@
             body.innerHTML = `<div class="arena-card-error">⚠ ${escapeHtml(error || '回答失败')}</div>`;
         }
 
-        // 评分区：等待 AI 评判 / 已评判 / 评判失败
+        // 评分区：AI 评判 / 用户评分 状态机
         const voteArea = card.querySelector('[data-vote-area]');
+        if (!voteArea) return;
+        const hasJudge = currentBattle && currentBattle.judge_model_id;
         const judgeStatus = card._judgeState; // {status, score, reasoning, judgeModel}
-        if (judgeStatus && judgeStatus.status === 'scored') {
-            const reasoning = judgeStatus.reasoning || '';
-            const stars = renderStarsDisplay(judgeStatus.score);
-            voteArea.innerHTML = `
-                <div class="arena-judge-result">
-                    <div class="arena-judge-result-row">
-                        <span class="arena-judge-result-label">AI 评分</span>
-                        <span class="arena-stars">${stars}</span>
-                        <span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-sunset);">${judgeStatus.score}/5</span>
+        const userVote = card._userVote;       // {score, saved}
+
+        // AI 评判分支
+        if (hasJudge) {
+            if (judgeStatus && judgeStatus.status === 'scored') {
+                const reasoning = judgeStatus.reasoning || '';
+                const stars = renderStarsDisplay(judgeStatus.score);
+                voteArea.innerHTML = `
+                    <div class="arena-judge-result">
+                        <div class="arena-judge-result-row">
+                            <span class="arena-judge-result-label">AI 评分</span>
+                            <span class="arena-stars">${stars}</span>
+                            <span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-sunset);">${judgeStatus.score}/5</span>
+                        </div>
+                        ${reasoning ? `<div class="arena-judge-reasoning-toggle" data-reasoning-toggle>查看理由</div>
+                        <div class="arena-judge-reasoning" data-reasoning>${escapeHtml(reasoning)}</div>` : ''}
                     </div>
-                    ${reasoning ? `<div class="arena-judge-reasoning-toggle" data-reasoning-toggle>查看理由</div>
-                    <div class="arena-judge-reasoning" data-reasoning>${escapeHtml(reasoning)}</div>` : ''}
-                </div>
-            `;
-            const toggle = voteArea.querySelector('[data-reasoning-toggle]');
-            const reasonEl = voteArea.querySelector('[data-reasoning]');
-            if (toggle && reasonEl) {
-                toggle.addEventListener('click', () => {
-                    const showing = reasonEl.classList.toggle('show');
-                    toggle.textContent = showing ? '收起理由' : '查看理由';
-                });
+                `;
+                const toggle = voteArea.querySelector('[data-reasoning-toggle]');
+                const reasonEl = voteArea.querySelector('[data-reasoning]');
+                if (toggle && reasonEl) {
+                    toggle.addEventListener('click', () => {
+                        const showing = reasonEl.classList.toggle('show');
+                        toggle.textContent = showing ? '收起理由' : '查看理由';
+                    });
+                }
+            } else if (judgeStatus && judgeStatus.status === 'judging') {
+                voteArea.innerHTML = `
+                    <div class="arena-judge-status">
+                        <span class="dot is-loading"></span>
+                        <span style="font-size: 12px; color: var(--body);">AI 评判中…</span>
+                    </div>
+                `;
+            } else if (judgeStatus && judgeStatus.status === 'judge-error') {
+                voteArea.innerHTML = `
+                    <div class="arena-judge-status">
+                        <span class="dot is-error"></span>
+                        <span style="font-size: 12px; color: #ff7b72;">评判失败${judgeStatus.error ? '：' + escapeHtml(judgeStatus.error) : ''}</span>
+                    </div>
+                `;
+                // AI 评判失败时，降级为人类评分入口
+                if (card._responseId) {
+                    renderHumanVoteUI(voteArea, card);
+                }
+            } else {
+                voteArea.innerHTML = `
+                    <div class="arena-judge-status">
+                        <span class="dot"></span>
+                        <span style="font-size: 12px; color: var(--body-mid);">等待 AI 评判</span>
+                    </div>
+                `;
             }
-        } else if (judgeStatus && judgeStatus.status === 'judging') {
+            return;
+        }
+
+        // 无 AI 评判：人类评分入口
+        if (!card._responseId) {
             voteArea.innerHTML = `
                 <div class="arena-judge-status">
-                    <span class="dot is-loading"></span>
-                    <span style="font-size: 12px; color: var(--body);">AI 评判中…</span>
+                    <span class="dot"></span>
+                    <span style="font-size: 12px; color: var(--body-mid);">无 response_id，无法评分</span>
                 </div>
             `;
-        } else if (judgeStatus && judgeStatus.status === 'judge-error') {
-            voteArea.innerHTML = `
-                <div class="arena-judge-status">
-                    <span class="dot is-error"></span>
-                    <span style="font-size: 12px; color: #ff7b72;">评判失败${judgeStatus.error ? '：' + escapeHtml(judgeStatus.error) : ''}</span>
+            return;
+        }
+        renderHumanVoteUI(voteArea, card);
+    }
+
+    // ============ 人类评分 UI ============
+    function renderHumanVoteUI(voteArea, card) {
+        const userVote = card._userVote;
+        const savedScore = userVote ? userVote.score : 0;
+        const starsHtml = [1, 2, 3, 4, 5].map(i => {
+            const active = i <= savedScore;
+            return `<span class="arena-star${active ? ' active' : ''}" data-star="${i}" role="button" tabindex="0" aria-label="${i} 星">${active ? '★' : '☆'}</span>`;
+        }).join('');
+        const hint = savedScore
+            ? `已提交 ${savedScore}/5 · 点击星星修改`
+            : '点击 1-5 星为这份回答打分';
+        voteArea.innerHTML = `
+            <div class="arena-vote-display">
+                <div class="arena-vote-display-row">
+                    <span class="arena-judge-result-label">你的评分</span>
+                    <span class="arena-stars arena-stars-interactive" data-vote-stars>${starsHtml}</span>
+                    <span class="arena-vote-hint" data-vote-hint>${escapeHtml(hint)}</span>
                 </div>
-            `;
-        } else {
-            // 默认：等待评判（用户在底部点击启动）或未配置 judge
-            const hasJudge = currentBattle && currentBattle.judge_model_id;
-            voteArea.innerHTML = hasJudge
-                ? `<div class="arena-judge-status"><span class="dot"></span><span style="font-size: 12px; color: var(--body-mid);">等待 AI 评判</span></div>`
-                : `<div class="arena-judge-status"><span class="dot"></span><span style="font-size: 12px; color: var(--body-mid);">未配置 AI 评判</span></div>`;
+            </div>
+        `;
+        attachHumanVoteHandlers(voteArea, card);
+    }
+
+    function attachHumanVoteHandlers(voteArea, card) {
+        const stars = voteArea.querySelectorAll('[data-star]');
+        stars.forEach(star => {
+            const handler = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const score = parseInt(star.dataset.star, 10);
+                if (!Number.isInteger(score) || score < 1 || score > 5) return;
+                submitHumanVote(card, score);
+            };
+            star.addEventListener('click', handler);
+            star.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handler(e);
+                }
+            });
+            // hover 预览：hover 时临时显示 hover 星数（不提交）
+            star.addEventListener('mouseenter', () => {
+                const target = parseInt(star.dataset.star, 10);
+                const all = voteArea.querySelectorAll('[data-star]');
+                all.forEach(s => {
+                    const v = parseInt(s.dataset.star, 10);
+                    s.classList.toggle('hover', v <= target);
+                    s.textContent = v <= target ? '★' : '☆';
+                });
+            });
+        });
+        const starsContainer = voteArea.querySelector('[data-vote-stars]');
+        if (starsContainer) {
+            starsContainer.addEventListener('mouseleave', () => {
+                const all = voteArea.querySelectorAll('[data-star]');
+                const saved = (card._userVote && card._userVote.score) || 0;
+                all.forEach(s => {
+                    const v = parseInt(s.dataset.star, 10);
+                    s.classList.remove('hover');
+                    s.textContent = v <= saved ? '★' : '☆';
+                });
+            });
+        }
+    }
+
+    async function submitHumanVote(card, score) {
+        if (!currentBattle || !currentBattle.question_id || !card._responseId) return;
+        const t = getToken();
+        if (!t) {
+            alert('请先登录');
+            return;
+        }
+        const voteArea = card.querySelector('[data-vote-area]');
+        if (!voteArea) return;
+
+        // 乐观更新：先显示「提交中」
+        const hint = voteArea.querySelector('[-data-vote-hint], [data-vote-hint]');
+        if (hint) hint.textContent = '提交中…';
+
+        try {
+            const r = await fetch(API_BASE + '/vote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${t}`,
+                },
+                body: JSON.stringify({
+                    question_id: currentBattle.question_id,
+                    votes: [{ response_id: card._responseId, score }],
+                }),
+            });
+            const d = await r.json();
+            if (!r.ok || !d.success) {
+                throw new Error(d.message || `HTTP ${r.status}`);
+            }
+            // 保存状态，重新渲染
+            card._userVote = { score, saved: true };
+            renderHumanVoteUI(voteArea, card);
+            updateVotedCount();
+        } catch (err) {
+            console.error('[Arena] vote error:', err);
+            if (hint) hint.textContent = `提交失败：${err.message}`;
+        }
+    }
+
+    function updateVotedCount() {
+        if (!currentBattle) return;
+        let voted = 0;
+        const total = Object.keys(currentBattle.slots).length;
+        for (const slot of Object.keys(currentBattle.slots)) {
+            const s = currentBattle.slots[slot];
+            if (s.card && s.card._userVote && s.card._userVote.saved) voted++;
+        }
+        if (arenaVotedCount) arenaVotedCount.textContent = String(voted);
+        if (arenaTotalCount) arenaTotalCount.textContent = String(total);
+        // 提交按钮启用条件：有 1 张以上打了分
+        if (arenaSubmitVoteBtn) {
+            arenaSubmitVoteBtn.disabled = voted === 0;
+            arenaSubmitVoteBtn.textContent = `提交评分（${voted}/${total}）`;
         }
     }
 
@@ -963,6 +1110,7 @@
                 const s = battle.slots[evt.slot];
                 if (!s) return;
                 s.response_id = evt.response_id;
+                s.card._responseId = evt.response_id;
                 s.status = 'streaming';
                 setCardStatus(s.card, 'streaming', 'STREAMING');
                 const body = s.card.querySelector('[data-body]');
@@ -1033,19 +1181,28 @@
                 battle.total = evt.total || 0;
                 battle.actual_credits = evt.actual_credits || 0;
                 arenaFinalActions.hidden = false;
-                arenaTotalCount.textContent = String(battle.ok_count);
-                arenaVotedCount.textContent = '0';
-                arenaSubmitVoteBtn.disabled = true;
-                if (battle.ok_count === 0) {
-                    arenaSubmitVoteBtn.textContent = '所有模型都失败了';
-                    arenaSubmitVoteBtn.disabled = true;
+                // 没配 AI 评判时：每个 card 自己处理评分入口，全局 submit 按钮隐藏
+                if (!battle.judge_model_id) {
+                    arenaSubmitVoteBtn.style.display = 'none';
                 } else {
-                    arenaSubmitVoteBtn.innerHTML = '所有回答已生成';
+                    arenaSubmitVoteBtn.style.display = '';
+                    arenaTotalCount.textContent = String(battle.ok_count);
+                    arenaVotedCount.textContent = '0';
                     arenaSubmitVoteBtn.disabled = true;
+                    if (battle.ok_count === 0) {
+                        arenaSubmitVoteBtn.textContent = '所有模型都失败了';
+                        arenaSubmitVoteBtn.disabled = true;
+                    } else {
+                        arenaSubmitVoteBtn.innerHTML = '所有回答已生成';
+                        arenaSubmitVoteBtn.disabled = true;
+                    }
                 }
                 // 自动启动 AI 评判（如果配置了 judge）
                 if (battle.judge_model_id && battle.ok_count > 0) {
                     startJudge(battle);
+                } else {
+                    // 无 AI 评判：每个 card 已通过 slot_done → finalizeCard 渲染人类评分 UI
+                    updateVotedCount();
                 }
                 break;
             }
@@ -1214,6 +1371,8 @@
         arenaAnonymous.checked = false;
         renderEmptyState();
         arenaCharCount.textContent = '0';
+        // 恢复 submit 按钮默认显示（让下一轮能正常用）
+        if (arenaSubmitVoteBtn) arenaSubmitVoteBtn.style.display = '';
         recalcEstimate();
     });
 
@@ -1347,7 +1506,7 @@
         document.getElementById('arenaDetailClose').addEventListener('click', () => modal.remove());
     }
 
-    function renderDetailResponse(resp, hideModels) {
+    function renderDetailResponse(resp, hideModels, llmVote) {
         // 隐藏模型名时：用 slot 替代；后端已置 model_id=null（双重保险）
         let labelHtml;
         if (hideModels || !resp.model_id) {

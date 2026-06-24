@@ -667,6 +667,33 @@
 .arena-star.active { color: var(--accent-sunset); }
 .arena-star:active { transform: scale(0.9); }
 .arena-star.display { cursor: default; }
+.arena-star.hover { color: var(--accent-sunset); }
+
+.arena-stars-interactive .arena-star {
+    cursor: pointer;
+    user-select: none;
+    padding: 0 2px;
+}
+
+.arena-vote-display {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.arena-vote-display-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.arena-vote-hint {
+    font-size: 11px;
+    color: var(--body-mid);
+    font-family: var(--font-mono);
+    letter-spacing: 0.4px;
+}
 
 .arena-vote-label {
     font-family: var(--font-mono);
