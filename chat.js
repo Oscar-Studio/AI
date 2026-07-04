@@ -918,6 +918,12 @@
 
             // 通知抽屉
             window.dispatchEvent(new CustomEvent('chat:current-session-changed', { detail: { sessionId: id } }));
+
+            // 如果会话标题仍是默认值（前次 title gen 被刷新中断），触发 AI 生成
+            if ((session.title || '') === '新对话') {
+                triggerAiTitle(id, null);
+            }
+
             return true;
         },
 
