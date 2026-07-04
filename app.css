@@ -1579,8 +1579,7 @@ textarea, input, select {
     display: none;
     gap: 2px;
 }
-.sidebar-history-item:hover .sidebar-history-item-actions,
-.sidebar-history-item.active .sidebar-history-item-actions {
+.sidebar-history-item:hover .sidebar-history-item-actions {
     display: flex;
 }
 .sidebar-history-item-action {
