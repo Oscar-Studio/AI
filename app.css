@@ -1614,15 +1614,13 @@ textarea, input, select {
     .sidebar-history-item-time { font-size: 10px; }
 }
 
-/* ==================== 自定义确认弹窗 ==================== */
+/* ==================== xAI-style Confirm Dialog ==================== */
 .confirm-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.65);
     z-index: 950;
-    animation: confirmFadeIn 0.18s ease;
+    animation: confirmFadeIn 0.15s ease;
 }
 @keyframes confirmFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -1631,21 +1629,18 @@ textarea, input, select {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: min(400px, calc(100vw - 32px));
-    background: rgba(20, 24, 33, 0.98);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid var(--hairline);
+    width: min(360px, calc(100vw - 32px));
+    background: #1f1f1f;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 16px;
-    padding: 28px 28px 22px;
+    padding: 24px;
     z-index: 960;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
-    animation: confirmPopIn 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    text-align: center;
-    color: #f1f5f9;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    animation: confirmPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    color: #fff;
 }
 @keyframes confirmPopIn {
-    from { opacity: 0; transform: translate(-50%, -48%) scale(0.94); }
+    from { opacity: 0; transform: translate(-50%, -47%) scale(0.96); }
     to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 .confirm-dialog[hidden],
@@ -1653,82 +1648,63 @@ textarea, input, select {
     display: none !important;
 }
 
-.confirm-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: rgba(248, 81, 73, 0.12);
-    color: #fca5a5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    margin: 0 auto 16px;
-}
-.confirm-icon.is-info {
-    background: rgba(99, 102, 241, 0.14);
-    color: #c7d2fe;
-}
-
 .confirm-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #f1f5f9;
-    margin: 0 0 8px;
-    letter-spacing: 0.01em;
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
 }
 
 .confirm-message {
-    font-size: 13.5px;
-    line-height: 1.6;
-    color: var(--body-mid);
-    margin: 0 0 22px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 20px;
     word-wrap: break-word;
     word-break: break-word;
 }
 
 .confirm-actions {
     display: flex;
-    gap: 10px;
-    justify-content: center;
+    gap: 8px;
+    justify-content: flex-end;
 }
 
 .confirm-btn {
-    flex: 0 1 auto;
-    min-width: 90px;
-    height: 36px;
-    padding: 0 20px;
-    border-radius: 8px;
-    border: 1px solid var(--hairline);
-    background: rgba(255, 255, 255, 0.04);
-    color: #e2e8f0;
+    height: 32px;
+    padding: 0 16px;
+    border-radius: 9999px;
+    border: none;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 400;
     font-family: inherit;
     cursor: pointer;
-    transition: all 0.15s;
-}
-.confirm-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+    transition: all 0.12s;
+    line-height: 1;
 }
 .confirm-btn-cancel {
     background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.6);
 }
-.confirm-btn-ok {
-    background: #6366f1;
-    border-color: #6366f1;
+.confirm-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.06);
     color: #fff;
 }
+.confirm-btn-ok {
+    background: rgba(255, 255, 255, 0.9);
+    color: #141414;
+}
 .confirm-btn-ok:hover {
-    background: #818cf8;
-    border-color: #818cf8;
+    background: #fff;
 }
 .confirm-btn-ok.is-danger {
-    background: #dc2626;
-    border-color: #dc2626;
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    color: #ef4444;
 }
 .confirm-btn-ok.is-danger:hover {
-    background: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
     border-color: #ef4444;
 }

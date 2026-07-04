@@ -17,7 +17,6 @@
     (function setupConfirmDialog() {
         const overlay   = document.getElementById('confirmOverlay');
         const dialog    = document.getElementById('confirmDialog');
-        const icon      = document.getElementById('confirmIcon');
         const titleEl   = document.getElementById('confirmTitle');
         const messageEl = document.getElementById('confirmMessage');
         const okBtn     = document.getElementById('confirmOk');
@@ -57,8 +56,6 @@
             okBtn.textContent = confirmText;
             cancelBtn.textContent = cancelText;
             okBtn.classList.toggle('is-danger', !!danger);
-            icon.classList.toggle('is-info', !danger);
-            icon.textContent = danger ? '🗑' : 'ℹ';
 
             overlay.hidden = false;
             dialog.hidden = false;
