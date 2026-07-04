@@ -380,6 +380,18 @@
         </main>
     </div>
 
+    <!-- ===== Confirm Dialog ===== -->
+    <div class="confirm-overlay" id="confirmOverlay" hidden></div>
+    <div class="confirm-dialog" id="confirmDialog" hidden role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <div class="confirm-icon" id="confirmIcon">⚠</div>
+        <h3 class="confirm-title" id="confirmTitle">确认操作</h3>
+        <p class="confirm-message" id="confirmMessage">确定要执行此操作吗？</p>
+        <div class="confirm-actions">
+            <button class="confirm-btn confirm-btn-cancel" id="confirmCancel" type="button">取消</button>
+            <button class="confirm-btn confirm-btn-ok" id="confirmOk" type="button">确定</button>
+        </div>
+    </div>
+
     <!-- ===== Arena Model Picker Modal ===== -->
     <div class="modal-overlay" id="arenaModelModal" hidden>
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="arenaModelModalTitle">

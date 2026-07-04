@@ -11,6 +11,81 @@
     const views        = document.querySelectorAll('.view');
     const STORAGE_VIEW = 'ai_studio_view';
 
+    // ============ 自定义确认弹窗 ============
+    // 替代浏览器的 confirm()，样式与 AI Studio 一致
+    // 用法：const ok = await window.confirmDialog({ title, message, confirmText, cancelText, danger });
+    (function setupConfirmDialog() {
+        const overlay   = document.getElementById('confirmOverlay');
+        const dialog    = document.getElementById('confirmDialog');
+        const icon      = document.getElementById('confirmIcon');
+        const titleEl   = document.getElementById('confirmTitle');
+        const messageEl = document.getElementById('confirmMessage');
+        const okBtn     = document.getElementById('confirmOk');
+        const cancelBtn = document.getElementById('confirmCancel');
+        if (!overlay || !dialog) return;
+
+        let currentResolve = null;
+        let escHandler = null;
+
+        function close(result) {
+            overlay.hidden = true;
+            dialog.hidden = true;
+            if (escHandler) {
+                document.removeEventListener('keydown', escHandler, true);
+                escHandler = null;
+            }
+            if (currentResolve) {
+                currentResolve(result);
+                currentResolve = null;
+            }
+        }
+
+        okBtn.addEventListener('click', () => close(true));
+        cancelBtn.addEventListener('click', () => close(false));
+        overlay.addEventListener('click', () => close(false));
+
+        window.confirmDialog = function (opts = {}) {
+            const {
+                title = '确认操作',
+                message = '确定要执行此操作吗？',
+                confirmText = '确定',
+                cancelText = '取消',
+                danger = false
+            } = opts;
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            okBtn.textContent = confirmText;
+            cancelBtn.textContent = cancelText;
+            okBtn.classList.toggle('is-danger', !!danger);
+            icon.classList.toggle('is-info', !danger);
+            icon.textContent = danger ? '🗑' : 'ℹ';
+
+            overlay.hidden = false;
+            dialog.hidden = false;
+
+            return new Promise(resolve => {
+                currentResolve = resolve;
+                // 下一帧聚焦到确定按钮，回车直接确认
+                requestAnimationFrame(() => {
+                    okBtn.focus();
+                });
+                // Escape 取消
+                escHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        close(false);
+                    } else if (e.key === 'Enter' && document.activeElement !== cancelBtn) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        close(true);
+                    }
+                };
+                document.addEventListener('keydown', escHandler, true);
+            });
+        };
+    })();
+
     function switchView(target) {
         sidebarItems.forEach(i => i.classList.toggle('active', i.dataset.view === target));
         views.forEach(v => v.classList.toggle('active', v.dataset.view === target));
@@ -185,7 +260,13 @@
             delBtn.textContent = '×';
             delBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                if (!confirm(`确定删除「${s.title || '新对话'}」？`)) return;
+                const ok = await window.confirmDialog({
+                    title: '删除会话',
+                    message: `确定删除「${s.title || '新对话'}」？\n该会话的所有消息都会一起删除，且无法恢复。`,
+                    confirmText: '删除',
+                    danger: true
+                });
+                if (!ok) return;
                 await window.ChatSessions.remove(s.id);
                 if (s.id === window.ChatModule.getCurrentSessionId()) {
                     window.ChatModule.newChat();
