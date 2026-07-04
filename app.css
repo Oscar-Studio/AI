@@ -1539,7 +1539,7 @@ textarea, input, select {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding-right: 28px;
+    padding-right: 52px;
     margin-bottom: 2px;
     cursor: text;
     border-radius: 4px;

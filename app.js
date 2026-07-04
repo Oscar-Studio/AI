@@ -170,6 +170,17 @@
             const actions = document.createElement('div');
             actions.className = 'sidebar-history-item-actions';
 
+            const renameBtn = document.createElement('button');
+            renameBtn.className = 'sidebar-history-item-action';
+            renameBtn.type = 'button';
+            renameBtn.title = '重命名';
+            renameBtn.setAttribute('aria-label', '重命名');
+            renameBtn.textContent = '✎';
+            renameBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                enterEditMode(item, s, title);
+            });
+
             const delBtn = document.createElement('button');
             delBtn.className = 'sidebar-history-item-action is-del';
             delBtn.type = 'button';
@@ -186,6 +197,7 @@
                 loadAndRenderSidebar();
             });
 
+            actions.appendChild(renameBtn);
             actions.appendChild(delBtn);
 
             item.appendChild(title);
