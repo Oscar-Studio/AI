@@ -388,7 +388,7 @@
         if (role === 'ai') {
             const content = document.createElement('div');
             content.className = 'content';
-            if (text) content.textContent = text;
+            if (text) setContent(content, marked.parse(text, { async: false }));
             bubble.appendChild(content);
         } else {
             bubble.textContent = text;
