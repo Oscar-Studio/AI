@@ -56,13 +56,10 @@
     if (window.ChatModule) window.ChatModule.init();
     if (window.ArenaModule) window.ArenaModule.init();
 
-    // ---- History drawer ----
-    const historyBtn    = document.getElementById('historyBtn');
-    const drawerOverlay = document.getElementById('drawerOverlay');
-    const historyDrawer = document.getElementById('historyDrawer');
-    const drawerClose   = document.getElementById('drawerClose');
-    const drawerList    = document.getElementById('drawerList');
-    const drawerLoginHint = document.getElementById('drawerLoginHint');
+    // ---- Sidebar history (inline, below Arena) ----
+    const sidebarHistory    = document.getElementById('sidebarHistory');
+    const sidebarHistoryList = document.getElementById('sidebarHistoryList');
+    const sidebarHistoryNew  = document.getElementById('sidebarHistoryNew');
 
     function formatTimeAgo(iso) {
         if (!iso) return '';
@@ -79,130 +76,107 @@
         return t.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
     }
 
-    async function loadAndRenderDrawer() {
-        if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) {
-            drawerLoginHint.hidden = false;
-            drawerList.innerHTML = '';
-            return;
-        }
-        drawerLoginHint.hidden = true;
+    async function loadAndRenderSidebar() {
+        const loggedIn = window.ChatSessions && window.ChatSessions.isLoggedIn();
+        sidebarHistory.hidden = !loggedIn;
+        if (!loggedIn) return;
 
         const r = await window.ChatSessions.list(100);
         if (!r.ok) {
-            drawerList.innerHTML = '<div class="drawer-empty">加载失败，请稍后再试</div>';
+            sidebarHistoryList.innerHTML = '<div class="sidebar-history-empty">加载失败</div>';
             return;
         }
 
         const sessions = r.data.sessions || [];
         if (sessions.length === 0) {
-            drawerList.innerHTML = '<div class="drawer-empty">还没有会话<br><span class="drawer-empty-sub">开始一次对话即可自动保存</span></div>';
+            sidebarHistoryList.innerHTML = '<div class="sidebar-history-empty">还没有会话</div>';
             return;
         }
 
         const currentId = window.ChatModule.getCurrentSessionId();
-        drawerList.innerHTML = '';
+        sidebarHistoryList.innerHTML = '';
         for (const s of sessions) {
             const item = document.createElement('div');
-            item.className = 'drawer-item' + (s.id === currentId ? ' active' : '');
+            item.className = 'sidebar-history-item' + (s.id === currentId ? ' active' : '');
             item.dataset.id = s.id;
+            item.title = s.title || '新对话';
 
             const title = document.createElement('div');
-            title.className = 'drawer-item-title';
+            title.className = 'sidebar-history-item-title';
             title.textContent = s.title || '新对话';
 
-            const meta = document.createElement('div');
-            meta.className = 'drawer-item-meta';
-            const time = document.createElement('span');
+            const time = document.createElement('div');
+            time.className = 'sidebar-history-item-time';
             time.textContent = formatTimeAgo(s.last_message_at);
-            const count = document.createElement('span');
-            count.textContent = `${s.message_count || 0} 条消息`;
-            meta.appendChild(time);
-            meta.appendChild(count);
 
             const actions = document.createElement('div');
-            actions.className = 'drawer-item-actions';
+            actions.className = 'sidebar-history-item-actions';
 
             const renameBtn = document.createElement('button');
-            renameBtn.className = 'drawer-item-action';
+            renameBtn.className = 'sidebar-history-item-action';
             renameBtn.type = 'button';
             renameBtn.title = '重命名';
-            renameBtn.innerHTML = '✏️';
+            renameBtn.setAttribute('aria-label', '重命名');
+            renameBtn.textContent = '✎';
             renameBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const newTitle = prompt('新标题：', s.title || '');
                 if (newTitle === null || !newTitle.trim()) return;
                 await window.ChatSessions.rename(s.id, newTitle.trim());
-                loadAndRenderDrawer();
+                loadAndRenderSidebar();
             });
 
             const delBtn = document.createElement('button');
-            delBtn.className = 'drawer-item-action drawer-item-action-del';
+            delBtn.className = 'sidebar-history-item-action is-del';
             delBtn.type = 'button';
             delBtn.title = '删除';
-            delBtn.innerHTML = '🗑';
+            delBtn.setAttribute('aria-label', '删除');
+            delBtn.textContent = '×';
             delBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                if (!confirm(`确定删除「${s.title || '新对话'}」？\n该会话的所有消息都会一起删除。`)) return;
+                if (!confirm(`确定删除「${s.title || '新对话'}」？`)) return;
                 await window.ChatSessions.remove(s.id);
                 if (s.id === window.ChatModule.getCurrentSessionId()) {
                     window.ChatModule.newChat();
                 }
-                loadAndRenderDrawer();
+                loadAndRenderSidebar();
             });
 
             actions.appendChild(renameBtn);
             actions.appendChild(delBtn);
 
             item.appendChild(title);
-            item.appendChild(meta);
+            item.appendChild(time);
             item.appendChild(actions);
 
             item.addEventListener('click', async () => {
-                if (s.id === window.ChatModule.getCurrentSessionId()) {
-                    closeDrawer();
-                    return;
-                }
-                const ok = await window.ChatModule.loadSession(s.id);
-                if (ok) closeDrawer();
+                if (s.id === window.ChatModule.getCurrentSessionId()) return;
+                // 切到 Chat 视图
+                switchView('chat');
+                await window.ChatModule.loadSession(s.id);
             });
 
-            drawerList.appendChild(item);
+            sidebarHistoryList.appendChild(item);
         }
     }
 
-    function openDrawer() {
-        historyDrawer.hidden = false;
-        drawerOverlay.hidden = false;
-        loadAndRenderDrawer();
-    }
-    function closeDrawer() {
-        historyDrawer.hidden = true;
-        drawerOverlay.hidden = true;
-    }
-
-    historyBtn.addEventListener('click', openDrawer);
-    drawerClose.addEventListener('click', closeDrawer);
-    drawerOverlay.addEventListener('click', closeDrawer);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !historyDrawer.hidden) closeDrawer();
+    sidebarHistoryNew.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (window.ChatModule) window.ChatModule.newChat();
     });
 
-    // 抽屉按钮仅在登录后可见（在 user-button.js 登录态变化时通过事件更新）
-    historyBtn.style.display = 'none';
+    // 登录态变化时刷新
     window.addEventListener('user:login-changed', () => {
-        const loggedIn = !!(localStorage.getItem('ai_token'));
-        historyBtn.style.display = loggedIn ? '' : 'none';
-        if (loggedIn) loadAndRenderDrawer();
+        loadAndRenderSidebar();
     });
-    // 首次加载时检查一次
-    if (localStorage.getItem('ai_token')) {
-        historyBtn.style.display = '';
-    }
 
-    // 会话列表在新建/重命名/删除时刷新
-    window.addEventListener('chat:session-updated', loadAndRenderDrawer);
-    window.addEventListener('chat:session-renamed', loadAndRenderDrawer);
-    window.addEventListener('chat:current-session-changed', loadAndRenderDrawer);
+    // 首次加载
+    loadAndRenderSidebar();
+
+    // 抽屉里在新建/重命名/删除时刷新
+    window.addEventListener('chat:session-updated', loadAndRenderSidebar);
+    window.addEventListener('chat:session-renamed', loadAndRenderSidebar);
+    window.addEventListener('chat:current-session-changed', loadAndRenderSidebar);
 
     // ---- Auto-fill chat input from ?q= (Opilot integration) ----
     (function autoFillFromQuery() {

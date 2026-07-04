@@ -31,13 +31,6 @@
     <div class="layout">
         <!-- ===== Left Sidebar ===== -->
         <aside class="sidebar">
-            <button class="sidebar-history-btn" id="historyBtn" type="button" title="会话历史" aria-label="会话历史">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <span>历史</span>
-            </button>
             <nav class="sidebar-nav">
                 <button class="sidebar-item active" data-view="chat">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -66,6 +59,17 @@
                     <span>Arena</span>
                 </button>
             </nav>
+
+            <div class="sidebar-history" id="sidebarHistory" hidden>
+                <div class="sidebar-history-divider"></div>
+                <div class="sidebar-history-head">
+                    <span class="sidebar-eyebrow">历史</span>
+                    <button class="sidebar-history-new" id="sidebarHistoryNew" type="button" title="新对话">+</button>
+                </div>
+                <div class="sidebar-history-list" id="sidebarHistoryList">
+                    <div class="sidebar-history-empty">还没有会话</div>
+                </div>
+            </div>
 
             <div class="sidebar-footer">
                 <span class="sidebar-eyebrow">MODEL</span>
@@ -375,21 +379,6 @@
             </section>
         </main>
     </div>
-
-    <!-- ===== Chat History Drawer ===== -->
-    <div class="drawer-overlay" id="drawerOverlay" hidden></div>
-    <aside class="history-drawer" id="historyDrawer" hidden aria-label="会话历史">
-        <header class="drawer-header">
-            <span class="drawer-title">会话历史</span>
-            <button class="drawer-close" id="drawerClose" type="button" aria-label="关闭">✕</button>
-        </header>
-        <div class="drawer-login-hint" id="drawerLoginHint" hidden>
-            <div class="drawer-login-msg">登录后开启云端会话存储</div>
-        </div>
-        <div class="drawer-list" id="drawerList">
-            <div class="drawer-empty">暂无历史会话</div>
-        </div>
-    </aside>
 
     <!-- ===== Arena Model Picker Modal ===== -->
     <div class="modal-overlay" id="arenaModelModal" hidden>

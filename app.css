@@ -1434,6 +1434,7 @@ textarea, input, select {
     .sidebar-model-name { font-size: 11px; }
     .sidebar-model-chevron { display: none; }
     .sidebar-footer { padding-top: var(--space-12); }
+    .sidebar-history { display: none !important; }
 
     /* design 规定 hero 在 mobile 缩到 48px；display-md 也是 48px，不变 */
     .tts-headline { font-size: 32px; line-height: 36px; letter-spacing: -0.6px; }
@@ -1457,185 +1458,132 @@ textarea, input, select {
     .quota-pill { display: none; }
 }
 
-/* ==================== Sidebar history button ==================== */
-.sidebar-history-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 10px 14px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--hairline);
-    border-radius: 10px;
-    color: var(--body-mid);
-    font-size: 13px;
-    cursor: pointer;
-    margin-bottom: 12px;
-    transition: all 0.2s;
-    font-family: inherit;
-}
-.sidebar-history-btn:hover {
-    background: rgba(99, 102, 241, 0.12);
-    color: #c7d2fe;
-    border-color: rgba(99, 102, 241, 0.3);
-}
-.sidebar-history-btn svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-}
-
-/* ==================== History drawer ==================== */
-.drawer-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
-    z-index: 800;
-    animation: drawerFadeIn 0.2s ease;
-}
-@keyframes drawerFadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.history-drawer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 320px;
-    background: rgba(15, 23, 42, 0.96);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-right: 1px solid var(--hairline);
-    z-index: 900;
+/* ==================== Sidebar history (inline, below Arena) ==================== */
+.sidebar-history {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--hairline);
     display: flex;
     flex-direction: column;
-    animation: drawerSlideIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    min-height: 0;
+    flex: 1 1 auto;
 }
-.history-drawer[hidden],
-.drawer-overlay[hidden] {
+.sidebar-history[hidden] {
     display: none !important;
 }
-@keyframes drawerSlideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 
-.drawer-header {
+.sidebar-history-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid var(--hairline);
+    padding: 0 14px 8px;
 }
-.drawer-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #f1f5f9;
-    letter-spacing: 0.02em;
+.sidebar-history-head .sidebar-eyebrow {
+    margin: 0;
 }
-.drawer-close {
-    background: none;
-    border: none;
+.sidebar-history-new {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--hairline);
     color: var(--body-mid);
-    font-size: 18px;
-    cursor: pointer;
-    padding: 4px 8px;
+    width: 22px;
+    height: 22px;
     border-radius: 6px;
-    transition: all 0.2s;
-}
-.drawer-close:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #f1f5f9;
-}
-
-.drawer-login-hint {
-    padding: 40px 24px;
-    text-align: center;
-}
-.drawer-login-msg {
-    color: var(--body-mid);
-    font-size: 13px;
-    line-height: 1.6;
-}
-
-.drawer-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-}
-.drawer-empty {
-    text-align: center;
-    color: var(--body-mid);
-    font-size: 13px;
-    padding: 60px 20px;
-    line-height: 1.8;
-}
-.drawer-empty-sub {
-    color: rgba(148, 163, 184, 0.6);
-    font-size: 12px;
-}
-
-.drawer-item {
-    position: relative;
-    padding: 12px 14px;
-    margin-bottom: 4px;
-    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s;
-    border: 1px solid transparent;
-}
-.drawer-item:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: var(--hairline);
-}
-.drawer-item.active {
-    background: rgba(99, 102, 241, 0.12);
-    border-color: rgba(99, 102, 241, 0.3);
-}
-.drawer-item-title {
-    color: #e2e8f0;
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding-right: 70px;
-}
-.drawer-item-meta {
-    display: flex;
-    gap: 12px;
-    color: var(--body-mid);
-    font-size: 11px;
-}
-.drawer-item-actions {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    display: none;
-    gap: 4px;
-}
-.drawer-item:hover .drawer-item-actions,
-.drawer-item.active .drawer-item-actions {
-    display: flex;
-}
-.drawer-item-action {
-    background: rgba(255, 255, 255, 0.08);
-    border: none;
-    border-radius: 6px;
-    width: 26px;
-    height: 26px;
-    cursor: pointer;
-    font-size: 12px;
+    font-size: 16px;
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
     transition: all 0.2s;
 }
-.drawer-item-action:hover {
-    background: rgba(99, 102, 241, 0.25);
-}
-.drawer-item-action-del:hover {
-    background: rgba(248, 81, 73, 0.25);
+.sidebar-history-new:hover {
+    background: rgba(99, 102, 241, 0.18);
+    color: #c7d2fe;
+    border-color: rgba(99, 102, 241, 0.3);
 }
 
-@media (max-width: 640px) {
-    .history-drawer { width: 100vw; }
+.sidebar-history-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 0 6px 8px;
+    margin: 0 6px;
+}
+.sidebar-history-empty {
+    color: var(--body-mid);
+    font-size: 12px;
+    padding: 14px 8px;
+    text-align: center;
+    line-height: 1.6;
+}
+
+.sidebar-history-item {
+    position: relative;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.sidebar-history-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+.sidebar-history-item.active {
+    background: rgba(99, 102, 241, 0.14);
+}
+.sidebar-history-item-title {
+    color: #e2e8f0;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 44px;
+    margin-bottom: 2px;
+}
+.sidebar-history-item-time {
+    color: var(--body-mid);
+    font-size: 11px;
+}
+.sidebar-history-item-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: none;
+    gap: 2px;
+}
+.sidebar-history-item:hover .sidebar-history-item-actions,
+.sidebar-history-item.active .sidebar-history-item-actions {
+    display: flex;
+}
+.sidebar-history-item-action {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: var(--body-mid);
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.15s;
+}
+.sidebar-history-item-action:hover {
+    background: rgba(99, 102, 241, 0.25);
+    color: #e2e8f0;
+}
+.sidebar-history-item-action.is-del:hover {
+    background: rgba(248, 81, 73, 0.25);
+    color: #fca5a5;
+}
+
+/* 窄屏（侧边栏变窄）下：让历史列表的标题字号小一点 */
+@media (max-width: 1100px) {
+    .sidebar-history-item-title { font-size: 12px; }
+    .sidebar-history-item-time { font-size: 10px; }
 }
