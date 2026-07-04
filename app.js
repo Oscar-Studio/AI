@@ -56,6 +56,154 @@
     if (window.ChatModule) window.ChatModule.init();
     if (window.ArenaModule) window.ArenaModule.init();
 
+    // ---- History drawer ----
+    const historyBtn    = document.getElementById('historyBtn');
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const historyDrawer = document.getElementById('historyDrawer');
+    const drawerClose   = document.getElementById('drawerClose');
+    const drawerList    = document.getElementById('drawerList');
+    const drawerLoginHint = document.getElementById('drawerLoginHint');
+
+    function formatTimeAgo(iso) {
+        if (!iso) return '';
+        const t = new Date(iso);
+        const diff = Date.now() - t.getTime();
+        const min = Math.floor(diff / 60000);
+        if (min < 1) return '刚刚';
+        if (min < 60) return `${min} 分钟前`;
+        const h = Math.floor(min / 60);
+        if (h < 24) return `${h} 小时前`;
+        const d = Math.floor(h / 24);
+        if (d === 1) return '昨天';
+        if (d < 7) return `${d} 天前`;
+        return t.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    }
+
+    async function loadAndRenderDrawer() {
+        if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) {
+            drawerLoginHint.hidden = false;
+            drawerList.innerHTML = '';
+            return;
+        }
+        drawerLoginHint.hidden = true;
+
+        const r = await window.ChatSessions.list(100);
+        if (!r.ok) {
+            drawerList.innerHTML = '<div class="drawer-empty">加载失败，请稍后再试</div>';
+            return;
+        }
+
+        const sessions = r.data.sessions || [];
+        if (sessions.length === 0) {
+            drawerList.innerHTML = '<div class="drawer-empty">还没有会话<br><span class="drawer-empty-sub">开始一次对话即可自动保存</span></div>';
+            return;
+        }
+
+        const currentId = window.ChatModule.getCurrentSessionId();
+        drawerList.innerHTML = '';
+        for (const s of sessions) {
+            const item = document.createElement('div');
+            item.className = 'drawer-item' + (s.id === currentId ? ' active' : '');
+            item.dataset.id = s.id;
+
+            const title = document.createElement('div');
+            title.className = 'drawer-item-title';
+            title.textContent = s.title || '新对话';
+
+            const meta = document.createElement('div');
+            meta.className = 'drawer-item-meta';
+            const time = document.createElement('span');
+            time.textContent = formatTimeAgo(s.last_message_at);
+            const count = document.createElement('span');
+            count.textContent = `${s.message_count || 0} 条消息`;
+            meta.appendChild(time);
+            meta.appendChild(count);
+
+            const actions = document.createElement('div');
+            actions.className = 'drawer-item-actions';
+
+            const renameBtn = document.createElement('button');
+            renameBtn.className = 'drawer-item-action';
+            renameBtn.type = 'button';
+            renameBtn.title = '重命名';
+            renameBtn.innerHTML = '✏️';
+            renameBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const newTitle = prompt('新标题：', s.title || '');
+                if (newTitle === null || !newTitle.trim()) return;
+                await window.ChatSessions.rename(s.id, newTitle.trim());
+                loadAndRenderDrawer();
+            });
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'drawer-item-action drawer-item-action-del';
+            delBtn.type = 'button';
+            delBtn.title = '删除';
+            delBtn.innerHTML = '🗑';
+            delBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!confirm(`确定删除「${s.title || '新对话'}」？\n该会话的所有消息都会一起删除。`)) return;
+                await window.ChatSessions.remove(s.id);
+                if (s.id === window.ChatModule.getCurrentSessionId()) {
+                    window.ChatModule.newChat();
+                }
+                loadAndRenderDrawer();
+            });
+
+            actions.appendChild(renameBtn);
+            actions.appendChild(delBtn);
+
+            item.appendChild(title);
+            item.appendChild(meta);
+            item.appendChild(actions);
+
+            item.addEventListener('click', async () => {
+                if (s.id === window.ChatModule.getCurrentSessionId()) {
+                    closeDrawer();
+                    return;
+                }
+                const ok = await window.ChatModule.loadSession(s.id);
+                if (ok) closeDrawer();
+            });
+
+            drawerList.appendChild(item);
+        }
+    }
+
+    function openDrawer() {
+        historyDrawer.hidden = false;
+        drawerOverlay.hidden = false;
+        loadAndRenderDrawer();
+    }
+    function closeDrawer() {
+        historyDrawer.hidden = true;
+        drawerOverlay.hidden = true;
+    }
+
+    historyBtn.addEventListener('click', openDrawer);
+    drawerClose.addEventListener('click', closeDrawer);
+    drawerOverlay.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !historyDrawer.hidden) closeDrawer();
+    });
+
+    // 抽屉按钮仅在登录后可见（在 user-button.js 登录态变化时通过事件更新）
+    historyBtn.style.display = 'none';
+    window.addEventListener('user:login-changed', () => {
+        const loggedIn = !!(localStorage.getItem('ai_token'));
+        historyBtn.style.display = loggedIn ? '' : 'none';
+        if (loggedIn) loadAndRenderDrawer();
+    });
+    // 首次加载时检查一次
+    if (localStorage.getItem('ai_token')) {
+        historyBtn.style.display = '';
+    }
+
+    // 会话列表在新建/重命名/删除时刷新
+    window.addEventListener('chat:session-updated', loadAndRenderDrawer);
+    window.addEventListener('chat:session-renamed', loadAndRenderDrawer);
+    window.addEventListener('chat:current-session-changed', loadAndRenderDrawer);
+
     // ---- Auto-fill chat input from ?q= (Opilot integration) ----
     (function autoFillFromQuery() {
         const params = new URLSearchParams(location.search);

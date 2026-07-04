@@ -127,6 +127,7 @@
 
             document.getElementById('logoutBtn').addEventListener('click', function() {
                 clearLoginState();
+                window.dispatchEvent(new CustomEvent('user:login-changed', { detail: { loggedIn: false } }));
                 location.reload();
             });
 
@@ -347,6 +348,9 @@
         // 从跨域 Cookie 同步登录状态（如果 localStorage 还没有）
         await syncLoginFromCookie();
         renderUserButton();
+        // 通知外部模块登录态（AI Studio 抽屉依赖此事件）
+        const loggedIn = !!checkLoginStatus();
+        window.dispatchEvent(new CustomEvent('user:login-changed', { detail: { loggedIn } }));
         // 应用用户 UI 配置
         applyUserUI();
     }

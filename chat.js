@@ -119,6 +119,8 @@
     let totalTokens    = 0;
     let userScrolledUp = false;
     const history = [];
+    let currentSessionId = null;
+    let pendingFirstUserContent = null;
 
     // ---- Free models loader ----
     (async function loadFreeModels() {
@@ -526,6 +528,9 @@
         renderAttachPreview();
         setLoading(true);
 
+        // 云端持久化：确保会话存在
+        await ensureSessionForUser(text);
+
         const aiDiv = appendMsg('ai', '');
         currentAiDiv = aiDiv;
 
@@ -576,6 +581,8 @@
         let fullReasoning = '';
         let outputChars = 0;
         let usageReceived = false;
+        let lastInputTokens = 0;
+        let lastOutputTokens = 0;
         const isMiniMax = provider === 'minimax';
 
         const body = {
@@ -724,8 +731,13 @@
 
                         if (d._type === 'usage') {
                             usageReceived = true;
+                            lastInputTokens = d.input_tokens || lastInputTokens;
+                            lastOutputTokens = d.output_tokens || lastOutputTokens;
                             applyUsage(d);
                         } else if (d.usage && !usageReceived) {
+                            usageReceived = true;
+                            lastInputTokens = d.usage.input_tokens || lastInputTokens;
+                            lastOutputTokens = d.usage.output_tokens || lastOutputTokens;
                             applyUsage(d.usage);
                         }
                     } catch (e) {
@@ -753,10 +765,14 @@
             if (rem) { fullResponse += rem; outputChars += rem.length; }
 
             if (!usageReceived) {
+                const estInput = Math.max(1, Math.ceil(promptChars / 4));
+                const estOutput = Math.max(1, Math.ceil(outputChars / 4));
+                lastInputTokens = estInput;
+                lastOutputTokens = estOutput;
                 applyUsage({
-                    input_tokens: Math.max(1, Math.ceil(promptChars / 4)),
-                    output_tokens: Math.max(1, Math.ceil(outputChars / 4)),
-                    total_tokens: Math.max(1, Math.ceil((promptChars + outputChars) / 4))
+                    input_tokens: estInput,
+                    output_tokens: estOutput,
+                    total_tokens: estInput + estOutput
                 });
             }
 
@@ -764,6 +780,16 @@
             const r = typeof marked !== 'undefined' ? marked.parse(fullResponse) : fullResponse;
             if (r instanceof Promise) r.then(html => setContent(contentDiv, html));
             else setContent(contentDiv, r);
+
+            // 云端持久化：写 user + assistant 两条消息
+            persistTurnToCloud({
+                userText: text,
+                userAtts: sentAtts,
+                assistantText: fullResponse,
+                assistantReasoning: fullReasoning,
+                inputTokens: lastInputTokens,
+                outputTokens: lastOutputTokens
+            });
 
         } catch (err) {
             contentDiv.classList.remove('typing');
@@ -807,7 +833,82 @@
             tokenCounter.textContent = '累计 0 tokens';
             chatScroll.innerHTML = '';
             if (chatWelcome) chatScroll.appendChild(chatWelcome);
+            currentSessionId = null;
+            // 通知抽屉：当前会话已变更
+            window.dispatchEvent(new CustomEvent('chat:current-session-changed', { detail: { sessionId: null } }));
         },
+
+        async loadSession(id) {
+            if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) return false;
+            if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+
+            const r = await window.ChatSessions.get(id);
+            if (!r.ok) return false;
+
+            const session = r.data.session;
+            const messages = r.data.messages || [];
+
+            // 切换 provider/model 到会话当时的设置
+            if (session.provider) provider = session.provider;
+            if (session.model_id) {
+                modelId = session.model_id;
+                saveState();
+                applyThinkBtn();
+                applyAttachBtn();
+                refreshSidebarModel();
+            }
+            currentSessionId = session.id;
+
+            // 清空 UI + history，重新渲染
+            history.length = 0;
+            totalTokens = 0;
+            tokenCounter.textContent = '累计 0 tokens';
+            chatScroll.innerHTML = '';
+
+            // 重新构造 history 数组（OpenAI 格式）
+            for (const m of messages) {
+                let content = m.content;
+                if (m.attachments) {
+                    try {
+                        const atts = typeof m.attachments === 'string' ? JSON.parse(m.attachments) : m.attachments;
+                        if (Array.isArray(atts) && atts.length) {
+                            const parts = [{ type: 'text', text: m.content }];
+                            for (const a of atts) {
+                                if (a.type === 'image') parts.push({ type: 'image_url', image_url: { url: a.url } });
+                                else if (a.type === 'audio') parts.push({ type: 'audio', audio_url: { url: a.url } });
+                            }
+                            content = parts;
+                        }
+                    } catch {}
+                }
+                history.push({ role: m.role, content });
+            }
+
+            // 渲染消息
+            for (const m of messages) {
+                const atts = (() => {
+                    try {
+                        return typeof m.attachments === 'string' ? JSON.parse(m.attachments) : m.attachments;
+                    } catch { return null; }
+                })();
+                appendMsg(m.role === 'user' ? 'user' : 'ai', m.content, m.role === 'user' ? atts : null);
+            }
+
+            // 累计 token
+            for (const m of messages) {
+                totalTokens += (m.input_tokens || 0) + (m.output_tokens || 0);
+            }
+            tokenCounter.textContent = `累计 ${totalTokens.toLocaleString()} tokens`;
+
+            // 通知抽屉
+            window.dispatchEvent(new CustomEvent('chat:current-session-changed', { detail: { sessionId: id } }));
+            return true;
+        },
+
+        getCurrentSessionId() {
+            return currentSessionId;
+        },
+
         init() {
             applyThinkBtn();
             applyAttachBtn();
@@ -818,4 +919,51 @@
         MODEL_CONFIG,
         MULTIMODAL_MODELS,
     };
+
+    // ============ 云端持久化辅助函数 ============
+
+    async function ensureSessionForUser(firstUserContent) {
+        if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) return null;
+        if (currentSessionId) return currentSessionId;
+        const r = await window.ChatSessions.create({
+            provider,
+            modelId,
+            firstUserContent
+        });
+        if (r.ok) {
+            currentSessionId = r.data.session.id;
+            window.dispatchEvent(new CustomEvent('chat:current-session-changed', { detail: { sessionId: currentSessionId } }));
+            return currentSessionId;
+        }
+        return null;
+    }
+
+    function persistTurnToCloud({ userText, userAtts, assistantText, assistantReasoning, inputTokens, outputTokens }) {
+        if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) return;
+        if (!currentSessionId) return; // ensureSessionForUser 没成功
+
+        // 写 user
+        window.ChatSessions.appendMessage(currentSessionId, {
+            role: 'user',
+            content: userText,
+            attachments: userAtts && userAtts.length ? userAtts.map(a => ({ type: a.type, url: a.url, name: a.name })) : null
+        }).then(r => {
+            if (r.ok && r.data.title) {
+                // 服务端自动生成了新标题，通知抽屉
+                window.dispatchEvent(new CustomEvent('chat:session-renamed', { detail: { sessionId: currentSessionId, title: r.data.title } }));
+            }
+        }).catch(() => {});
+
+        // 写 assistant
+        window.ChatSessions.appendMessage(currentSessionId, {
+            role: 'assistant',
+            content: assistantText,
+            reasoning: assistantReasoning || null,
+            inputTokens: inputTokens || 0,
+            outputTokens: outputTokens || 0
+        }).then(() => {
+            // 通知抽屉刷新"最后消息时间"
+            window.dispatchEvent(new CustomEvent('chat:session-updated', { detail: { sessionId: currentSessionId } }));
+        }).catch(() => {});
+    }
 })();
