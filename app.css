@@ -1539,8 +1539,34 @@ textarea, input, select {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding-right: 44px;
+    padding-right: 28px;
     margin-bottom: 2px;
+    cursor: text;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+.sidebar-history-item-title:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+.sidebar-history-item-edit {
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    border: 1px solid rgba(99, 102, 241, 0.6);
+    border-radius: 6px;
+    color: #f1f5f9;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    padding: 2px 6px;
+    margin: -3px -7px 2px;
+    outline: none;
+    font-family: inherit;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.18);
+}
+.sidebar-history-item-edit:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
 }
 .sidebar-history-item-time {
     color: var(--body-mid);

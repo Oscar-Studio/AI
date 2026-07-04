@@ -76,6 +76,59 @@
         return t.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
     }
 
+    // 进入内联编辑模式：把 title 替换为 input
+    function enterEditMode(item, s, titleEl) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'sidebar-history-item-edit';
+        input.value = s.title || '';
+        input.maxLength = 200;
+        input.spellcheck = false;
+
+        let committed = false;
+        const commit = async (save) => {
+            if (committed) return;
+            committed = true;
+            const newTitle = input.value.trim();
+            if (save && newTitle && newTitle !== s.title) {
+                await window.ChatSessions.rename(s.id, newTitle);
+                window.dispatchEvent(new CustomEvent('chat:session-renamed', { detail: { sessionId: s.id, title: newTitle } }));
+                loadAndRenderSidebar();
+            } else {
+                // 取消或空字符串：恢复原标题
+                titleEl.textContent = s.title || '新对话';
+            }
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur(); // 触发 commit
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                committed = true; // 跳过 commit 的保存
+                titleEl.textContent = s.title || '新对话';
+                input.remove();
+                titleEl.style.display = '';
+            }
+            e.stopPropagation();
+        });
+        input.addEventListener('blur', () => {
+            if (!committed) commit(true);
+            // commit() 会通过 loadAndRenderSidebar 重新渲染，无需手动恢复
+        });
+        input.addEventListener('click', (e) => e.stopPropagation());
+        input.addEventListener('mousedown', (e) => e.stopPropagation());
+
+        titleEl.style.display = 'none';
+        titleEl.parentNode.insertBefore(input, titleEl);
+        // 下一帧聚焦并选中
+        requestAnimationFrame(() => {
+            input.focus();
+            input.select();
+        });
+    }
+
     async function loadAndRenderSidebar() {
         const loggedIn = window.ChatSessions && window.ChatSessions.isLoggedIn();
         sidebarHistory.hidden = !loggedIn;
@@ -104,6 +157,11 @@
             const title = document.createElement('div');
             title.className = 'sidebar-history-item-title';
             title.textContent = s.title || '新对话';
+            // 单击标题直接进入内联编辑（不切换会话）
+            title.addEventListener('click', (e) => {
+                e.stopPropagation();
+                enterEditMode(item, s, title);
+            });
 
             const time = document.createElement('div');
             time.className = 'sidebar-history-item-time';
@@ -111,20 +169,6 @@
 
             const actions = document.createElement('div');
             actions.className = 'sidebar-history-item-actions';
-
-            const renameBtn = document.createElement('button');
-            renameBtn.className = 'sidebar-history-item-action';
-            renameBtn.type = 'button';
-            renameBtn.title = '重命名';
-            renameBtn.setAttribute('aria-label', '重命名');
-            renameBtn.textContent = '✎';
-            renameBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const newTitle = prompt('新标题：', s.title || '');
-                if (newTitle === null || !newTitle.trim()) return;
-                await window.ChatSessions.rename(s.id, newTitle.trim());
-                loadAndRenderSidebar();
-            });
 
             const delBtn = document.createElement('button');
             delBtn.className = 'sidebar-history-item-action is-del';
@@ -142,16 +186,18 @@
                 loadAndRenderSidebar();
             });
 
-            actions.appendChild(renameBtn);
             actions.appendChild(delBtn);
 
             item.appendChild(title);
             item.appendChild(time);
             item.appendChild(actions);
 
-            item.addEventListener('click', async () => {
+            // 点击空白处（不是 title、不是 actions）才切换会话
+            item.addEventListener('click', async (e) => {
+                if (e.target.closest('.sidebar-history-item-actions')) return;
+                if (e.target.closest('.sidebar-history-item-title')) return;
+                if (e.target.closest('.sidebar-history-item-edit')) return;
                 if (s.id === window.ChatModule.getCurrentSessionId()) return;
-                // 切到 Chat 视图
                 switchView('chat');
                 await window.ChatModule.loadSession(s.id);
             });
