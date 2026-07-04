@@ -166,10 +166,12 @@
                 await window.ChatSessions.rename(s.id, newTitle);
                 window.dispatchEvent(new CustomEvent('chat:session-renamed', { detail: { sessionId: s.id, title: newTitle } }));
                 loadAndRenderSidebar();
-            } else {
-                // 取消或空字符串：恢复原标题
-                titleEl.textContent = s.title || '新对话';
+                return;
             }
+            // 取消或空字符串/没变化：恢复原标题，清理编辑状态
+            titleEl.textContent = s.title || '新对话';
+            input.remove();
+            titleEl.style.display = '';
         };
 
         input.addEventListener('keydown', (e) => {
