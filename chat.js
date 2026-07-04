@@ -120,7 +120,8 @@
     let userScrolledUp = false;
     const history = [];
     let currentSessionId = null;
-    let pendingFirstUserContent = null;
+    let isNewSession    = false;       // 标记当前会话是否刚创建（用于首轮后生成 AI 标题）
+    let pendingFirstUserText = null;  // 首条 user 消息，用于 AI 标题生成（客户端预读，防后端写消息失败时丢失）
 
     // ---- Free models loader ----
     (async function loadFreeModels() {
@@ -530,6 +531,9 @@
 
         // 云端持久化：确保会话存在
         await ensureSessionForUser(text);
+        if (isNewSession) {
+            pendingFirstUserText = text;
+        }
 
         const aiDiv = appendMsg('ai', '');
         currentAiDiv = aiDiv;
@@ -791,6 +795,14 @@
                 outputTokens: lastOutputTokens
             });
 
+            // 首轮后 AI 自动命名（仅在新会话且无失败时）
+            if (isNewSession && currentSessionId && pendingFirstUserText) {
+                const firstText = pendingFirstUserText;
+                isNewSession = false;
+                pendingFirstUserText = null;
+                triggerAiTitle(currentSessionId, firstText);
+            }
+
         } catch (err) {
             contentDiv.classList.remove('typing');
             if (err.name === 'AbortError') {
@@ -834,6 +846,8 @@
             chatScroll.innerHTML = '';
             if (chatWelcome) chatScroll.appendChild(chatWelcome);
             currentSessionId = null;
+            isNewSession = false;
+            pendingFirstUserText = null;
             // 通知抽屉：当前会话已变更
             window.dispatchEvent(new CustomEvent('chat:current-session-changed', { detail: { sessionId: null } }));
         },
@@ -858,6 +872,8 @@
                 refreshSidebarModel();
             }
             currentSessionId = session.id;
+            isNewSession = false;
+            pendingFirstUserText = null;
 
             // 清空 UI + history，重新渲染
             history.length = 0;
@@ -927,15 +943,32 @@
         if (currentSessionId) return currentSessionId;
         const r = await window.ChatSessions.create({
             provider,
-            modelId,
-            firstUserContent
+            modelId
         });
         if (r.ok) {
             currentSessionId = r.data.session.id;
+            isNewSession = true;
             window.dispatchEvent(new CustomEvent('chat:current-session-changed', { detail: { sessionId: currentSessionId } }));
             return currentSessionId;
         }
         return null;
+    }
+
+    // 触发 AI 标题生成（后台进行，不阻塞 UI）
+    async function triggerAiTitle(sessionId, firstUserText) {
+        if (!window.ChatSessions) return;
+        try {
+            const r = await window.ChatSessions.generateTitle(sessionId);
+            if (r.ok && r.data.title) {
+                // 通知抽屉更新
+                window.dispatchEvent(new CustomEvent('chat:session-renamed', {
+                    detail: { sessionId, title: r.data.title }
+                }));
+            }
+        } catch (e) {
+            // 静默失败，保留默认标题
+            console.warn('[chat] AI title gen failed:', e.message);
+        }
     }
 
     function persistTurnToCloud({ userText, userAtts, assistantText, assistantReasoning, inputTokens, outputTokens }) {

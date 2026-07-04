@@ -101,6 +101,10 @@
 
         async removeMessage(sessionId, msgId) {
             return request(`/${sessionId}/messages/${msgId}`, { method: 'DELETE' });
+        },
+
+        async generateTitle(sessionId) {
+            return request(`/${sessionId}/generate-title`, { method: 'POST' });
         }
     };
 })();

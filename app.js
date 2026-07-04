@@ -157,11 +157,7 @@
             const title = document.createElement('div');
             title.className = 'sidebar-history-item-title';
             title.textContent = s.title || '新对话';
-            // 单击标题直接进入内联编辑（不切换会话）
-            title.addEventListener('click', (e) => {
-                e.stopPropagation();
-                enterEditMode(item, s, title);
-            });
+            // 标题不绑定任何点击行为 — 由 item 的统一 click 处理（切换会话）
 
             const time = document.createElement('div');
             time.className = 'sidebar-history-item-time';
@@ -204,10 +200,9 @@
             item.appendChild(time);
             item.appendChild(actions);
 
-            // 点击空白处（不是 title、不是 actions）才切换会话
+            // 点击空白处（非 actions、非 input 编辑态）才切换会话
             item.addEventListener('click', async (e) => {
                 if (e.target.closest('.sidebar-history-item-actions')) return;
-                if (e.target.closest('.sidebar-history-item-title')) return;
                 if (e.target.closest('.sidebar-history-item-edit')) return;
                 if (s.id === window.ChatModule.getCurrentSessionId()) return;
                 switchView('chat');
