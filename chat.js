@@ -785,8 +785,8 @@
             if (r instanceof Promise) r.then(html => setContent(contentDiv, html));
             else setContent(contentDiv, r);
 
-            // 云端持久化：写 user + assistant 两条消息
-            persistTurnToCloud({
+            // 云端持久化：先写 user，再写 assistant（有序防 seq 冲突）
+            await persistTurnToCloud({
                 userText: text,
                 userAtts: sentAtts,
                 assistantText: fullResponse,
@@ -971,32 +971,30 @@
         }
     }
 
-    function persistTurnToCloud({ userText, userAtts, assistantText, assistantReasoning, inputTokens, outputTokens }) {
+    async function persistTurnToCloud({ userText, userAtts, assistantText, assistantReasoning, inputTokens, outputTokens }) {
         if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) return;
         if (!currentSessionId) return; // ensureSessionForUser 没成功
 
-        // 写 user
-        window.ChatSessions.appendMessage(currentSessionId, {
+        // 先写 user，等 seq 确认后再写 assistant，防止 seq 冲突
+        const userResp = await window.ChatSessions.appendMessage(currentSessionId, {
             role: 'user',
             content: userText,
             attachments: userAtts && userAtts.length ? userAtts.map(a => ({ type: a.type, url: a.url, name: a.name })) : null
-        }).then(r => {
-            if (r.ok && r.data.title) {
-                // 服务端自动生成了新标题，通知抽屉
-                window.dispatchEvent(new CustomEvent('chat:session-renamed', { detail: { sessionId: currentSessionId, title: r.data.title } }));
-            }
-        }).catch(() => {});
+        });
+        if (userResp.ok && userResp.data && userResp.data.title) {
+            window.dispatchEvent(new CustomEvent('chat:session-renamed', { detail: { sessionId: currentSessionId, title: userResp.data.title } }));
+        }
 
-        // 写 assistant
-        window.ChatSessions.appendMessage(currentSessionId, {
+        // 再写 assistant
+        const asstResp = await window.ChatSessions.appendMessage(currentSessionId, {
             role: 'assistant',
             content: assistantText,
             reasoning: assistantReasoning || null,
             inputTokens: inputTokens || 0,
             outputTokens: outputTokens || 0
-        }).then(() => {
-            // 通知抽屉刷新"最后消息时间"
+        });
+        if (asstResp.ok) {
             window.dispatchEvent(new CustomEvent('chat:session-updated', { detail: { sessionId: currentSessionId } }));
-        }).catch(() => {});
+        }
     }
 })();
