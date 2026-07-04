@@ -1537,13 +1537,14 @@ textarea, input, select {
     font-weight: 500;
     line-height: 1.4;
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
     padding-right: 52px;
     margin-bottom: 2px;
     cursor: text;
     border-radius: 4px;
     transition: background 0.15s;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent 100%);
+            mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent 100%);
 }
 .sidebar-history-item-title:hover {
     background: rgba(255, 255, 255, 0.04);
