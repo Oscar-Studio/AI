@@ -1004,9 +1004,12 @@
         if (attachments.length > 0) {
             const nonMulti = selectedModels.filter(m => !m.isMulti);
             if (nonMulti.length) {
-                const ok = confirm(
-                    `${nonMulti.length} 个模型不支持图片/音频，附件将被忽略。继续吗？`
-                );
+                const ok = await window.confirmDialog({
+                    title: '附件将被忽略',
+                    message: `${nonMulti.length} 个模型不支持图片/音频，附件将被忽略。继续吗？`,
+                    confirmText: '继续',
+                    cancelText: '取消'
+                });
                 if (!ok) return;
             }
         }
