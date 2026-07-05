@@ -19,7 +19,7 @@
         minimax: {
             name: 'MiniMax',
             models: [
-                { id: 'MiniMax-M3',  name: 'M3',  think: true },
+                { id: 'MiniMax-M3',  name: 'M3',  think: true, multi: true },
                 { id: 'MiniMax-M2.7', name: 'M2.7', think: true }
             ]
         },
@@ -81,7 +81,8 @@
         'z-ai/glm-5v-turbo', 'z-ai/glm-4.7-flash',
         'moonshotai/kimi-k2.5', 'moonshotai/kimi-k2.6', 'moonshotai/kimi-k2.7-code',
         'x-ai/grok-4.3',
-        'mimo-v2.5', 'mimo-v2.5-pro'
+        'mimo-v2.5', 'mimo-v2.5-pro',
+        'MiniMax-M3'
     ];
 
     // ---- DOM ----
