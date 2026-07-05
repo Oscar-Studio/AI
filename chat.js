@@ -36,6 +36,7 @@
             models: [
                 { id: 'qwen/qwen3.6-flash', name: 'Qwen3.6-Flash', multi: true },
                 { id: 'qwen/qwen3.6-plus',  name: 'Qwen3.6-Plus',  multi: true, premium: true },
+                { id: 'qwen/qwen3.7-plus',  name: 'Qwen3.7-Plus',  multi: true, premium: true },
                 { id: 'qwen/qwen3.7-max',   name: 'Qwen3.7-Max',   multi: true, premium: true }
             ]
         },
@@ -45,14 +46,16 @@
                 { id: 'z-ai/glm-4.7-flash', name: 'GLM-4.7-Flash', multi: true },
                 { id: 'z-ai/glm-5v-turbo',  name: 'GLM-5V-Turbo',  multi: true, premium: true },
                 { id: 'z-ai/glm-5',         name: 'GLM-5',         premium: true },
-                { id: 'z-ai/glm-5.1',       name: 'GLM-5.1',       premium: true }
+                { id: 'z-ai/glm-5.1',       name: 'GLM-5.1',       premium: true },
+                { id: 'z-ai/glm-5.2',       name: 'GLM-5.2',       premium: true }
             ]
         },
         moonshot: {
             name: 'Kimi',
             models: [
-                { id: 'moonshotai/kimi-k2.5', name: 'Kimi-K2.5', multi: true, premium: true },
-                { id: 'moonshotai/kimi-k2.6', name: 'Kimi-K2.6', multi: true, premium: true }
+                { id: 'moonshotai/kimi-k2.5',       name: 'Kimi-K2.5',     multi: true, premium: true },
+                { id: 'moonshotai/kimi-k2.6',       name: 'Kimi-K2.6',     multi: true, premium: true },
+                { id: 'moonshotai/kimi-k2.7-code',  name: 'Kimi-K2.7-Code', multi: true, premium: true }
             ]
         },
         hy3: {
@@ -74,9 +77,9 @@
     };
 
     const MULTIMODAL_MODELS = [
-        'qwen/qwen3.6-flash', 'qwen/qwen3.6-plus', 'qwen/qwen3.7-max',
+        'qwen/qwen3.6-flash', 'qwen/qwen3.6-plus', 'qwen/qwen3.7-plus', 'qwen/qwen3.7-max',
         'z-ai/glm-5v-turbo', 'z-ai/glm-4.7-flash',
-        'moonshotai/kimi-k2.5', 'moonshotai/kimi-k2.6',
+        'moonshotai/kimi-k2.5', 'moonshotai/kimi-k2.6', 'moonshotai/kimi-k2.7-code',
         'x-ai/grok-4.3',
         'mimo-v2.5', 'mimo-v2.5-pro'
     ];
