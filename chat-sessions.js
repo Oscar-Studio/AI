@@ -88,6 +88,10 @@
             });
         },
 
+        async togglePin(id) {
+            return request(`/${id}/pin`, { method: 'PATCH' });
+        },
+
         async remove(id) {
             return request(`/${id}`, { method: 'DELETE' });
         },

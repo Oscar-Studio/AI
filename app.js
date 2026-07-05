@@ -224,41 +224,96 @@
         sidebarHistoryList.innerHTML = '';
         for (const s of sessions) {
             const item = document.createElement('div');
-            item.className = 'sidebar-history-item' + (s.id === currentId ? ' active' : '');
+            item.className = 'sidebar-history-item' + (s.id === currentId ? ' active' : '') + (s.pinned ? ' is-pinned' : '');
             item.dataset.id = s.id;
             item.title = s.title || '新对话';
 
             const title = document.createElement('div');
             title.className = 'sidebar-history-item-title';
-            title.textContent = s.title || '新对话';
-            // 标题不绑定任何点击行为 — 由 item 的统一 click 处理（切换会话）
+            // 置顶图标 + 标题文本，flex 同行，置顶图标在左侧
+            if (s.pinned) {
+                const pinIcon = document.createElement('span');
+                pinIcon.className = 'sidebar-history-item-pin-icon';
+                pinIcon.textContent = '▣';
+                pinIcon.title = '已置顶';
+                title.appendChild(pinIcon);
+            }
+            const titleText = document.createElement('span');
+            titleText.className = 'sidebar-history-item-title-text';
+            titleText.textContent = s.title || '新对话';
+            title.appendChild(titleText);
 
             const time = document.createElement('div');
             time.className = 'sidebar-history-item-time';
             time.textContent = formatTimeAgo(s.last_message_at);
 
-            const actions = document.createElement('div');
-            actions.className = 'sidebar-history-item-actions';
+            const menuWrap = document.createElement('div');
+            menuWrap.className = 'sidebar-history-item-menu';
 
-            const renameBtn = document.createElement('button');
-            renameBtn.className = 'sidebar-history-item-action';
-            renameBtn.type = 'button';
-            renameBtn.title = '重命名';
-            renameBtn.setAttribute('aria-label', '重命名');
-            renameBtn.textContent = '✎';
-            renameBtn.addEventListener('click', (e) => {
+            const menuBtn = document.createElement('button');
+            menuBtn.className = 'sidebar-history-item-menu-btn';
+            menuBtn.type = 'button';
+            menuBtn.setAttribute('aria-label', '更多操作');
+            menuBtn.innerHTML = '⋯';
+
+            const menu = document.createElement('div');
+            menu.className = 'sidebar-history-item-dropdown';
+            menu.setAttribute('role', 'menu');
+
+            const menuRename = document.createElement('button');
+            menuRename.className = 'sidebar-history-item-dropdown-item';
+            menuRename.type = 'button';
+            menuRename.textContent = '重命名';
+
+            const menuPin = document.createElement('button');
+            menuPin.className = 'sidebar-history-item-dropdown-item';
+            menuPin.type = 'button';
+            menuPin.textContent = s.pinned ? '取消置顶' : '置顶';
+
+            const menuDelete = document.createElement('button');
+            menuDelete.className = 'sidebar-history-item-dropdown-item is-danger';
+            menuDelete.type = 'button';
+            menuDelete.textContent = '删除';
+
+            menu.appendChild(menuRename);
+            menu.appendChild(menuPin);
+            menu.appendChild(menuDelete);
+            menuWrap.appendChild(menuBtn);
+            menuWrap.appendChild(menu);
+
+            item.appendChild(title);
+            item.appendChild(time);
+            item.appendChild(menuWrap);
+
+            // 三个点按钮：切换菜单
+            menuBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                const open = !menu.classList.contains('show');
+                document.querySelectorAll('.sidebar-history-item-dropdown.show').forEach(m => m.classList.remove('show'));
+                if (open) menu.classList.add('show');
+            });
+
+            // 重命名
+            menuRename.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.classList.remove('show');
                 enterEditMode(item, s, title);
             });
 
-            const delBtn = document.createElement('button');
-            delBtn.className = 'sidebar-history-item-action is-del';
-            delBtn.type = 'button';
-            delBtn.title = '删除';
-            delBtn.setAttribute('aria-label', '删除');
-            delBtn.textContent = '×';
-            delBtn.addEventListener('click', async (e) => {
+            // 置顶 / 取消置顶
+            menuPin.addEventListener('click', async (e) => {
                 e.stopPropagation();
+                menu.classList.remove('show');
+                const r = await window.ChatSessions.togglePin(s.id);
+                if (r.ok) {
+                    loadAndRenderSidebar();
+                }
+            });
+
+            // 删除
+            menuDelete.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                menu.classList.remove('show');
                 const ok = await window.confirmDialog({
                     title: '删除会话',
                     message: `确定删除「${s.title || '新对话'}」？\n该会话的所有消息都会一起删除，且无法恢复。`,
@@ -273,16 +328,9 @@
                 loadAndRenderSidebar();
             });
 
-            actions.appendChild(renameBtn);
-            actions.appendChild(delBtn);
-
-            item.appendChild(title);
-            item.appendChild(time);
-            item.appendChild(actions);
-
-            // 点击空白处（非 actions、非 input 编辑态）才切换会话
+            // 点击空白处（非菜单、非 input 编辑态）才切换会话
             item.addEventListener('click', async (e) => {
-                if (e.target.closest('.sidebar-history-item-actions')) return;
+                if (e.target.closest('.sidebar-history-item-menu')) return;
                 if (e.target.closest('.sidebar-history-item-edit')) return;
                 if (s.id === window.ChatModule.getCurrentSessionId()) return;
                 switchView('chat');
@@ -292,6 +340,11 @@
             sidebarHistoryList.appendChild(item);
         }
     }
+
+    // 点击页面其他区域时关闭所有菜单
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.sidebar-history-item-dropdown.show').forEach(m => m.classList.remove('show'));
+    });
 
     sidebarHistoryNew.addEventListener('click', (e) => {
         e.preventDefault();
