@@ -5,6 +5,8 @@
 (function() {
     // API 基础路径
     const API_BASE = 'https://api.oscarstudio.cn/api';
+    const LS_TOKEN_KEY = 'ai_token';
+    const LS_USER_KEY = 'ai_user';
 
     // 读取 Cookie（跨域共享：后端在 .oscarstudio.cn 设了 HttpOnly=false 的 Cookie）
     function getCookie(name) {
@@ -32,56 +34,74 @@
         }
     }
 
-    // 清除本地登录状态
-    function clearLoginState() {
-        localStorage.removeItem('ai_token');
-        localStorage.removeItem('ai_user');
-        document.cookie = 'userToken=; max-age=0; path=/; domain=.oscarstudio.cn';
+    // 清除本地登录状态（保留退出登录按钮统一调用）
+    function clearLocalState() {
+        localStorage.removeItem(LS_TOKEN_KEY);
+        localStorage.removeItem(LS_USER_KEY);
     }
 
-    // 检查登录状态
+    // 跨子域登出：调用后端清 Cookie，再清本地缓存
+    async function logout() {
+        try {
+            await fetch(`${API_BASE}/logout`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+        } catch (e) {
+            // 网络失败兜底：直接清 JS 可见的同名 Cookie
+            document.cookie = 'userToken=; max-age=0; path=/; domain=.oscarstudio.cn';
+        }
+        clearLocalState();
+    }
+
+    // 把 Cookie + 用户信息落地为当前域的缓存
+    function persistSession(token, user) {
+        localStorage.setItem(LS_TOKEN_KEY, token);
+        localStorage.setItem(LS_USER_KEY, JSON.stringify(user));
+    }
+
+    // 检查登录状态：以跨域 Cookie 为准，localStorage 仅作缓存
     function checkLoginStatus() {
-        const token = localStorage.getItem('ai_token');
-        const userStr = localStorage.getItem('ai_user');
-        if (!token || !userStr) return null;
-
-        // 1. 检查 JWT 是否已过期（避免过期 token 仍显示已登录）
-        if (isTokenExpired(token)) {
-            console.log('[用户] Token 已过期，清除登录状态');
-            clearLoginState();
-            return null;
-        }
-
-        // 2. 双重验证：Cookie 必须也存在（跨域登出同步）
-        // 如果用户在别的子站退出了登录，Cookie 会被清掉
-        const cookieToken = document.cookie.split('; ').find(c => c.startsWith('userToken='));
+        const cookieToken = getCookie('userToken');
         if (!cookieToken) {
-            console.log('[用户] Cookie 已不存在，清除登录状态');
-            clearLoginState();
+            // Cookie 已被其他子域登出/过期 → 清本地缓存
+            if (localStorage.getItem(LS_TOKEN_KEY)) clearLocalState();
             return null;
         }
 
-        try { return JSON.parse(userStr); }
-        catch (e) { console.error('解析用户数据失败:', e); clearLoginState(); return null; }
+        // Cookie 存在即认为已登录（cookie 寿命 7 天对齐 JWT 7 天）。
+        // 若缓存里的 ai_token 已过期但 cookie 仍有效，下面 syncLoginFromCookie 会刷新它。
+        const cachedUserStr = localStorage.getItem(LS_USER_KEY);
+        if (cachedUserStr) {
+            try { return JSON.parse(cachedUserStr); }
+            catch (e) { /* fallthrough, 重新拉 */ }
+        }
+        return null;
     }
 
-    // 从跨域 Cookie 同步登录状态到 localStorage
+    // 从跨域 Cookie 同步登录状态到 localStorage（含用户信息）
     async function syncLoginFromCookie() {
-        // 已经有 localStorage 数据了，跳过
-        if (localStorage.getItem('ai_token') && localStorage.getItem('ai_user')) return;
+        const cookieToken = getCookie('userToken');
+        if (!cookieToken) return;
 
-        const token = getCookie('userToken');
-        if (!token) return;
+        // 当前域缓存的 token 与 cookie 一致，且有用户信息 → 无需刷新
+        const cachedToken = localStorage.getItem(LS_TOKEN_KEY);
+        const cachedUser = localStorage.getItem(LS_USER_KEY);
+        if (cachedToken === cookieToken && cachedUser) return;
 
+        // 任一缺失或不一致：用 cookie 调 /api/user 拿最新用户
         try {
             const resp = await fetch(`${API_BASE}/user`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${cookieToken}` },
+                credentials: 'include'
             });
             const data = await resp.json();
             if (data.success && data.user) {
-                localStorage.setItem('ai_token', token);
-                localStorage.setItem('ai_user', JSON.stringify(data.user));
+                persistSession(cookieToken, data.user);
                 console.log('[用户] 从 Cookie 同步登录状态成功');
+            } else if (resp.status === 401) {
+                // 后端判定 cookie 失效 → 清本地缓存并通知刷新 UI
+                clearLocalState();
             }
         } catch (e) {
             console.warn('[用户] 从 Cookie 同步登录状态失败:', e.message);
@@ -125,8 +145,8 @@
                 document.getElementById('userDropdown').classList.toggle('active');
             });
 
-            document.getElementById('logoutBtn').addEventListener('click', function() {
-                clearLoginState();
+            document.getElementById('logoutBtn').addEventListener('click', async function() {
+                await logout();
                 window.dispatchEvent(new CustomEvent('user:login-changed', { detail: { loggedIn: false } }));
                 location.reload();
             });
@@ -355,9 +375,9 @@
         applyUserUI();
     }
 
-    // 应用用户 UI 配置
+    // 应用用户 UI 配置（cookie 是真理之源）
     async function applyUserUI() {
-        const token = localStorage.getItem('ai_token') || getCookie('userToken');
+        const token = getCookie('userToken');
         if (!token) return;
 
         try {
