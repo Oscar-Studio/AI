@@ -38,6 +38,14 @@
     function clearLocalState() {
         localStorage.removeItem(LS_TOKEN_KEY);
         localStorage.removeItem(LS_USER_KEY);
+        try { localStorage.removeItem('lg-bg'); } catch (e) {}
+        if (document.body && document.body.style) {
+            document.body.style.backgroundImage = '';
+            document.body.style.backgroundSize = '';
+            document.body.style.backgroundPosition = '';
+            document.body.style.backgroundRepeat = '';
+            document.body.style.backgroundAttachment = '';
+        }
     }
 
     // 跨子域登出：调用后端清 Cookie，再清本地缓存
