@@ -10,12 +10,12 @@
   // ============ 配置 ============
   const API_BASE = 'https://api.oscarstudio.cn/api/opilot';
   const TOOLS_CONFIG_URLS = {
-    tools: 'https://tools.oscarstudio.cn/tools-config.json',
+    tools: 'https://edu.oscarstudio.cn/tools-config.json',
     games: 'https://games.oscarstudio.cn/tools-config.json',
     ppt:   'https://ppt.oscarstudio.cn/tools-config.json'
   };
   const SITE_ORIGINS = {
-    tools: 'https://tools.oscarstudio.cn',
+    tools: 'https://edu.oscarstudio.cn',
     games: 'https://games.oscarstudio.cn',
     ppt:   'https://ppt.oscarstudio.cn'
   };

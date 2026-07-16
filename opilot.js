@@ -582,7 +582,7 @@
   function openPalette(opts) {
     opts = opts || {};
     const sources = opts.sources || [
-      { site: 'tools', origin: 'https://tools.oscarstudio.cn', configUrl: 'https://tools.oscarstudio.cn/tools-config.json' },
+      { site: 'tools', origin: 'https://edu.oscarstudio.cn', configUrl: 'https://edu.oscarstudio.cn/tools-config.json' },
       { site: 'games', origin: 'https://games.oscarstudio.cn', configUrl: 'https://games.oscarstudio.cn/tools-config.json' },
       { site: 'ppt',   origin: 'https://ppt.oscarstudio.cn',   configUrl: 'https://ppt.oscarstudio.cn/tools-config.json' }
     ];
