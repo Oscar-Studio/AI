@@ -26,7 +26,6 @@
         mimo: {
             name: 'MiMo',
             models: [
-                { id: 'mimo-v2-flash',  name: 'V2-Flash' },
                 { id: 'mimo-v2.5',      name: 'V2.5',     multi: true },
                 { id: 'mimo-v2.5-pro',  name: 'V2.5-Pro', premium: true, multi: true }
             ]
@@ -45,7 +44,6 @@
             models: [
                 { id: 'z-ai/glm-4.7-flash', name: 'GLM-4.7-Flash', multi: true },
                 { id: 'z-ai/glm-5v-turbo',  name: 'GLM-5V-Turbo',  multi: true, premium: true },
-                { id: 'z-ai/glm-5',         name: 'GLM-5',         premium: true },
                 { id: 'z-ai/glm-5.1',       name: 'GLM-5.1',       premium: true },
                 { id: 'z-ai/glm-5.2',       name: 'GLM-5.2',       premium: true }
             ]
@@ -61,7 +59,13 @@
         hy3: {
             name: 'Tencent',
             models: [
-                { id: 'tencent/hy3-preview', name: 'Hy3-Preview', premium: true }
+                { id: 'tencent/hy3', name: 'Hy3', premium: true }
+            ]
+        },
+        meituan: {
+            name: 'Meituan',
+            models: [
+                { id: 'meituan/longcat-2.0', name: 'LongCat 2.0', premium: true }
             ]
         },
         xai: {
