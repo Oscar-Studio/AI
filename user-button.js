@@ -129,6 +129,11 @@
         if (user) {
             // 已登录状态
             const firstChar = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+            const isGuest = !!user.is_guest;
+            const guestTag = isGuest ? '<span class="user-tag-guest">访客</span>' : '';
+            const userUpgradeItem = isGuest
+                ? '<a href="https://api.oscarstudio.cn/auth.html?action=promote&return=' + encodeURIComponent(window.location.href) + '" class="user-dropdown-item user-dropdown-link user-upgrade-link">升级账号 →</a>'
+                : '';
             container.innerHTML = `
                 <div class="user-btn-wrapper">
                     <button class="user-avatar-btn" id="userAvatarBtn" title="${user.username}">
@@ -136,10 +141,11 @@
                     </button>
                     <div class="user-dropdown" id="userDropdown">
                         <div class="user-dropdown-header">
-                            <span class="user-name">${user.username}</span>
-                            <span class="user-email">${user.email || ''}</span>
+                            <span class="user-name">${user.username} ${guestTag}</span>
+                            <span class="user-email">${user.email || (isGuest ? '临时访客 · 7 天有效' : '')}</span>
                         </div>
                         <div class="user-dropdown-divider"></div>
+                        ${userUpgradeItem}
                         <button class="user-dropdown-item" id="muteBtn">🔇 静音</button>
                         <a href="https://api.oscarstudio.cn/user/settings" class="user-dropdown-item user-dropdown-link">UI 设置</a>
                         <button class="user-dropdown-item" id="logoutBtn">退出登录</button>
@@ -365,6 +371,29 @@
                 border-color: rgba(255, 255, 255, 0.35);
                 box-shadow: 0 10px 30px rgba(99, 102, 241, 0.25), 0 0 20px rgba(255, 255, 255, 0.1);
                 color: #f8fafc;
+            }
+
+            .user-tag-guest {
+                display: inline-block;
+                margin-left: 6px;
+                padding: 1px 8px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 500;
+                letter-spacing: 0.4px;
+                background: rgba(250, 204, 21, 0.18);
+                color: #fbbf24;
+                border: 1px solid rgba(250, 204, 21, 0.35);
+            }
+
+            .user-upgrade-link {
+                color: #f59e0b !important;
+                font-weight: 600;
+            }
+
+            .user-upgrade-link:hover {
+                background: rgba(245, 158, 11, 0.15);
+                color: #fbbf24 !important;
             }
         `;
         document.head.appendChild(style);
