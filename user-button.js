@@ -449,17 +449,59 @@
                 }
             }
 
-            // 应用背景图片 - 统一设置 body style
+            // 应用背景图片 - 使用 fixed 层而不是 body background，
+// 这样 filter: blur 只影响背景，不会模糊前景内容。
+// 遮罩通过另一个 fixed 层（半透明黑色）叠加。
+            const oldLayer = document.getElementById('userBgLayer');
+            const oldMask = document.getElementById('userBgMask');
+            if (oldLayer) oldLayer.remove();
+            if (oldMask) oldMask.remove();
+            document.body.style.backgroundImage = '';
+            document.body.style.backgroundSize = '';
+            document.body.style.backgroundPosition = '';
+            document.body.style.backgroundRepeat = '';
+            document.body.style.backgroundAttachment = '';
+
             if (ui.backgroundImage) {
                 const bgUrl = `${UPLOAD_BASE}${ui.backgroundImage}`;
                 console.log('[UI] 设置背景:', bgUrl);
-                document.body.style.backgroundImage = `url(${bgUrl})`;
-                document.body.style.backgroundSize = 'cover';
-                document.body.style.backgroundPosition = 'center';
-                document.body.style.backgroundRepeat = 'no-repeat';
-                document.body.style.backgroundAttachment = 'fixed';
-            } else {
-                document.body.style.backgroundImage = 'none';
+                const overlay = Number.isFinite(ui.backgroundOverlay) ? ui.backgroundOverlay : 0;
+                const blur = Number.isFinite(ui.backgroundBlur) ? ui.backgroundBlur : 0;
+
+                const layer = document.createElement('div');
+                layer.id = 'userBgLayer';
+                layer.style.cssText = [
+                    'position:fixed',
+                    'inset:0',
+                    'z-index:-1',
+                    'pointer-events:none',
+                    `background-image:url(${bgUrl})`,
+                    'background-size:cover',
+                    'background-position:center',
+                    'background-repeat:no-repeat',
+                    'background-attachment:fixed',
+                    blur > 0 ? `filter:blur(${blur}px)` : ''
+                ].filter(Boolean).join(';');
+                document.body.appendChild(layer);
+
+                if (overlay > 0) {
+                    const mask = document.createElement('div');
+                    mask.id = 'userBgMask';
+                    mask.style.cssText = [
+                        'position:fixed',
+                        'inset:0',
+                        'z-index:-1',
+                        'pointer-events:none',
+                        'background:#000',
+                        `opacity:${overlay}`
+                    ].join(';');
+                    document.body.appendChild(mask);
+                }
+
+                // body 设为 stacking context root 并透明，让 z-index:-1 的层正确显示
+                document.body.style.position = 'relative';
+                document.body.style.isolation = 'isolate';
+                document.body.style.background = 'transparent';
             }
 
             // 应用字体
