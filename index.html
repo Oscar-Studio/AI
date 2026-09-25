@@ -8,14 +8,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <title>AI Studio — Oscar Studio</title>
-    <link rel="stylesheet" href="app.css">
-    <link rel="stylesheet" href="opilot.css">
-    <link rel="stylesheet" href="arena.css">
+    <link rel="stylesheet" href="app.css?v=20260810-9">
+    <link rel="stylesheet" href="opilot.css?v=20260810-9">
+    <link rel="stylesheet" href="arena.css?v=20260810-9">
 </head>
 <body>
     <!-- ===== Top Nav ===== -->
     <header class="top-nav">
         <div class="top-nav-left">
+            <button class="nav-hamburger" id="navHamburger" type="button" aria-label="打开导航" title="打开导航">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
             <img src="logo.png" alt="Oscar Studio" class="top-nav-logo">
             <span class="top-nav-eyebrow">AI STUDIO</span>
         </div>
@@ -24,11 +31,19 @@
                 <span class="quota-label">CREDITS</span>
                 <span class="quota-value" id="quotaValue">—</span>
             </div>
+            <button class="model-pill" id="modelPill" type="button" title="更换模型" aria-label="更换模型">
+                <span class="model-pill-vendor" id="modelPillVendor">DeepSeek</span>
+                <span class="model-pill-name" id="modelPillName">V4-Flash</span>
+                <svg class="model-pill-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
             <div id="userButtonContainer"></div>
         </div>
     </header>
 
     <div class="layout">
+        <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
         <!-- ===== Left Sidebar ===== -->
         <aside class="sidebar">
             <nav class="sidebar-nav">
@@ -440,11 +455,11 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <script src="https://api.oscarstudio.cn/user-button.js"></script>
-    <script src="chat-sessions.js"></script>
-    <script src="chat.js"></script>
-    <script src="tts.js"></script>
-    <script src="opilot.js"></script>
-    <script src="arena.js"></script>
-    <script src="app.js"></script>
+    <script src="chat-sessions.js?v=20260810-9"></script>
+    <script src="chat.js?v=20260810-9"></script>
+    <script src="tts.js?v=20260810-9"></script>
+    <script src="opilot.js?v=20260810-9"></script>
+    <script src="arena.js?v=20260810-9"></script>
+    <script src="app.js?v=20260810-9"></script>
 </body>
 </html>

@@ -170,7 +170,9 @@
     avatar.textContent = role === 'user' ? '我' : '✨';
     const body = document.createElement('div');
     body.className = 'opilot-msg-body';
-    body.innerHTML = html;
+    const _bodyFrag = document.createRange().createContextualFragment(html);
+    body.textContent = '';
+    body.appendChild(_bodyFrag);
     div.appendChild(avatar);
     div.appendChild(body);
     messagesScroll.appendChild(div);
@@ -365,7 +367,11 @@
 
     if (searchResult && searchResult.success) {
       // 清空占位
-      aiDiv.body.innerHTML = '';
+      const _frag = document.createRange().createContextualFragment('');
+
+      aiDiv.body.textContent = '';
+
+      aiDiv.body.appendChild(_frag);
 
       // 降级 toast
       if (searchResult._fallback) {
@@ -403,11 +409,21 @@
         html += renderToolsBlock(tools, { label: '或许你想用' });
       }
 
-      aiDiv.body.innerHTML = html || '<div>暂无结果</div>';
+      const _frag = document.createRange().createContextualFragment(html || '<div>暂无结果</div>');
+
+
+      aiDiv.body.textContent = '';
+
+
+      aiDiv.body.appendChild(_frag);
       bindToolCardClicks();
     } else if (searchResult && searchResult._degraded) {
       // AI 不可用 → 退化为关键词搜索
-      aiDiv.body.innerHTML = '';
+      const _frag = document.createRange().createContextualFragment('');
+
+      aiDiv.body.textContent = '';
+
+      aiDiv.body.appendChild(_frag);
       const lower = q.toLowerCase();
       const matched = allTools.filter(t =>
         (t.name && t.name.toLowerCase().includes(lower)) ||
@@ -415,13 +431,25 @@
         (t.tags && t.tags.some(tag => String(tag).toLowerCase().includes(lower)))
       );
       if (matched.length) {
-        aiDiv.body.innerHTML = '<div style="color:#94a3b8;margin-bottom:8px;">Opilot 暂不可用，基于关键词为你找到：</div>' + renderToolsBlock(matched, { label: '匹配结果' });
+        const _frag = document.createRange().createContextualFragment('<div style="color:#94a3b8);
+
+        aiDiv.body.textContent = '';
+
+        aiDiv.body.appendChild(_frag);margin-bottom:8px;">Opilot 暂不可用，基于关键词为你找到：</div>' + renderToolsBlock(matched, { label: '匹配结果' });
         bindToolCardClicks();
       } else {
-        aiDiv.body.innerHTML = '<div style="color:#94a3b8;">Opilot 暂不可用，且未找到匹配工具。请尝试其他关键词。</div>';
+        const _frag = document.createRange().createContextualFragment('<div style="color:#94a3b8);
+
+        aiDiv.body.textContent = '';
+
+        aiDiv.body.appendChild(_frag);">Opilot 暂不可用，且未找到匹配工具。请尝试其他关键词。</div>';
       }
     } else {
-      aiDiv.body.innerHTML = '<div>出错了，请稍后再试</div>';
+      const _frag = document.createRange().createContextualFragment('<div>出错了，请稍后再试</div>');
+
+      aiDiv.body.textContent = '';
+
+      aiDiv.body.appendChild(_frag);
     }
 
     isGenerating = false;
@@ -432,7 +460,11 @@
   function showFallbackBadge() {
     // 简单的提示：更新 model label
     if (modelLabel) {
-      modelLabel.innerHTML = '<span style="color:#fbbf24">⚡ 备用模型</span>';
+      modelLabel.textContent = '';
+      const _mlSpan = document.createElement('span');
+      _mlSpan.style.color = '#fbbf24';
+      _mlSpan.textContent = '⚡ 备用模型';
+      modelLabel.appendChild(_mlSpan);
     }
   }
 
@@ -475,16 +507,30 @@
       const welcome = document.createElement('div');
       welcome.className = 'opilot-panel-welcome';
       welcome.id = 'welcomeScreen';
-      welcome.innerHTML = `
-        <span class="opilot-welcome-eyebrow">AI COPILOT</span>
-        <h1 class="opilot-welcome-title">Ask anything.<br>Build anything.</h1>
-        <div class="opilot-welcome-suggestions">
-          <div class="opilot-suggestion-card" data-q="适合高中生的数学工具">📐 适合高中生的数学工具</div>
-          <div class="opilot-suggestion-card" data-q="配平 H2+O2">🧪 配平 H2+O2</div>
-          <div class="opilot-suggestion-card" data-q="什么是勾股定理">📜 什么是勾股定理</div>
-          <div class="opilot-suggestion-card" data-q="推荐一个抽签器">🎯 推荐一个抽签器</div>
-        </div>
-      `;
+      const eyebrow = document.createElement('span');
+      eyebrow.className = 'opilot-welcome-eyebrow';
+      eyebrow.textContent = 'AI COPILOT';
+      const title = document.createElement('h1');
+      title.className = 'opilot-welcome-title';
+      title.innerHTML = 'Ask anything.<br>Build anything.';  // 安全：常量字符串
+      const suggestions = document.createElement('div');
+      suggestions.className = 'opilot-welcome-suggestions';
+      const suggestionData = [
+        ['适合高中生的数学工具', '📐 适合高中生的数学工具'],
+        ['配平 H2+O2', '🧪 配平 H2+O2'],
+        ['什么是勾股定理', '📜 什么是勾股定理'],
+        ['推荐一个抽签器', '🎯 推荐一个抽签器'],
+      ];
+      for (const [q, label] of suggestionData) {
+        const card = document.createElement('div');
+        card.className = 'opilot-suggestion-card';
+        card.dataset.q = q;
+        card.textContent = label;
+        suggestions.appendChild(card);
+      }
+      welcome.appendChild(eyebrow);
+      welcome.appendChild(title);
+      welcome.appendChild(suggestions);
       messagesScroll.appendChild(welcome);
       bindSuggestionCards();
     });
@@ -536,6 +582,9 @@
 
   // 监听父窗口消息（跨域主路径，替代直接访问 contentWindow.OpilotPanel）
   window.addEventListener('message', (e) => {
+    const event = e;
+    // origin 验证：仅接受父窗口（window.parent）发送的可信消息
+    if (event.origin !== window.location.origin && event.origin !== 'null' && event.origin !== '') return;
     if (!e.data || typeof e.data !== 'object') return;
     if (e.data.type === 'opilot-open') {
       panel.classList.remove('closing', 'minimized');

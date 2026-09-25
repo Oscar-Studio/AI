@@ -7,6 +7,25 @@
 (function () {
     'use strict';
 
+    // ===== 客户端结构化日志（t=ms 相对时间轴）=====
+    // 默认只输出关键事件（永远打印）；要看到每条 chunk，console 里：
+    //   window.__chatVerbose = true
+    let _t0 = 0;
+    function clock() { return _t0 ? Date.now() - _t0 : 0; }
+    function chatLog(kind, msg, data) {
+        const t = clock();
+        const tag = `[chat] t=${String(t).padStart(6)}ms`;
+        const tail = data ? ' ' + data : '';
+        if (kind === 'warn')  console.warn(tag, msg, tail);
+        else if (kind === 'err') console.error(tag, msg, tail);
+        else                    console.log(tag, msg, tail);
+    }
+    function chatVerbose(msg, data) {
+        if (typeof window !== 'undefined' && window.__chatVerbose) {
+            chatLog('info', msg, data);
+        }
+    }
+
     // ---- Model catalog (vendor + models) ----
     const MODEL_CONFIG = {
         deepseek: {
@@ -104,6 +123,10 @@
     const sidebarModelBtn   = document.getElementById('sidebarModelBtn');
     const sidebarModelVendor = document.getElementById('sidebarModelVendor');
     const sidebarModelName  = document.getElementById('sidebarModelName');
+    // 顶栏紧凑 pill（移动端使用，但始终存在；桌面端 display:none 不显示）
+    const modelPill        = document.getElementById('modelPill');
+    const modelPillVendor  = document.getElementById('modelPillVendor');
+    const modelPillName    = document.getElementById('modelPillName');
 
     const modelModal       = document.getElementById('modelModal');
     const modelModalClose  = document.getElementById('modelModalClose');
@@ -123,6 +146,7 @@
     let attachments    = [];
     let isGenerating   = false;
     let abortCtrl      = null;
+    let liveStreamCtrl = null;  // 当前订阅的 live stream AbortController
     let currentAiDiv   = null;
     let totalTokens    = 0;
     let userScrolledUp = false;
@@ -199,10 +223,14 @@
             const cfg = MODEL_CONFIG[key];
             const li = document.createElement('li');
             li.className = key === provider ? 'active' : '';
-            li.innerHTML = `
-                <span class="vendor-name">${cfg.name}</span>
-                <span class="vendor-count">${cfg.models.length}</span>
-            `;
+            const vn = document.createElement('span');
+            vn.className = 'vendor-name';
+            vn.textContent = cfg.name;
+            const vc = document.createElement('span');
+            vc.className = 'vendor-count';
+            vc.textContent = String(cfg.models.length);
+            li.appendChild(vn);
+            li.appendChild(vc);
             li.addEventListener('click', () => {
                 provider = key;
                 renderVendorList();
@@ -229,13 +257,44 @@
             if (m.premium)  badges.push('<span class="model-badge">PRO</span>');
             if (MULTIMODAL_MODELS.includes(m.id)) badges.push('<span class="model-badge multi">MULTI</span>');
             if (m.think || provider === 'minimax') badges.push('<span class="model-badge think">THINK</span>');
-            li.innerHTML = `
-                <div class="model-row">
-                    <span class="model-name">${m.name}</span>
-                    <span class="model-id">${m.id}</span>
-                </div>
-                <div class="model-badges">${badges.join('')}</div>
-            `;
+            const modelRow = document.createElement('div');
+            modelRow.className = 'model-row';
+            const mnameSpan = document.createElement('span');
+            mnameSpan.className = 'model-name';
+            mnameSpan.textContent = m.name;
+            const midSpan = document.createElement('span');
+            midSpan.className = 'model-id';
+            midSpan.textContent = m.id;
+            modelRow.appendChild(mnameSpan);
+            modelRow.appendChild(midSpan);
+            li.appendChild(modelRow);
+            const badgesDiv = document.createElement('div');
+            badgesDiv.className = 'model-badges';
+            if (m.free) {
+                const b = document.createElement('span');
+                b.className = 'model-badge free';
+                b.textContent = 'FREE';
+                badgesDiv.appendChild(b);
+            }
+            if (m.premium) {
+                const b = document.createElement('span');
+                b.className = 'model-badge';
+                b.textContent = 'PRO';
+                badgesDiv.appendChild(b);
+            }
+            if (MULTIMODAL_MODELS.includes(m.id)) {
+                const b = document.createElement('span');
+                b.className = 'model-badge multi';
+                b.textContent = 'MULTI';
+                badgesDiv.appendChild(b);
+            }
+            if (m.think || provider === 'minimax') {
+                const b = document.createElement('span');
+                b.className = 'model-badge think';
+                b.textContent = 'THINK';
+                badgesDiv.appendChild(b);
+            }
+            li.appendChild(badgesDiv);
             li.addEventListener('click', () => {
                 modelId = m.id;
                 thinking = true;
@@ -251,8 +310,12 @@
     function refreshSidebarModel() {
         const cfg = MODEL_CONFIG[provider];
         const m   = cfg.models.find(x => x.id === modelId);
+        const displayName = m ? m.name : modelId;
         sidebarModelVendor.textContent = cfg.name;
-        sidebarModelName.textContent = m ? m.name : modelId;
+        sidebarModelName.textContent = displayName;
+        // 同步顶栏 pill（移动端）
+        if (modelPillVendor) modelPillVendor.textContent = cfg.name;
+        if (modelPillName)   modelPillName.textContent   = displayName;
     }
 
     function applyThinkBtn() {
@@ -281,6 +344,7 @@
     }
 
     sidebarModelBtn.addEventListener('click', openModelModal);
+    if (modelPill) modelPill.addEventListener('click', openModelModal);
     modelModalClose.addEventListener('click', closeModelModal);
     modelModal.addEventListener('click', (e) => {
         if (e.target === modelModal) closeModelModal();
@@ -379,7 +443,7 @@
         return { role: 'user', content };
     }
 
-    function appendMsg(role, text, meta) {
+    function appendMsg(role, text, meta, reasoning) {
         const div = document.createElement('div');
         div.className = `msg ${role}`;
 
@@ -394,6 +458,25 @@
         bubble.className = 'msg-bubble';
 
         if (role === 'ai') {
+            // 思考块（reasoning）：如果历史消息有 reasoning，建一个
+            // 这样新窗口打开时能看到已完成的 reasoning，live stream 时也能继续 append
+            if (reasoning || meta === 'live') {
+                const rBlock = document.createElement('div');
+                rBlock.className = 'reasoning-block';
+                const rHeader = document.createElement('div');
+                rHeader.className = 'reasoning-header';
+                rHeader.innerHTML = '<span class="think-label">已深度思考</span><span class="think-time"></span><span class="think-arrow">▶</span>';
+                const rBody = document.createElement('div');
+                rBody.className = 'reasoning-body';
+                rBody.textContent = reasoning || '';
+                rHeader.addEventListener('click', () => {
+                    rBlock.classList.toggle('expanded');
+                    rHeader.classList.toggle('expanded');
+                });
+                rBlock.appendChild(rHeader);
+                rBlock.appendChild(rBody);
+                bubble.appendChild(rBlock);
+            }
             const content = document.createElement('div');
             content.className = 'content';
             if (text) setContent(content, marked.parse(text, { async: false }));
@@ -427,10 +510,32 @@
         if (role === 'ai') {
             const tokenBtn = document.createElement('button');
             tokenBtn.className = 'msg-token';
-            tokenBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><span>—</span>`;
+            const tokenSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            tokenSvg.setAttribute('viewBox', '0 0 24 24');
+            tokenSvg.setAttribute('fill', 'none');
+            tokenSvg.setAttribute('stroke', 'currentColor');
+            tokenSvg.setAttribute('stroke-width', '1.8');
+            tokenSvg.setAttribute('stroke-linecap', 'round');
+            tokenSvg.setAttribute('stroke-linejoin', 'round');
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', '12');
+            circle.setAttribute('cy', '12');
+            circle.setAttribute('r', '10');
+            tokenSvg.appendChild(circle);
+            const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path1.setAttribute('d', 'M12 16v-4');
+            tokenSvg.appendChild(path1);
+            const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path2.setAttribute('d', 'M12 8h.01');
+            tokenSvg.appendChild(path2);
+            const tokenDash = document.createElement('span');
+            tokenDash.textContent = '—';
+            tokenBtn.textContent = '';
+            tokenBtn.appendChild(tokenSvg);
+            tokenBtn.appendChild(tokenDash);
             const tip = document.createElement('span');
             tip.className = 'token-tip';
-            tip.innerHTML = '输入: <span>—</span> &nbsp;|&nbsp; 输出: <span>—</span>';
+            tip.textContent = '输入: — | 输出: —';
             tokenBtn.appendChild(tip);
             tokenBtn._tip = tip;
             tokenBtn._count = tokenBtn.querySelector('span');
@@ -439,17 +544,61 @@
 
         const copyBtn = document.createElement('button');
         copyBtn.className = 'msg-action';
-        copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制`;
+        copyBtn.textContent = '';
+        const cpSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        cpSvg.setAttribute('viewBox', '0 0 24 24');
+        cpSvg.setAttribute('fill', 'none');
+        cpSvg.setAttribute('stroke', 'currentColor');
+        cpSvg.setAttribute('stroke-width', '1.8');
+        const rectEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rectEl.setAttribute('x', '9');
+        rectEl.setAttribute('y', '9');
+        rectEl.setAttribute('width', '13');
+        rectEl.setAttribute('height', '13');
+        rectEl.setAttribute('rx', '2');
+        cpSvg.appendChild(rectEl);
+        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathEl.setAttribute('d', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1');
+        cpSvg.appendChild(pathEl);
+        copyBtn.appendChild(cpSvg);
+        copyBtn.appendChild(document.createTextNode('复制'));
         copyBtn.addEventListener('click', () => {
             const src = role === 'ai'
                 ? bubble.querySelector('.content')?.textContent || ''
                 : bubble.textContent || '';
             navigator.clipboard.writeText(src).then(() => {
                 copyBtn.classList.add('copied');
-                copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>已复制`;
+                copyBtn.textContent = '';
+                const cpSvg2 = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                cpSvg2.setAttribute('viewBox', '0 0 24 24');
+                cpSvg2.setAttribute('fill', 'none');
+                cpSvg2.setAttribute('stroke', 'currentColor');
+                cpSvg2.setAttribute('stroke-width', '1.8');
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                poly.setAttribute('points', '20 6 9 17 4 12');
+                cpSvg2.appendChild(poly);
+                copyBtn.appendChild(cpSvg2);
+                copyBtn.appendChild(document.createTextNode('已复制'));
                 setTimeout(() => {
                     copyBtn.classList.remove('copied');
-                    copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制`;
+                    copyBtn.textContent = '';
+            const cpSvg1 = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            cpSvg1.setAttribute('viewBox', '0 0 24 24');
+            cpSvg1.setAttribute('fill', 'none');
+            cpSvg1.setAttribute('stroke', 'currentColor');
+            cpSvg1.setAttribute('stroke-width', '1.8');
+            const rect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect1.setAttribute('x', '9');
+            rect1.setAttribute('y', '9');
+            rect1.setAttribute('width', '13');
+            rect1.setAttribute('height', '13');
+            rect1.setAttribute('rx', '2');
+            cpSvg1.appendChild(rect1);
+            const cpPath1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            cpPath1.setAttribute('d', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1');
+            cpSvg1.appendChild(cpPath1);
+            copyBtn.appendChild(cpSvg1);
+            copyBtn.appendChild(document.createTextNode('复制'));
                 }, 1500);
             });
         });
@@ -476,7 +625,10 @@
     }
 
     function setContent(el, html) {
-        el.innerHTML = DOMPurify.sanitize(html);
+        const sanitized = DOMPurify.sanitize(html);
+        const frag = document.createRange().createContextualFragment(sanitized);
+        el.textContent = '';
+        el.appendChild(frag);
         renderMath(el);
         addCodeCopyBtns(el);
     }
@@ -531,6 +683,8 @@
         chatInput.style.height = '56px';
         userScrolledUp = false;
         const sentAtts = attachments.slice();
+        _t0 = Date.now();
+        chatLog('info', 'sendMessage', `model=${modelId} provider=${provider} thinking=${thinking} session=${currentSessionId || 'null'} msgLen=${text.length} atts=${sentAtts.length}`);
         appendMsg('user', text, sentAtts);
         history.push(buildContent(text, sentAtts));
         attachments = [];
@@ -538,9 +692,24 @@
         setLoading(true);
 
         // 云端持久化：确保会话存在
+        const _prevSess = currentSessionId;
         await ensureSessionForUser(text);
+        chatLog('info', 'ensureSession', _prevSess ? `reused=${currentSessionId}` : `created=${currentSessionId}`);
         if (isNewSession) {
             pendingFirstUserText = text;
+        }
+
+        // 关键修复：用户消息必须先入库，不再等流结束。
+        // 这样即便 AI 思考超时 / 网络断开，用户的提问也会保留在历史里。
+        // 服务端有 fallback 标题（前 15 字），即便 AI 标题生成失败，session 也不会一直叫"新对话"。
+        if (currentSessionId) {
+            persistUserToCloud(text, sentAtts)
+                .then((r) => chatLog('info', 'persistUser', `ok=${!!(r && r.ok)} seq=${r && r.data && r.data.message ? r.data.message.seq : '?'}`))
+                .catch((e) => chatLog('warn', 'persistUser failed', e.message));
+            if (isNewSession && pendingFirstUserText) {
+                chatLog('info', 'triggerAiTitle', `session=${currentSessionId}`);
+                triggerAiTitle(currentSessionId, pendingFirstUserText);
+            }
         }
 
         const aiDiv = appendMsg('ai', '');
@@ -551,7 +720,18 @@
         reasoningDiv.className = 'reasoning-block';
         const reasoningHeader = document.createElement('div');
         reasoningHeader.className = 'reasoning-header';
-        reasoningHeader.innerHTML = `<span class="think-label">思考中</span><span class="think-time"></span><span class="think-arrow">▶</span>`;
+        reasoningHeader.textContent = '';
+        const thinkLabel = document.createElement('span');
+        thinkLabel.className = 'think-label';
+        thinkLabel.textContent = '思考中';
+        const thinkTime = document.createElement('span');
+        thinkTime.className = 'think-time';
+        const thinkArrow = document.createElement('span');
+        thinkArrow.className = 'think-arrow';
+        thinkArrow.textContent = '▶';
+        reasoningHeader.appendChild(thinkLabel);
+        reasoningHeader.appendChild(thinkTime);
+        reasoningHeader.appendChild(thinkArrow);
         const reasoningBody = document.createElement('div');
         reasoningBody.className = 'reasoning-body';
         reasoningHeader.addEventListener('click', () => {
@@ -589,6 +769,7 @@
         }, 1000);
 
         abortCtrl = new AbortController();
+        let streamTimeoutId = null;  // 提到 try 之外，catch 块也能 clearTimeout
         let fullResponse = '';
         let fullReasoning = '';
         let outputChars = 0;
@@ -600,7 +781,8 @@
         const body = {
             model: modelId,
             messages: history,
-            stream: true
+            stream: true,
+            sessionId: currentSessionId  // 让服务端在 abort 时能把累积内容存到正确的 session
         };
 
         let promptChars = 0;
@@ -626,14 +808,30 @@
             const headers = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            const timeoutId = setTimeout(() => abortCtrl.abort(), 60000);
+            // 空闲超时（idle timeout），不是总时长：
+            // 思考/正文每来一个 chunk 都 armIdleTimeout() 重置一次计时器。
+            // 只有当上游"完全沉默" STREAM_IDLE_MS 毫秒才认为连接死了。
+            // 思考过程（reasoning_content）就是输出，不应该被总时长卡掉。
+            const STREAM_IDLE_MS = 300000;
+            function armIdleTimeout() {
+                if (streamTimeoutId) clearTimeout(streamTimeoutId);
+                streamTimeoutId = setTimeout(() => {
+                    const silentMs = Date.now() - (typeof _lastChunkAt === 'number' ? _lastChunkAt : Date.now());
+                    chatLog('warn', 'ABORT (idle fired)', `上游 ${silentMs}ms 没任何输出 (阈值 ${STREAM_IDLE_MS}ms)`);
+                    abortCtrl.abort();
+                }, STREAM_IDLE_MS);
+            }
+            armIdleTimeout();
+            const _fetchStart = Date.now();
+            chatLog('info', 'fetch', `POST /api/chat stream=true body≈${JSON.stringify(body).length}B`);
             const resp = await fetch('https://api.oscarstudio.cn/api/chat', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(body),
                 signal: abortCtrl.signal
             });
-            clearTimeout(timeoutId);
+            const _ttfb = Date.now() - _fetchStart;
+            chatLog('info', 'fetch-response', `status=${resp.status} ttfb=${_ttfb}ms content-type=${resp.headers.get('content-type') || '?'}`);
 
             if (resp.status === 401) throw new Error('请先登录后再使用 (401 未登录)');
             if (resp.status === 502) {
@@ -651,9 +849,21 @@
             const dec = new TextDecoder();
             let buf = '';
 
+            let _chunkCount = 0;
+            let _totalBytes = 0;
+            let _lastChunkAt = Date.now();
+            let _finishReason = null;
+            chatLog('info', 'stream-loop start', `idle=${STREAM_IDLE_MS}ms`);
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
+                // 每拿到一个 chunk（哪怕只是 ": keep-alive" 注释）就重置
+                // 空闲计时器；上游只要还在产出，就算在思考，也不算"卡"
+                _chunkCount++;
+                _totalBytes += value ? value.length : 0;
+                _lastChunkAt = Date.now();
+                armIdleTimeout();
+                chatVerbose('chunk', `#${_chunkCount} ${value ? value.length : 0}B idle-reset`);
                 buf += dec.decode(value, { stream: true });
                 let lines = buf.split(/\r\n|\r|\n/);
                 buf = lines.pop() || '';
@@ -713,7 +923,10 @@
                                 fullResponse += delta.content;
                                 outputChars += delta.content.length;
                                 const html = marked.parse(fullResponse, { async: false });
-                                contentDiv.innerHTML = DOMPurify.sanitize(html);
+                                const sanitized = DOMPurify.sanitize(html);
+                                const frag = document.createRange().createContextualFragment(sanitized);
+                                contentDiv.textContent = '';
+                                contentDiv.appendChild(frag);
                                 renderMath(contentDiv);
                                 scrollBottom();
                             }
@@ -726,6 +939,11 @@
                             reasoningDiv.style.display = 'block';
                             if (!_reasoningExpanded) reasoningDiv.classList.remove('expanded');
                             scrollBottom();
+                        }
+
+                        // 抓 finishReason（OpenAI 兼容 stream 通常在最后一个 delta 里带）
+                        if (!isMiniMax && d.choices?.[0]?.finish_reason) {
+                            _finishReason = d.choices[0].finish_reason;
                         }
 
                         // Answer content
@@ -775,6 +993,8 @@
             }
             const rem = dec.decode();
             if (rem) { fullResponse += rem; outputChars += rem.length; }
+            clearTimeout(streamTimeoutId);
+            chatLog('info', 'stream done', `chunks=${_chunkCount} bytes=${_totalBytes} reasoningChars=${fullReasoning.length} contentChars=${fullResponse.length}`);
 
             if (!usageReceived) {
                 const estInput = Math.max(1, Math.ceil(promptChars / 4));
@@ -789,21 +1009,20 @@
             }
 
             history.push({ role: 'assistant', content: fullResponse });
-            const r = typeof marked !== 'undefined' ? marked.parse(fullResponse) : fullResponse;
+            // 截断检测：finishReason='length' 表示上游打到了 max_tokens 上限被截断
+            // 在 UI 末尾追加明显的提示，告诉用户"这是被截断的"
+            let truncatedNote = '';
+            if (typeof _finishReason === 'string' && _finishReason === 'length') {
+                truncatedNote = '\n\n> ⚠️ **回答被 max_tokens 截断了**（模型输出达到上限）。如果需要更完整的回答，请换用 `deepseek-v4-pro`（maxOutput 384K）或精简输入。';
+            }
+            const r = typeof marked !== 'undefined' ? marked.parse(fullResponse + truncatedNote) : (fullResponse + truncatedNote);
             if (r instanceof Promise) r.then(html => setContent(contentDiv, html));
             else setContent(contentDiv, r);
+            if (truncatedNote) chatLog('warn', 'response truncated', `finishReason=length output=${(fullResponse || '').length}chars`);
 
-            // 云端持久化：先写 user，再写 assistant（有序防 seq 冲突）
-            await persistTurnToCloud({
-                userText: text,
-                userAtts: sentAtts,
-                assistantText: fullResponse,
-                assistantReasoning: fullReasoning,
-                inputTokens: lastInputTokens,
-                outputTokens: lastOutputTokens
-            });
-
-            // 首轮后 AI 自动命名（仅在新会话且无失败时）
+            // 云端持久化：assistant 消息由后端 live-stream 单一写入（routes/chat.js 里的 updateLiveMessage
+            // 在流结束时已把内容 + token 落到 chat_messages）。前端不再调 appendMessage，避免重复行。
+            // 只剩 AI 自动命名这步。（仅在新会话且无失败时）
             if (isNewSession && currentSessionId && pendingFirstUserText) {
                 const firstText = pendingFirstUserText;
                 isNewSession = false;
@@ -812,10 +1031,16 @@
             }
 
         } catch (err) {
+            clearTimeout(streamTimeoutId);
             contentDiv.classList.remove('typing');
+            chatLog('err', 'CATCH', `name=${err.name} msg="${err.message}" chunks_seen=${typeof _chunkCount === 'number' ? _chunkCount : '?'} bytes_seen=${typeof _totalBytes === 'number' ? _totalBytes : '?'} partialResponse=${(fullResponse || '').length}ch`);
             if (err.name === 'AbortError') {
+                // 思考超时 / 用户主动停止：部分正文由后端 live-stream + req.on('close') 兜底落库
+                // 前端不再写，避免重复行。
                 contentDiv.textContent = (fullResponse || '') + '\n[已停止生成]';
-                if (fullResponse) history.push({ role: 'assistant', content: fullResponse });
+                if (fullResponse) {
+                    history.push({ role: 'assistant', content: fullResponse });
+                }
             } else {
                 contentDiv.textContent = `[出错: ${err.message}]`;
             }
@@ -838,7 +1063,11 @@
             const tokenBtn = currentAiDiv.querySelector('.msg-token');
             if (tokenBtn) {
                 tokenBtn._count.textContent = total.toLocaleString();
-                tokenBtn._tip.innerHTML = `输入: <span>${input.toLocaleString()}</span> &nbsp;|&nbsp; 输出: <span>${output.toLocaleString()}</span>`;
+                const tipText = document.createElement('span');
+                tipText.className = 'tip-text';
+                tipText.textContent = `输入: ${input.toLocaleString()} | 输出: ${output.toLocaleString()}`;
+                tokenBtn._tip.textContent = '';
+                tokenBtn._tip.appendChild(tipText);
             }
         }
     }
@@ -863,9 +1092,11 @@
         async loadSession(id) {
             if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) return false;
             if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+            const _lsT0 = Date.now();
+            chatLog('info', 'loadSession start', `id=${id}`);
 
             const r = await window.ChatSessions.get(id);
-            if (!r.ok) return false;
+            if (!r.ok) { chatLog('warn', 'loadSession failed', `id=${id} reason=${r.reason || r.message || '?'}`); return false; }
 
             const session = r.data.session;
             const messages = r.data.messages || [];
@@ -888,6 +1119,11 @@
             totalTokens = 0;
             tokenCounter.textContent = '累计 0 tokens';
             chatScroll.innerHTML = '';
+
+            // 0 条消息时把欢迎语补回去，避免空会话点进去一片空白
+            if (messages.length === 0 && chatWelcome) {
+                chatScroll.appendChild(chatWelcome);
+            }
 
             // 重新构造 history 数组（OpenAI 格式）
             for (const m of messages) {
@@ -915,7 +1151,15 @@
                         return typeof m.attachments === 'string' ? JSON.parse(m.attachments) : m.attachments;
                     } catch { return null; }
                 })();
-                appendMsg(m.role === 'user' ? 'user' : 'ai', m.content, m.role === 'user' ? atts : null);
+                // 顺便看这条是不是还在生成（in_progress=1）→ 用 'live' 标记
+                // 让 appendMsg 占位 reasoning block，方便后续 live update
+                const isLive = m.is_in_progress === 1 || m.is_in_progress === '1';
+                appendMsg(
+                    m.role === 'user' ? 'user' : 'ai',
+                    m.content,
+                    m.role === 'user' ? atts : (isLive ? 'live' : null),
+                    m.role === 'ai' ? (m.reasoning || '') : null
+                );
             }
 
             // 累计 token
@@ -932,7 +1176,115 @@
                 triggerAiTitle(id, null);
             }
 
+            chatLog('info', 'loadSession done', `id=${id} msgs=${messages.length} elapsed=${Date.now() - _lsT0}ms`);
+
+            // ============ Live stream: 如果 AI 还在生成，订阅实时更新 ============
+            loadLiveStream(id).catch((e) => chatLog('warn', 'loadLiveStream error', e.message));
+
             return true;
+        },
+
+        // 订阅 session 的 live stream（AI 还在生成时调用）
+        async loadLiveStream(sessionId) {
+            if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) return false;
+            const token = localStorage.getItem('ai_token');
+            if (!token) return false;
+            // 找到最近一条 assistant 消息（就是要 live-update 的）
+            const lastAi = chatScroll.querySelector('.msg.ai:last-of-type .msg-bubble');
+            if (!lastAi) return false;
+            const liveUrl = `https://api.oscarstudio.cn/api/chat-sessions/${sessionId}/stream`;
+            chatLog('info', 'loadLiveStream', `session=${sessionId} url=${liveUrl}`);
+            // EventSource 不支持自定义 header，用 URL query 传 token（后端需要支持）
+            // 简单方案：fetch + ReadableStream（手动解析 SSE）
+            const ctrl = new AbortController();
+            liveStreamCtrl = ctrl;
+            let _replayed = false;
+            try {
+                const resp = await fetch(liveUrl, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    signal: ctrl.signal
+                });
+                if (resp.status === 404) {
+                    chatLog('info', 'loadLiveStream no-active-stream', `session=${sessionId}`);
+                    return false;
+                }
+                if (!resp.ok) {
+                    chatLog('warn', 'loadLiveStream failed', `status=${resp.status}`);
+                    return false;
+                }
+                const reader = resp.body.getReader();
+                const dec = new TextDecoder();
+                let buf = '';
+                // 标记这是 live 模式：appendMsg 时如果是 live update 改 incremental append
+                const contentDiv = lastAi.querySelector('.content');
+                const reasoningDiv = lastAi.querySelector('.reasoning-body');
+                if (contentDiv) contentDiv.classList.add('live-streaming');
+                chatLog('info', 'loadLiveStream connected', `session=${sessionId}`);
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += dec.decode(value, { stream: true });
+                    const lines = buf.split(/\r\n|\r|\n/);
+                    buf = lines.pop() || '';
+                    for (const line of lines) {
+                        if (!line.startsWith('data')) continue;
+                        const s = line.slice(line.charAt(5) === ' ' ? 6 : 5);
+                        if (!s) continue;
+                        try {
+                            const evt = JSON.parse(s);
+                            if (evt.type === 'replay') {
+                                _replayed = true;
+                                // 替换 contentDiv 的内容
+                                if (contentDiv && evt.text) {
+                                    contentDiv.replaceChildren();
+                                    const html = marked.parse(evt.text);
+                                    const applyHtml = (h) => contentDiv.replaceChildren(DOMPurify.sanitize(h));
+                                    if (html instanceof Promise) html.then(applyHtml);
+                                    else applyHtml(html);
+                                }
+                                if (reasoningDiv && evt.reasoning) {
+                                    reasoningDiv.textContent = evt.reasoning;
+                                }
+                                chatLog('info', 'loadLiveStream replayed', `text=${evt.text.length}ch reasoning=${evt.reasoning.length}ch`);
+                            } else if (evt.type === 'delta') {
+                                // 增量 append
+                                if (contentDiv && evt.content) {
+                                    // 简化：累加到一个隐藏变量，下次整体重渲染
+                                    // 或者直接 append 文本节点
+                                    contentDiv.appendChild(document.createTextNode(evt.content));
+                                }
+                                if (reasoningDiv && evt.reasoning) {
+                                    reasoningDiv.appendChild(document.createTextNode(evt.reasoning));
+                                }
+                            } else if (evt.type === 'end') {
+                                chatLog('info', 'loadLiveStream end', `reason=${evt.reason}`);
+                                if (contentDiv) {
+                                    // 重新解析（避免 textNode 拼接没走 markdown）
+                                    const text = contentDiv.textContent;
+                                    contentDiv.replaceChildren(DOMPurify.sanitize(marked.parse(text)));
+                                }
+                                if (contentDiv) contentDiv.classList.remove('live-streaming');
+                                liveStreamCtrl = null;
+                                return true;
+                            } else if (evt.type === 'stale') {
+                                chatLog('warn', 'loadLiveStream stale', '服务重启过，标记为 interrupted');
+                                if (contentDiv && evt.text) {
+                                    contentDiv.textContent = evt.text + '\n\n[本次回答因服务重启中断]';
+                                }
+                                if (contentDiv) contentDiv.classList.remove('live-streaming');
+                                liveStreamCtrl = null;
+                                return true;
+                            }
+                        } catch (e) { /* 忽略 parse 错误 */ }
+                    }
+                }
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    chatLog('warn', 'loadLiveStream error', e.message);
+                }
+            }
+            liveStreamCtrl = null;
+            return _replayed;
         },
 
         getCurrentSessionId() {
@@ -985,30 +1337,29 @@
         }
     }
 
-    async function persistTurnToCloud({ userText, userAtts, assistantText, assistantReasoning, inputTokens, outputTokens }) {
-        if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) return;
-        if (!currentSessionId) return; // ensureSessionForUser 没成功
-
-        // 先写 user，等 seq 确认后再写 assistant，防止 seq 冲突
-        const userResp = await window.ChatSessions.appendMessage(currentSessionId, {
-            role: 'user',
-            content: userText,
-            attachments: userAtts && userAtts.length ? userAtts.map(a => ({ type: a.type, url: a.url, name: a.name })) : null
-        });
-        if (userResp.ok && userResp.data && userResp.data.title) {
-            window.dispatchEvent(new CustomEvent('chat:session-renamed', { detail: { sessionId: currentSessionId, title: userResp.data.title } }));
-        }
-
-        // 再写 assistant
-        const asstResp = await window.ChatSessions.appendMessage(currentSessionId, {
-            role: 'assistant',
-            content: assistantText,
-            reasoning: assistantReasoning || null,
-            inputTokens: inputTokens || 0,
-            outputTokens: outputTokens || 0
-        });
-        if (asstResp.ok) {
-            window.dispatchEvent(new CustomEvent('chat:session-updated', { detail: { sessionId: currentSessionId } }));
+    // 立即保存 user 消息（不等流结束；流被砍/超时/网络断都不会丢失）
+    async function persistUserToCloud(userText, userAtts) {
+        if (!window.ChatSessions || !window.ChatSessions.isLoggedIn()) return null;
+        if (!currentSessionId) return null;
+        try {
+            const resp = await window.ChatSessions.appendMessage(currentSessionId, {
+                role: 'user',
+                content: userText,
+                attachments: userAtts && userAtts.length ? userAtts.map(a => ({ type: a.type, url: a.url, name: a.name })) : null
+            });
+            if (resp.ok) {
+                window.dispatchEvent(new CustomEvent('chat:session-updated', { detail: { sessionId: currentSessionId } }));
+            } else {
+                console.warn('[chat] persist user msg not ok:', resp.reason || resp.message);
+            }
+            return resp;
+        } catch (e) {
+            console.warn('[chat] persist user msg threw:', e.message);
+            return null;
         }
     }
+
+    // 注意：assistant 消息的云端落库完全由后端负责（API/routes/chat.js 的
+    // updateLiveMessage / persistAssistantMessage）。前端不再 appendMessage，
+    // 否则会和后端写同一行 → 历史里出现重复 AI 回复。
 })();

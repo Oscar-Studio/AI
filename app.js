@@ -86,16 +86,51 @@
     function switchView(target) {
         sidebarItems.forEach(i => i.classList.toggle('active', i.dataset.view === target));
         views.forEach(v => v.classList.toggle('active', v.dataset.view === target));
-        localStorage.setItem(STORAGE_VIEW, target);
+        // localStorage.setItem 可能因配额超限抛 QuotaExceededError，需要捕获
+        try { localStorage.setItem(STORAGE_VIEW, target); } catch (e) { /* 静默降级 */ }
         // 进入特定 view 时触发模块钩子
         if (target === 'arena' && window.ArenaModule && window.ArenaModule.onViewEnter) {
             window.ArenaModule.onViewEnter();
         }
+        // 移动端切视图后顺手关掉抽屉
+        closeSidebar();
     }
 
     sidebarItems.forEach(item => {
         item.addEventListener('click', () => switchView(item.dataset.view));
     });
+
+    // ---- Sidebar drawer (mobile) ----
+    const sidebar       = document.querySelector('.sidebar');
+    const backdrop      = document.getElementById('sidebarBackdrop');
+    const hamburgerBtn  = document.getElementById('navHamburger');
+
+    function openSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.add('is-open');
+        if (backdrop) backdrop.hidden = false;
+        document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.remove('is-open');
+        if (backdrop) backdrop.hidden = true;
+        document.body.style.overflow = '';
+    }
+    // 抽屉打开时点击 backdrop 关闭
+    if (backdrop) backdrop.addEventListener('click', closeSidebar);
+    if (hamburgerBtn) hamburgerBtn.addEventListener('click', openSidebar);
+    // ESC 关抽屉（仅当抽屉是打开的）
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar && sidebar.classList.contains('is-open')) {
+            closeSidebar();
+        }
+    });
+    // 视口从小屏拉回桌面端时，强制清掉抽屉状态
+    const mq = window.matchMedia('(min-width: 769px)');
+    function handleMq(e) { if (e.matches) closeSidebar(); }
+    if (mq.addEventListener) mq.addEventListener('change', handleMq);
+    else if (mq.addListener) mq.addListener(handleMq); // 旧 Safari
 
     // Restore last view (default: chat)
     const savedView = localStorage.getItem(STORAGE_VIEW);

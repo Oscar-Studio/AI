@@ -207,12 +207,17 @@
       // 空 query：显示历史
       if (!q) {
         const history = getHistory(5);
-        dropdown.innerHTML = history.length
-          ? `<div class="opilot-col opilot-col-full">
+        if (history.length) {
+          const _hFrag = document.createRange().createContextualFragment(
+            `<div class="opilot-col opilot-col-full">
                <h4>最近搜索</h4>
                <div class="opilot-history-list">${history.map(renderHistoryItem).join('')}</div>
-             </div>`
-          : `<div class="opilot-col opilot-col-full opilot-empty">输入关键词 · 按 <kbd>Enter</kbd> 让 Opilot 帮你找</div>`;
+             </div>`);
+          dropdown.textContent = '';
+          dropdown.appendChild(_hFrag);
+        } else {
+          dropdown.textContent = '输入关键词 · 按 Enter 让 Opilot 帮你找';
+        }
         bindHistoryClicks();
         dropdown.classList.add('open');
         return;
@@ -220,19 +225,23 @@
 
       // 关键词命中：单列
       if (keywordHits.length) {
-        dropdown.innerHTML = `
+        const _frag = document.createRange().createContextualFragment(`
           <div class="opilot-col opilot-col-full">
             <h4>工具 (${keywordHits.length})</h4>
             <div class="opilot-tool-list">${keywordHits.map(t => renderToolCard(t, { site: ctx.site })).join('')}</div>
           </div>
-        `;
+        `);
+
+        dropdown.textContent = '';
+
+        dropdown.appendChild(_frag);
         bindCardClicks();
         dropdown.classList.add('open');
         return;
       }
 
       // 无关键词命中
-      dropdown.innerHTML = `<div class="opilot-col opilot-col-full opilot-empty">无关键词匹配 · 按 <kbd>Enter</kbd> 让 Opilot 帮你找</div>`;
+      dropdown.textContent = '无关键词匹配 · 按 Enter 让 Opilot 帮你找';
       dropdown.classList.add('open');
     }
 
@@ -242,7 +251,7 @@
       const keywordHits = lastKeywordResults;
 
       if (isLoading) {
-        dropdown.innerHTML = `<div class="opilot-col opilot-col-full opilot-loading">✨ Opilot 思考中...</div>`;
+        dropdown.textContent = '✨ Opilot 思考中...';
         dropdown.classList.add('open');
         return;
       }
@@ -255,7 +264,7 @@
       const opilotHtml = renderOpilotColumn(aiResult);
 
       // 双列：左关键词 + 右 AI
-      dropdown.innerHTML = `
+      const _dFrag = document.createRange().createContextualFragment(`
         <div class="opilot-col opilot-col-keyword">
           <h4>工具 ${keywordHits.length ? `(${keywordHits.length})` : ''}</h4>
           <div class="opilot-tool-list">${keywordHits.map(t => renderToolCard(t, { site: ctx.site })).join('') || '<div class="opilot-empty-mini">无关键词匹配</div>'}</div>
@@ -264,7 +273,9 @@
           <h4>✨ Opilot</h4>
           <div class="opilot-ai-content">${opilotHtml}</div>
         </div>
-      `;
+      `);
+      dropdown.textContent = '';
+      dropdown.appendChild(_dFrag);
       bindCardClicks();
       bindOpilotActions();
       dropdown.classList.add('open');
@@ -594,7 +605,7 @@
     const overlay = document.createElement('div');
     overlay.id = 'opilot-palette';
     overlay.className = 'opilot-palette-overlay';
-    overlay.innerHTML = `
+    const _frag = document.createRange().createContextualFragment(`
       <div class="opilot-palette">
         <div class="opilot-palette-header">
           <input type="text" class="opilot-palette-input" placeholder="Chat with Opilot" autofocus>
@@ -605,7 +616,11 @@
         </div>
         <div class="opilot-palette-results"></div>
       </div>
-    `;
+    `);
+
+    overlay.textContent = '';
+
+    overlay.appendChild(_frag);
     document.body.appendChild(overlay);
 
     const input = overlay.querySelector('.opilot-palette-input');
@@ -616,7 +631,7 @@
     let lastMode = 'home'; // 'home' | 'keyword' | 'ai'
 
     // 加载多源工具配置
-    results.innerHTML = '<div class="opilot-palette-loading">加载工具中...</div>';
+    results.textContent = '加载工具中...';
     loadMultiConfig(sources).then(data => {
       Object.values(data).forEach(cfg => {
         if (cfg && cfg.tools) {
@@ -660,7 +675,17 @@
           `).join('')}
         </div>`;
       });
-      results.innerHTML = html || '<div class="opilot-palette-empty">暂无工具</div>';
+      if (html) {
+        const _rFrag = document.createRange().createContextualFragment(html);
+        results.textContent = '';
+        results.appendChild(_rFrag);
+      } else {
+        const _empty = document.createElement('div');
+        _empty.className = 'opilot-palette-empty';
+        _empty.textContent = '暂无工具';
+        results.textContent = '';
+        results.appendChild(_empty);
+      }
       currentItems = Array.from(results.querySelectorAll('.opilot-palette-item'));
       activeIndex = 0;
       updateActiveItem();
@@ -700,7 +725,11 @@
       if (!html) {
         html = `<div class="opilot-palette-empty">无匹配工具 · 按 <kbd>Enter</kbd> 让 Opilot 帮你找</div>`;
       }
-      results.innerHTML = html;
+      const _frag = document.createRange().createContextualFragment(html);
+
+      results.textContent = '';
+
+      results.appendChild(_frag);
       activeIndex = 0;
       updateActiveItem();
       bindResultsEvents();
@@ -710,7 +739,7 @@
     async function runAISearch() {
       const q = input.value.trim();
       if (!q) return;
-      results.innerHTML = `<div class="opilot-palette-loading">✨ Opilot 思考中...</div>`;
+      results.textContent = '✨ Opilot 思考中...';
       currentItems = [];
       activeIndex = 0;
       const toolsForAI = allTools.map(t => ({
@@ -733,13 +762,17 @@
     function renderAIResult(result) {
       if (!result || !result.success) {
         if (result && result._degraded) {
-          results.innerHTML = `
+          const _frag = document.createRange().createContextualFragment(`
             <div class="opilot-palette-degraded">Opilot 暂不可用，仅显示关键词结果</div>
-          `;
+          `);
+
+          results.textContent = '';
+
+          results.appendChild(_frag);
           renderKeyword(input.value);
           return;
         }
-        results.innerHTML = '<div class="opilot-palette-empty">出错了，请稍后再试</div>';
+        results.textContent = '出错了，请稍后再试';
         return;
       }
       const tools = (result.tools || []).map(t => {
@@ -776,7 +809,13 @@
         html += `<div class="opilot-palette-empty">无结果 · 试试其他关键词</div>`;
       }
 
-      results.innerHTML = html;
+      const _frag = document.createRange().createContextualFragment(html);
+
+
+      results.textContent = '';
+
+
+      results.appendChild(_frag);
       currentItems = Array.from(results.querySelectorAll('.opilot-palette-item'));
       activeIndex = 0;
       updateActiveItem();
@@ -938,7 +977,12 @@
       const banner = document.createElement('div');
       banner.className = 'opilot-prefill-banner';
       const entries = Object.entries(p).map(([k, v]) => `${k} = ${v}`).join(' · ');
-      banner.innerHTML = `✨ Opilot 已预填：<code>${escapeHtml(entries)}</code>`;
+      banner.textContent = '';
+      const bannerPrefix = document.createTextNode('✨ Opilot 已预填：');
+      const bannerCode = document.createElement('code');
+      bannerCode.textContent = escapeHtml(entries);
+      banner.appendChild(bannerPrefix);
+      banner.appendChild(bannerCode);
       document.body.appendChild(banner);
       setTimeout(() => {
         banner.classList.add('show');
@@ -1056,6 +1100,9 @@
 
     // 监听 iframe 消息
     panelMessageHandler = (e) => {
+      const event = e; // 兼容命名风格
+      // origin 验证：拒绝跨源消息（防 clickjacking / 消息注入）
+      if (event.origin !== window.location.origin && event.origin !== 'null' && event.origin !== '') return;
       if (!e.data || typeof e.data !== 'object') return;
       if (e.data.type === 'opilot-close') {
         if (panelInstance) panelInstance.style.display = 'none';

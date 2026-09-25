@@ -292,10 +292,14 @@
             const cfg = MODEL_CONFIG[key];
             const li = document.createElement('li');
             li.className = key === currentProvider ? 'active' : '';
-            li.innerHTML = `
+            const _frag = document.createRange().createContextualFragment(`
                 <span class="vendor-name">${escapeHtml(cfg.name)}</span>
                 <span class="vendor-count">${cfg.models.length}</span>
-            `;
+            `);
+
+            li.textContent = '';
+
+            li.appendChild(_frag);
             li.addEventListener('click', () => {
                 // 重置 selectedModels 的 provider highlight 用
                 renderModelList(key);
@@ -327,13 +331,17 @@
             if (m.free)    badges.push('<span class="model-badge free">FREE</span>');
             if (m.premium) badges.push('<span class="model-badge">PRO</span>');
             if (MULTIMODAL_LIST.includes(m.id)) badges.push('<span class="model-badge multi">MULTI</span>');
-            li.innerHTML = `
+            const _frag = document.createRange().createContextualFragment(`
                 <div class="model-row">
                     <span class="model-name">${escapeHtml(m.name)}</span>
                     <span class="model-id">${escapeHtml(m.id)}</span>
                 </div>
                 <div class="model-badges">${badges.join('')}</div>
-            `;
+            `);
+
+            li.textContent = '';
+
+            li.appendChild(_frag);
             li.addEventListener('click', () => {
                 if (isSelected) {
                     selectedModels = selectedModels.filter(x => x.id !== m.id);
@@ -361,11 +369,15 @@
         selectedModels.forEach((m, i) => {
             const chip = document.createElement('div');
             chip.className = 'arena-chip';
-            chip.innerHTML = `
+            const _frag = document.createRange().createContextualFragment(`
                 <span class="arena-chip-vendor">${escapeHtml(m.vendor)}</span>
                 <span class="arena-chip-name">${escapeHtml(m.name)}</span>
                 <button class="arena-chip-remove" type="button" data-idx="${i}" aria-label="移除">✕</button>
-            `;
+            `);
+
+            chip.textContent = '';
+
+            chip.appendChild(_frag);
             arenaPickChips.appendChild(chip);
         });
         arenaPickCounter.textContent = `${selectedModels.length}/${MAX_MODELS}`;
@@ -396,7 +408,11 @@
     // Judge 可以是任何模型，包括非参与模型。例如：让 Claude 评判 GPT-4 vs Gemini 的回答
     function renderJudgeOptions() {
         const prev = arenaJudgeSelect.value;
-        arenaJudgeSelect.innerHTML = '<option value="">不评判（仅看回答）</option>';
+        const _opt = document.createElement('option');
+_opt.value = '';
+_opt.textContent = '不评判（仅看回答）';
+arenaJudgeSelect.textContent = '';
+arenaJudgeSelect.appendChild(_opt);
 
         // 把已选模型 ID 收集起来（用于高亮标记）
         const selectedIds = new Set(selectedModels.map(m => m.id));
@@ -558,7 +574,7 @@
         const headerRight = modelMeta
             ? `<span class="${labelClass}" data-model-label>${escapeHtml(modelLabel)}</span>`
             : '';
-        card.innerHTML = `
+        const _frag = document.createRange().createContextualFragment(`
             <div class="arena-card-header">
                 <div class="arena-card-header-left">
                     <span class="arena-card-slot">${slot}</span>
@@ -576,7 +592,11 @@
                 </div>
                 <div data-vote-area></div>
             </div>
-        `;
+        `);
+
+        card.textContent = '';
+
+        card.appendChild(_frag);
         arenaGrid.appendChild(card);
         return card;
     }
@@ -596,7 +616,11 @@
         body.classList.add('typing');
         // 累积原始文本（用于流式中每次 delta 都全量重渲染）
         body._rawText = text || '';
-        body.innerHTML = renderMarkdown(body._rawText);
+        const _frag = document.createRange().createContextualFragment(renderMarkdown(body._rawText));
+
+        body.textContent = '';
+
+        body.appendChild(_frag);
         addCodeCopyBtns(body);
         renderMathSafe(body);
         scrollCardToBottom(body);
@@ -739,7 +763,11 @@
         } else {
             metaText.textContent = '—';
             metaCost.textContent = '';
-            body.innerHTML = `<div class="arena-card-error">⚠ ${escapeHtml(error || '回答失败')}</div>`;
+            const _frag = document.createRange().createContextualFragment(`<div class="arena-card-error">⚠ ${escapeHtml(error || '回答失败')}</div>`);
+
+            body.textContent = '';
+
+            body.appendChild(_frag);
         }
 
         // 评分区：AI 评判 / 用户评分 状态机
@@ -754,7 +782,7 @@
             if (judgeStatus && judgeStatus.status === 'scored') {
                 const reasoning = judgeStatus.reasoning || '';
                 const stars = renderStarsDisplay(judgeStatus.score);
-                voteArea.innerHTML = `
+                const _vFrag = document.createRange().createContextualFragment(`
                     <div class="arena-judge-result">
                         <div class="arena-judge-result-row">
                             <span class="arena-judge-result-label">AI 评分</span>
@@ -764,7 +792,11 @@
                         ${reasoning ? `<div class="arena-judge-reasoning-toggle" data-reasoning-toggle>查看理由</div>
                         <div class="arena-judge-reasoning" data-reasoning>${escapeHtml(reasoning)}</div>` : ''}
                     </div>
-                `;
+                `);
+
+                voteArea.textContent = '';
+
+                voteArea.appendChild(_vFrag);
                 const toggle = voteArea.querySelector('[data-reasoning-toggle]');
                 const reasonEl = voteArea.querySelector('[data-reasoning]');
                 if (toggle && reasonEl) {
@@ -774,61 +806,85 @@
                     });
                 }
             } else if (judgeStatus && judgeStatus.status === 'judging') {
-                voteArea.innerHTML = `
+                const _frag = document.createRange().createContextualFragment(`
                     <div class="arena-judge-status">
                         <span class="dot is-loading"></span>
                         <span style="font-size: 12px; color: var(--body);">AI 评判中…</span>
                     </div>
-                `;
+                `);
+
+                voteArea.textContent = '';
+
+                voteArea.appendChild(_frag);
             } else if (judgeStatus && judgeStatus.status === 'judge-error') {
-                voteArea.innerHTML = `
+                const _frag = document.createRange().createContextualFragment(`
                     <div class="arena-judge-status">
                         <span class="dot is-error"></span>
                         <span style="font-size: 12px; color: #ff7b72;">评判失败${judgeStatus.error ? '：' + escapeHtml(judgeStatus.error) : ''}</span>
                     </div>
-                `;
+                `);
+
+                voteArea.textContent = '';
+
+                voteArea.appendChild(_frag);
                 // AI 评判失败时，降级为人类评分入口（仅当底层回答成功）
                 const slotState = currentBattle && currentBattle.slots[card.dataset.slot];
                 if (card._responseId && slotState && slotState.status !== 'error' && slotState.text) {
                     renderHumanVoteUI(voteArea, card);
                 } else {
-                    voteArea.innerHTML = `
+                    const _frag = document.createRange().createContextualFragment(`
                         <div class="arena-judge-status">
                             <span class="dot is-error"></span>
                             <span style="font-size: 12px; color: var(--body-mid);">${slotState && slotState.status === 'error' ? '回答失败，无法评分' : '评判失败'}</span>
                         </div>
-                    `;
+                    `);
+
+                    voteArea.textContent = '';
+
+                    voteArea.appendChild(_frag);
                 }
             } else {
-                voteArea.innerHTML = `
+                const _frag = document.createRange().createContextualFragment(`
                     <div class="arena-judge-status">
                         <span class="dot"></span>
                         <span style="font-size: 12px; color: var(--body-mid);">等待 AI 评判</span>
                     </div>
-                `;
+                `);
+
+                voteArea.textContent = '';
+
+                voteArea.appendChild(_frag);
             }
             return;
         }
 
         // 无 AI 评判：人类评分入口
         if (!card._responseId) {
-            voteArea.innerHTML = `
+            const _frag = document.createRange().createContextualFragment(`
                 <div class="arena-judge-status">
                     <span class="dot"></span>
                     <span style="font-size: 12px; color: var(--body-mid);">无 response_id，无法评分</span>
                 </div>
-            `;
+            `);
+
+            voteArea.textContent = '';
+
+            voteArea.appendChild(_frag);
             return;
         }
         // 失败的卡不允许评分（后端会拒绝）
         const slotState = currentBattle && currentBattle.slots[card.dataset.slot];
         if (slotState && (slotState.status === 'error' || !slotState.text)) {
-            voteArea.innerHTML = `
+            const _frag = document.createRange().createContextualFragment(`
                 <div class="arena-judge-status">
                     <span class="dot is-error"></span>
                     <span style="font-size: 12px; color: var(--body-mid);">回答失败，无法评分</span>
                 </div>
-            `;
+            `);
+
+            voteArea.textContent = '';
+
+            voteArea.appendChild(_frag);
             return;
         }
         renderHumanVoteUI(voteArea, card);
@@ -845,7 +901,7 @@
         const hint = savedScore
             ? `已提交 ${savedScore}/5 · 点击星星修改`
             : '点击 1-5 星为这份回答打分';
-        voteArea.innerHTML = `
+        const _frag = document.createRange().createContextualFragment(`
             <div class="arena-vote-display">
                 <div class="arena-vote-display-row">
                     <span class="arena-judge-result-label">你的评分</span>
@@ -853,7 +909,11 @@
                     <span class="arena-vote-hint" data-vote-hint>${escapeHtml(hint)}</span>
                 </div>
             </div>
-        `;
+        `);
+
+        voteArea.textContent = '';
+
+        voteArea.appendChild(_frag);
         attachHumanVoteHandlers(voteArea, card);
     }
 
@@ -1155,7 +1215,13 @@
                 for (const slot of Object.keys(battle.slots)) {
                     const s = battle.slots[slot];
                     const body = s.card.querySelector('[data-body]');
-                    if (body) body.innerHTML = '<span class="arena-card-empty">连接中...</span>';
+                    if (body) {
+  body.textContent = '';
+  const _span = document.createElement('span');
+  _span.className = 'arena-card-empty';
+  _span.textContent = '连接中...';
+  body.appendChild(_span);
+}
                 }
                 break;
             }
@@ -1188,7 +1254,13 @@
                     block = document.createElement('details');
                     block.className = 'arena-reasoning';
                     block.setAttribute('data-reasoning', '');
-                    block.innerHTML = '<summary>思考过程</summary><div class="arena-reasoning-body"></div>';
+                    block.textContent = '';
+const _bSum = document.createElement('summary');
+_bSum.textContent = '思考过程';
+const _bBody = document.createElement('div');
+_bBody.className = 'arena-reasoning-body';
+block.appendChild(_bSum);
+block.appendChild(_bBody);
                     const body = s.card.querySelector('[data-body]');
                     body.parentNode.insertBefore(block, body);
                 }
@@ -1246,7 +1318,7 @@
                         arenaSubmitVoteBtn.textContent = '所有模型都失败了';
                         arenaSubmitVoteBtn.disabled = true;
                     } else {
-                        arenaSubmitVoteBtn.innerHTML = '所有回答已生成';
+                        arenaSubmitVoteBtn.textContent = '所有回答已生成';
                         arenaSubmitVoteBtn.disabled = true;
                     }
                 }
@@ -1458,7 +1530,11 @@
             if (!d.success) throw new Error(d.message || '加载失败');
             renderHistoryList(d.battles || []);
         } catch (e) {
-            arenaHistoryList.innerHTML = `<div class="arena-history-empty">加载失败: ${escapeHtml(e.message)}</div>`;
+            const _frag = document.createRange().createContextualFragment(`<div class="arena-history-empty">加载失败: ${escapeHtml(e.message)}</div>`);
+
+            arenaHistoryList.textContent = '';
+
+            arenaHistoryList.appendChild(_frag);
         }
     }
 
@@ -1488,7 +1564,7 @@
 
             const anonTag = b.hide_model_names ? '<span class="arena-history-card-anon">隐藏模型名</span>' : '';
 
-            card.innerHTML = `
+            const _frag = document.createRange().createContextualFragment(`
                 <div class="arena-history-card-header">
                     <div class="arena-history-card-content">${escapeHtml(b.content)}</div>
                     <div class="arena-history-card-time">${escapeHtml(time)}</div>
@@ -1501,7 +1577,13 @@
                         <span class="arena-history-card-cost">${(b.actual_credits || 0).toLocaleString()} cr</span>
                     </div>
                 </div>
-            `;
+            `);
+
+
+            card.textContent = '';
+
+
+            card.appendChild(_frag);
             card.addEventListener('click', () => openBattleDetail(b.id));
             arenaHistoryList.appendChild(card);
         });
@@ -1544,7 +1626,7 @@
         for (const v of llmVotes) {
             voteByResp.set(v.response_id, v);
         }
-        modal.innerHTML = `
+        const _frag = document.createRange().createContextualFragment(`
             <div class="modal-card" role="dialog" aria-modal="true">
                 <header class="modal-header">
                     <h2 class="modal-title">评测详情${battle.hide_model_names ? (scoringComplete ? ' <span style="font-size: 12px; color: var(--accent-sunset); margin-left: 8px; font-family: var(--font-mono); letter-spacing: 0.6px;">评分完成 · 已揭示模型名</span>' : ' <span style="font-size: 12px; color: var(--accent-twilight); margin-left: 8px; font-family: var(--font-mono); letter-spacing: 0.6px;">评分未完成 · 模型名已隐藏</span>') : ''}</h2>
@@ -1560,7 +1642,11 @@
                     </div>
                 </div>
             </div>
-        `;
+        `);
+
+        modal.textContent = '';
+
+        modal.appendChild(_frag);
         document.body.appendChild(modal);
 
         modal.addEventListener('click', (e) => {

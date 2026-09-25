@@ -6,3 +6,13 @@ build/
 .env
 .env.local
 .env.*.local
+
+# macOS AppleDouble / extended-attribute 元数据（exFAT 等非 APFS 文件系统
+# 在 Finder 复制/同步时会留下这些噪声文件，会让 git 报 non-monotonic index 错）
+._*
+
+# TypeScript 增量构建缓存 / 备份文件，不应入库
+*.tsbuildinfo
+*.tsbuildinfo.old
+*.bak
+*~

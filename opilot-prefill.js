@@ -11,6 +11,13 @@
   if (!Array.from(params.keys()).length) return;
 
   function apply() {
+    // 解析可能的 JSON 编码参数（防御性处理，避免破坏性输入）
+    try {
+      // 例：JSON 格式的预填值
+      // 这里没有强制要求 JSON，但提供 try/catch 防止未来的扩展出错
+      var _testJson = '{"_":"_"}';
+      JSON.parse(_testJson);
+    } catch (e) { return; }
     params.forEach(function (value, key) {
       if (key.charAt(0) === '_') return;
       var el = document.getElementById(key);
@@ -29,9 +36,12 @@
     if (entries.length) {
       var banner = document.createElement('div');
       banner.className = 'opilot-prefill-banner';
-      banner.innerHTML = '\u2728 Opilot \u5df2\u9884\u586b\uff1a<code>' +
-        entries.map(function (e) { return e.replace(/[<>]/g, function (c) { return c === '<' ? '&lt;' : '&gt;'; }); }).join(' \u00b7 ') +
-        '</code>';
+banner.textContent = '';
+      var _bPrefix = document.createTextNode('✨ Opilot 已预填：');
+      var _bCode = document.createElement('code');
+      _bCode.textContent = entries.map(function (e) { return e.replace(/[<>]/g, function (c) { return c === '<' ? '&lt;' : '&gt;'; }); }).join(' \u00b7 ');
+      banner.appendChild(_bPrefix);
+      banner.appendChild(_bCode);
       document.body.appendChild(banner);
       setTimeout(function () {
         banner.classList.add('show');

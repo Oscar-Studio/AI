@@ -245,8 +245,9 @@
         setStatus('WAV 文件已下载', 'success');
     }
 
-    function setStatus(html, type) {
-        statusEl.innerHTML = html;
+    function setStatus(text, type) {
+        // XSS-safe：statusEl 仅接受纯文本，错误信息可能含 < > & 等
+        statusEl.textContent = text;
         statusEl.className = `tts-status ${type || ''}`.trim();
     }
     function clearStatus() { setStatus('', ''); }

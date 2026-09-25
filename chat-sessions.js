@@ -20,7 +20,9 @@
             const parts = t.split('.');
             if (parts.length !== 3) return false;
             const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-            if (payload.exp && Date.now() >= payload.exp * 1000) return false;
+            // 没有 exp 字段的 token 视为无效（不应信任无过期时间的 token）
+            if (typeof payload.exp !== 'number') return false;
+            if (Date.now() >= payload.exp * 1000) return false;
             return true;
         } catch { return false; }
     }
@@ -38,9 +40,11 @@
                 headers: { ...headers, ...(options.headers || {}) }
             });
 
-            // 401 = token 失效；通知上层降级
+            // 401 = token 失效；通知上层降级（dispatchEvent 失败不应影响返回）
             if (resp.status === 401) {
-                window.dispatchEvent(new CustomEvent('chat-sessions:auth-failed'));
+                try {
+                    window.dispatchEvent(new CustomEvent('chat-sessions:auth-failed'));
+                } catch (e) { /* ignore dispatch errors */ }
                 return { ok: false, reason: 'auth-failed', status: 401 };
             }
             // 429 = 限流；不影响功能
@@ -63,13 +67,13 @@
         isLoggedIn,
 
         async create({ provider, modelId, firstUserContent }) {
+            const payload = { provider, modelId };
+            if (firstUserContent !== undefined && firstUserContent !== null) {
+                payload.firstUserContent = firstUserContent;
+            }
             return request('', {
                 method: 'POST',
-                body: JSON.stringify({
-                    provider,
-                    modelId,
-                    firstUserContent: firstUserContent || undefined
-                })
+                body: JSON.stringify(payload)
             });
         },
 
