@@ -95,7 +95,7 @@
         },
         free: {
             name: 'Free',
-            models: [] // populated at runtime from openrouter-free-models repo
+            models: [] // populated at runtime from GET /api/chat/free-models
         }
     };
 
@@ -156,15 +156,29 @@
     let pendingFirstUserText = null;  // 首条 user 消息，用于 AI 标题生成（客户端预读，防后端写消息失败时丢失）
 
     // ---- Free models loader ----
+    // 走自家 API（后端那份 OpenRouter 实时数据），不再从 GitHub 仓库 CDN 拉。
+    // 旧 CDN 实测失真：20 条里 13 条已不是免费/已下线，另有 14 个新的没收进来。
+    // 前后端拉同一份数据却各自漂，是这次事故的根子。
     (async function loadFreeModels() {
         try {
-            const r = await fetch('https://cdn.jsdelivr.net/gh/Oscarwang1222/openrouter-free-models@main/models-cn.json');
+            const r = await fetch('https://api.oscarstudio.cn/api/chat/free-models');
+            if (!r.ok) throw new Error('HTTP ' + r.status);
             const d = await r.json();
-            MODEL_CONFIG.free.models = (d.models || []).map(m => ({
+            const list = d.models || [];
+            MODEL_CONFIG.free.models = list.map(m => ({
                 id: m.id,
-                name: (m.name || m.id).replace(/\s*\(free\)/gi, '').trim() + ' 🆓',
-                free: true
+                name: (m.name || m.id) + ' 🆓',
+                free: true,
+                multi: Array.isArray(m.modalities) && m.modalities.length > 1,
+                think: !!m.think
             }));
+            // 多模态免费模型并进 MULTIMODAL_MODELS，让 chat / arena / 附件按钮
+            // 三处的 MULTI 标记共用同一份事实，不用各自再抄一遍。
+            list.forEach(m => {
+                if (Array.isArray(m.modalities) && m.modalities.length > 1 && !MULTIMODAL_MODELS.includes(m.id)) {
+                    MULTIMODAL_MODELS.push(m.id);
+                }
+            });
             // If currently on free, refresh
             if (provider === 'free') renderModelList();
             // 通知外部模块（如 Arena）free 模型已就绪
