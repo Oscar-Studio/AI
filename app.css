@@ -354,6 +354,52 @@ textarea, input, select {
     margin-bottom: var(--space-16);
 }
 
+/* Welcome hero 里的功能介绍（SEO + 首次访问的可读性） */
+.ai-intro {
+  max-width: 560px;
+  margin: var(--space-32) auto 0;
+  text-align: left;
+  color: var(--body);
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+
+.ai-intro p {
+  margin: 0 0 var(--space-16);
+}
+
+.ai-intro strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ai-intro-list {
+  list-style: none;
+  margin: 0 0 var(--space-16);
+  padding: 0;
+  display: grid;
+  gap: var(--space-8);
+}
+
+.ai-intro-list li {
+  padding-left: var(--space-16);
+  border-left: 2px solid var(--hairline);
+}
+
+.ai-intro-note {
+  font-size: 12.5px;
+  color: var(--mute);
+}
+
+.ai-intro code {
+  font-family: var(--font-mono);
+  font-size: .92em;
+  padding: 1px 5px;
+  border-radius: var(--r-sm);
+  background: var(--canvas-card);
+  border: 1px solid var(--hairline);
+}
+
 /* Chat messages */
 .msg {
     display: flex;
