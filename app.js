@@ -399,7 +399,7 @@
     window.addEventListener('chat:session-renamed', loadAndRenderSidebar);
     window.addEventListener('chat:current-session-changed', loadAndRenderSidebar);
 
-    // ---- Auto-fill chat input from ?q= (Opilot integration) ----
+    // ---- Auto-fill chat input from ?q= ----
     (function autoFillFromQuery() {
         const params = new URLSearchParams(location.search);
         const q = params.get('q');
