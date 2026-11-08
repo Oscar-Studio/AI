@@ -38,8 +38,8 @@
         minimax: {
             name: 'MiniMax',
             models: [
-                { id: 'MiniMax-M3',  name: 'M3',  think: true, multi: true },
-                { id: 'MiniMax-M2.7', name: 'M2.7', think: true }
+                { id: 'MiniMax-M3',         name: 'M3',         think: true, multi: true },
+                { id: 'MiniMax-M3.1-Flash', name: 'M3.1-Flash', think: true, multi: true }
             ]
         },
         mimo: {
@@ -105,7 +105,7 @@
         'moonshotai/kimi-k2.5', 'moonshotai/kimi-k2.6', 'moonshotai/kimi-k2.7-code',
         'x-ai/grok-4.3',
         'mimo-v2.5', 'mimo-v2.5-pro',
-        'MiniMax-M3'
+        'MiniMax-M3', 'MiniMax-M3.1-Flash'
     ];
 
     // ---- DOM ----
@@ -143,6 +143,12 @@
     let provider       = saved.provider   || 'deepseek';
     let modelId        = saved.modelId    || 'deepseek-v4-flash';
     let thinking       = saved.thinking ?? true;
+    // M2.7 已下线（上游换成 M3.1-Flash）：存量偏好自动迁到新模型，
+    // 别让用户卡在一个已经不在模型目录里的模型上。
+    if (modelId === 'MiniMax-M2.7') {
+        modelId  = 'MiniMax-M3.1-Flash';
+        provider = 'minimax';
+    }
     let attachments    = [];
     let isGenerating   = false;
     let abortCtrl      = null;
@@ -925,6 +931,17 @@
                                         outputChars += rd.text.length;
                                     }
                                 }
+                                reasoningBody.textContent = fullReasoning;
+                                reasoningDiv.style.display = 'block';
+                                if (!_reasoningExpanded) reasoningDiv.classList.remove('expanded');
+                                scrollBottom();
+                            }
+                            // M3.1-Flash 的思考是**字符串** reasoning_content
+                            // （M3/M2.7 才是 reasoning_details 数组）。
+                            // 两种都要收，否则思考面板一片空白。
+                            if (delta.reasoning_content) {
+                                fullReasoning += delta.reasoning_content;
+                                outputChars += delta.reasoning_content.length;
                                 reasoningBody.textContent = fullReasoning;
                                 reasoningDiv.style.display = 'block';
                                 if (!_reasoningExpanded) reasoningDiv.classList.remove('expanded');
