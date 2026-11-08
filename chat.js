@@ -31,8 +31,7 @@
         deepseek: {
             name: 'DeepSeek',
             models: [
-                { id: 'deepseek-v4-flash', name: 'V4-Flash' },
-                { id: 'deepseek-v4-pro',   name: 'V4-Pro', premium: true }
+                { id: 'deepseek-flash', name: 'V4.1-Flash', multi: true }
             ]
         },
         minimax: {
@@ -45,8 +44,8 @@
         mimo: {
             name: 'MiMo',
             models: [
-                { id: 'mimo-v2.5',      name: 'V2.5',     multi: true },
-                { id: 'mimo-v2.5-pro',  name: 'V2.5-Pro', premium: true, multi: true }
+                { id: 'mimo-v2.6-flash', name: 'V2.6-Flash', multi: true },
+                { id: 'mimo-v2.6-pro',   name: 'V2.6-Pro',   multi: true, premium: true }
             ]
         },
         qwen: {
@@ -61,10 +60,8 @@
         zai: {
             name: 'GLM',
             models: [
-                { id: 'z-ai/glm-4.7-flash', name: 'GLM-4.7-Flash', multi: true },
-                { id: 'z-ai/glm-5v-turbo',  name: 'GLM-5V-Turbo',  multi: true, premium: true },
-                { id: 'z-ai/glm-5.1',       name: 'GLM-5.1',       premium: true },
-                { id: 'z-ai/glm-5.2',       name: 'GLM-5.2',       premium: true }
+                { id: 'z-ai/glm-5.3-flash', name: 'GLM-5.3-Flash', multi: true },
+                { id: 'z-ai/glm-5.3',       name: 'GLM-5.3', premium: true }
             ]
         },
         moonshot: {
@@ -78,13 +75,8 @@
         hy3: {
             name: 'Tencent',
             models: [
-                { id: 'tencent/hy3', name: 'Hy3', premium: true }
-            ]
-        },
-        meituan: {
-            name: 'Meituan',
-            models: [
-                { id: 'meituan/longcat-2.0', name: 'LongCat 2.0', premium: true }
+                { id: 'tencent/hy3', name: 'Hy3', premium: true },
+                { id: 'tencent/hy4', name: 'Hy4', premium: true, multi: true }
             ]
         },
         xai: {
@@ -101,11 +93,12 @@
 
     const MULTIMODAL_MODELS = [
         'qwen/qwen3.6-flash', 'qwen/qwen3.6-plus', 'qwen/qwen3.7-plus', 'qwen/qwen3.7-max',
-        'z-ai/glm-5v-turbo', 'z-ai/glm-4.7-flash',
+        'z-ai/glm-5.3-flash',
         'moonshotai/kimi-k2.5', 'moonshotai/kimi-k2.6', 'moonshotai/kimi-k2.7-code',
         'x-ai/grok-4.3',
-        'mimo-v2.5', 'mimo-v2.5-pro',
-        'MiniMax-M3', 'MiniMax-M3.1-Flash'
+        'mimo-v2.6-flash', 'mimo-v2.6-pro',
+        'MiniMax-M3', 'MiniMax-M3.1-Flash',
+        'deepseek-flash', 'tencent/hy4'
     ];
 
     // ---- DOM ----
@@ -141,13 +134,29 @@
     })();
 
     let provider       = saved.provider   || 'deepseek';
-    let modelId        = saved.modelId    || 'deepseek-v4-flash';
+    let modelId        = saved.modelId    || 'deepseek-flash';
     let thinking       = saved.thinking ?? true;
-    // M2.7 已下线（上游换成 M3.1-Flash）：存量偏好自动迁到新模型，
+    // 2026-11-08 模型换代：存量偏好自动迁到新模型，
     // 别让用户卡在一个已经不在模型目录里的模型上。
-    if (modelId === 'MiniMax-M2.7') {
-        modelId  = 'MiniMax-M3.1-Flash';
-        provider = 'minimax';
+    const MODEL_MIGRATIONS = {
+      'MiniMax-M2.7':        'MiniMax-M3.1-Flash',
+      'deepseek-v4-flash':   'deepseek-flash',
+      'deepseek-v4-pro':     'deepseek-flash',
+      'mimo-v2-flash':       'mimo-v2.6-flash',
+      'mimo-v2.5':           'mimo-v2.6-flash',
+      'mimo-v2.5-pro':       'mimo-v2.6-pro',
+      'z-ai/glm-4.7-flash':  'z-ai/glm-5.3-flash',
+      'z-ai/glm-5v-turbo':   'z-ai/glm-5.3',
+      'z-ai/glm-5.1':        'z-ai/glm-5.3',
+      'z-ai/glm-5.2':        'z-ai/glm-5.3',
+      'meituan/longcat-2.0': 'deepseek-flash'
+    };
+    if (MODEL_MIGRATIONS[modelId]) {
+      modelId = MODEL_MIGRATIONS[modelId];
+      // 厂商也跟着换（模型 id 变了，厂商可能也变了）
+      for (const [key, cfg] of Object.entries(MODEL_CONFIG)) {
+        if (cfg.models.some(m => m.id === modelId)) { provider = key; break; }
+      }
     }
     let attachments    = [];
     let isGenerating   = false;
@@ -811,8 +820,10 @@
         }
 
         if (provider === 'deepseek') {
-            body.extra_body = { thinking: { type: thinking ? 'enabled' : 'disabled' } };
-            if (thinking) body.extra_body.reasoning_effort = 'high';
+            // thinking 必须是**顶层**字段：套在 extra_body 里，
+            // 服务端 routes/chat.js 读的是 req.body.thinking，收不到就一直是关的。
+            body.thinking = { type: thinking ? 'enabled' : 'disabled' };
+            if (thinking) body.reasoning_effort = 'high';
         }
         if (isMiniMax) body.reasoning_split = true;
         if (provider === 'mimo') {
@@ -1044,7 +1055,7 @@
             // 在 UI 末尾追加明显的提示，告诉用户"这是被截断的"
             let truncatedNote = '';
             if (typeof _finishReason === 'string' && _finishReason === 'length') {
-                truncatedNote = '\n\n> ⚠️ **回答被 max_tokens 截断了**（模型输出达到上限）。如果需要更完整的回答，请换用 `deepseek-v4-pro`（maxOutput 384K）或精简输入。';
+                truncatedNote = '\n\n> ⚠️ **回答被 max_tokens 截断了**（模型输出达到上限）。如果需要更完整的回答，请换用 `MiniMax-M3`（maxOutput 512K）或精简输入。';
             }
             const r = typeof marked !== 'undefined' ? marked.parse(fullResponse + truncatedNote) : (fullResponse + truncatedNote);
             if (r instanceof Promise) r.then(html => setContent(contentDiv, html));
