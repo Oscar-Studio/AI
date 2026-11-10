@@ -1,0 +1,29 @@
+{
+  "name": "oscar-studio-ai",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && vite build --ssr src/prerender.tsx --outDir build --emptyOutDir && node scripts/render.mjs",
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/*.test.ts",
+    "deploy": "bash ../sync-site.sh AI /www/wwwroot/ai.oscarstudio.cn"
+  },
+  "dependencies": {
+    "dompurify": "^3.3.0",
+    "katex": "^0.19.1",
+    "lucide-react": "^0.468.0",
+    "marked": "^15.0.12",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.18.5"
+  },
+  "devDependencies": {
+    "@types/katex": "^0.16.7",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5"
+  }
+}
