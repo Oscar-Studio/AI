@@ -235,3 +235,15 @@ dialog::backdrop { background: #15100c85; }
   .composer-controls .think span { display: none; }
   .mode-row > button { padding: .5rem .3rem; font-size: .84rem; }
 }
+
+.eleven-voices { border: 1px solid var(--line); border-radius: 8px; }
+.eleven-voices > summary { padding: .65rem; cursor: pointer; overflow-wrap: anywhere; }
+.eleven-voice-controls { display: grid; gap: .7rem; padding: .65rem; border-top: 1px solid var(--line); }
+.eleven-voice-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .55rem; }
+.eleven-voice-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; max-height: 16rem; overflow: auto; }
+.eleven-voice-list li { display: flex; align-items: center; gap: .4rem; }
+.eleven-voice-option { flex: 1; min-width: 0; text-align: left; overflow-wrap: anywhere; }
+.eleven-voice-option[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.eleven-voice-option small { display: block; margin-top: .2rem; }
+.eleven-voice-pagination { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
+.eleven-voice-controls audio { width: 100%; }

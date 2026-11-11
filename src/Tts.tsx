@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { AudioLines, Download, Mic, Upload, WandSparkles, X } from 'lucide-react'
-import { errorMessage, json, payload, readFile } from './api'
+import { api, errorMessage, json, payload, readFile } from './api'
+import ElevenVoices, { type Voice } from './ElevenVoices'
 
 const BUILTIN_EXAMPLES = [
     { text: '明天就是周五了，真开心！',                          style: '开心' },
@@ -24,13 +25,16 @@ type Mode = keyof typeof modes
 const voices = ['冰糖', '茉莉', '苏打', '白桦', 'Mia', 'Chloe', 'Milo', 'Dean']
 const styles = ['开心', '悲伤', '东北话', '粤语', '唱歌', '悄悄话', '变快', '变慢']
 const empty = { text: '', style: '', voice: voices[0] }
-type Result = { url: string; name: string }
+const elevenModel = 'elevenlabs/eleven-v4-turbo'
+type Result = { url: string; name: string; format: 'WAV' | 'MP3' }
 type Response = { choices?: { message?: { audio?: { data?: string } } }[] }
 const waveform = [7, 15, 22, 13, 35, 51, 29, 60, 40, 68, 48, 24, 49, 64, 36, 49, 20, 31, 17, 24, 11]
 
 export default function Tts({ active }: { active: boolean }) {
   const [mode, setMode] = useState<Mode>('builtin')
   const [drafts, setDrafts] = useState({ builtin: empty, design: empty, clone: empty })
+  const [builtinModel, setBuiltinModel] = useState(modes.builtin.model)
+  const [elevenVoice, setElevenVoice] = useState<Voice>({ id: 'sarah', name: 'Sarah' })
   const [sample, setSample] = useState<File | null>(null)
   const [result, setResult] = useState<Result | null>(null)
   const [busy, setBusy] = useState(false)
@@ -39,6 +43,7 @@ export default function Tts({ active }: { active: boolean }) {
   const player = useRef<HTMLAudioElement>(null)
   const generation = useRef<AbortController | null>(null)
   const draft = drafts[mode]
+  const isEleven = mode === 'builtin' && builtinModel === elevenModel
 
   useEffect(() => () => { generation.current?.abort() }, [])
   useEffect(() => () => { if (result) URL.revokeObjectURL(result.url) }, [result])
@@ -65,6 +70,7 @@ export default function Tts({ active }: { active: boolean }) {
     if (generation.current) return
     const text = draft.text.trim()
     if (!text) { setError('请输入要合成的文本。'); return }
+    if (isEleven && [...text].length > 10000) { setError('Eleven v4 Turbo 最多支持 10,000 字符。'); return }
     if (mode === 'clone' && !sample) { setError('请先上传音频样本。'); return }
     const ctrl = new AbortController()
     generation.current = ctrl
@@ -74,6 +80,15 @@ export default function Tts({ active }: { active: boolean }) {
     try {
       const audioData = mode === 'clone' && sample ? (await readFile(sample)).split(',')[1] : undefined
       if (ctrl.signal.aborted) return
+      if (isEleven) {
+        const response = await api('/tts', {
+          ...payload('POST', { model: elevenModel, text, voice: elevenVoice.id }), signal: ctrl.signal,
+        }, false)
+        const audio = await response.blob()
+        if (!audio.size || audio.type !== 'audio/mpeg') throw new Error('没有收到有效的 MP3 音频。')
+        if (!ctrl.signal.aborted) setResult({ url: URL.createObjectURL(audio), name: `eleven-v4-turbo-${Date.now()}.mp3`, format: 'MP3' })
+        return
+      }
       const data = await json<Response>('/tts', {
         ...payload('POST', {
           model: modes[mode].model, text, voice: mode === 'builtin' ? draft.voice : undefined,
@@ -84,7 +99,7 @@ export default function Tts({ active }: { active: boolean }) {
       if (!base64) throw new Error('没有收到音频数据。')
       if (!ctrl.signal.aborted) {
         const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
-        setResult({ url: URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' })), name: `mimo-tts-${Date.now()}.wav` })
+        setResult({ url: URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' })), name: `mimo-tts-${Date.now()}.wav`, format: 'WAV' })
       }
     } catch (error) {
       if (!ctrl.signal.aborted) setError(errorMessage(error))
@@ -113,6 +128,15 @@ export default function Tts({ active }: { active: boolean }) {
           })}
         </div>
         <div className="section-label"><span>02</span><h2>输入内容</h2></div>
+        {mode === 'builtin' && <label>合成模型<select value={builtinModel} disabled={busy} onChange={(event) => {
+          setBuiltinModel(event.target.value)
+          setResult(null)
+          setError('')
+        }}>
+          <option value={modes.builtin.model}>MiMo TTS</option>
+          <option value={elevenModel}>Eleven v4 Turbo · OpenRouter</option>
+        </select></label>}
+        {isEleven && <ElevenVoices voice={elevenVoice} onSelect={setElevenVoice} disabled={busy || !active} />}
         {mode === 'clone' && <div className="clone-field">
           <input ref={fileInput} type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" hidden
             onChange={(event) => { selectFile(event.currentTarget.files?.[0]); event.currentTarget.value = '' }} />
@@ -125,19 +149,19 @@ export default function Tts({ active }: { active: boolean }) {
         </div>}
         {mode === 'design' && <label>声音描述<textarea rows={2} placeholder="例如，语速平稳、声音温和的年轻女性。" value={draft.style}
           onChange={(event) => update({ style: event.target.value })} /></label>}
-        <label>要合成的文本<textarea rows={5} placeholder="输入希望朗读的内容…" value={draft.text}
+        <label>要合成的文本<textarea rows={5} placeholder={isEleven ? '输入希望朗读的内容，可加入 [whispers] 等情绪标签。' : '输入希望朗读的内容…'} value={draft.text}
           onChange={(event) => update({ text: event.target.value })} />
-          <small className="muted count">{draft.text.length.toLocaleString()} 字符</small>
+          <small className="muted count">{(isEleven ? [...draft.text].length : draft.text.length).toLocaleString()}{isEleven ? ' / 10,000' : ''} 字符</small>
         </label>
-        {mode !== 'design' && <div className="tts-fields">
+        {mode !== 'design' && !isEleven && <div className="tts-fields">
           {mode === 'builtin' && <label>音色<select value={draft.voice} onChange={(event) => update({ voice: event.target.value })}>
             {voices.map((voice) => <option key={voice}>{voice}</option>)}</select></label>}
           <label>风格指导 <small className="muted">可选</small><input placeholder="例如，轻快地朗读" value={draft.style}
             onChange={(event) => update({ style: event.target.value })} /></label>
         </div>}
-        {mode === 'builtin' && <div className="tts-suggestions">{styles.map((style) =>
+        {mode === 'builtin' && !isEleven && <div className="tts-suggestions">{styles.map((style) =>
           <button key={style} type="button" onClick={() => update({ style: [draft.style.trim(), style].filter(Boolean).join(' ') })}>{style}</button>)}</div>}
-        {mode !== 'clone' && <details className="tts-examples"><summary>填入示例</summary><div className="tts-suggestions">
+        {mode !== 'clone' && !isEleven && <details className="tts-examples"><summary>填入示例</summary><div className="tts-suggestions">
           {mode === 'builtin'
             ? BUILTIN_EXAMPLES.map((example) => <button type="button" key={example.style} onClick={() => update(example)}>{example.style}</button>)
             : DESIGN_EXAMPLES.map((example) => <button type="button" key={example.desc} onClick={() => update({ style: example.desc, text: example.text })}>{example.desc.split('，')[0]}</button>)}
@@ -151,7 +175,7 @@ export default function Tts({ active }: { active: boolean }) {
         {result ? <div className="result-player">
           <p role="status">音频已生成</p>
           <audio ref={player} controls src={result.url} aria-label="试听生成的语音" />
-          <a className="button" href={result.url} download={result.name}><Download size={17} /> 下载 WAV</a>
+          <a className="button" href={result.url} download={result.name}><Download size={17} /> 下载 {result.format}</a>
         </div> : <p className="muted" role="status">{busy ? '正在合成，完成后可以在这里试听。' : '生成后，音频会出现在这里。'}</p>}
       </section>
     </div>

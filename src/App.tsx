@@ -34,7 +34,7 @@ function Landing() {
     </section>
     <section aria-label="工作台功能" className="feature-list">
       <Link to="/chat/"><span className="feature-index">01 / CHAT</span><MessageSquare size={22} /><div><h2>多模型对话</h2><p>切换模型，发送文字、图片或音频。登录后可在不同设备继续已有对话。</p></div><ArrowDownRight size={21} /></Link>
-      <Link to="/tts/"><span className="feature-index">02 / TTS</span><AudioLines size={22} /><div><h2>语音合成</h2><p>使用预设音色、描述想要的声音，或上传样本克隆音色。试听后可下载 WAV。</p></div><ArrowDownRight size={21} /></Link>
+      <Link to="/tts/"><span className="feature-index">02 / TTS</span><AudioLines size={22} /><div><h2>语音合成</h2><p>选择音色、描述想要的声音，或上传样本克隆音色。试听后可下载音频。</p></div><ArrowDownRight size={21} /></Link>
     </section>
     <footer><span>© Oscar Studio</span><a href="https://docs.oscarstudio.cn/ai/AI%20Studio">使用文档 ↗</a></footer>
   </main>
