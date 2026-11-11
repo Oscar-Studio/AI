@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { ArrowUp, History, MessageSquare, Paperclip, Pin, Plus, Sparkles, Square, X } from 'lucide-react'
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react'
+import { ArrowUp, History, MessageSquare, Mic, Paperclip, Pin, Plus, Sparkles, Square, X } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import renderMath from 'katex/contrib/auto-render'
@@ -7,6 +7,7 @@ import 'katex/dist/katex.min.css'
 import { authUrl, errorMessage, getToken, readFile } from './api'
 import { MODEL_CONFIG, modelPreference } from './models'
 import { useChat, type Attachment, type Message, type Session } from './useChat'
+import { useVoiceInput } from './useVoiceInput'
 
 function Markdown({ content }: { content: string }) {
   const target = useRef<HTMLDivElement>(null)
@@ -75,6 +76,12 @@ export default function Chat({ active }: { active: boolean }) {
 function Workspace({ token, active }: { token: string | null; active: boolean }) {
   const chat = useChat(token)
   const [draft, setDraft] = useState('')
+  const voice = useVoiceInput(active, (text) => {
+    setDraft((current) => current && !/\s$/.test(current) ? `${current} ${text}` : current + text)
+    composer.current?.focus()
+  }, chat.setError)
+  const press = useRef<{ x: number; y: number; timer: number } | null>(null)
+  const held = useRef(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [reading, setReading] = useState(false)
   const uploadVersion = useRef(0)
@@ -118,7 +125,38 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
     setAttachments([])
   }
 
+  function clearPress() {
+    window.clearTimeout(press.current?.timer)
+    press.current = null
+  }
+
+  useEffect(() => {
+    if (!active) clearPress()
+    return clearPress
+  }, [active])
+
+  function startVoice() {
+    if (!token) { chat.setError('请登录或使用访客身份后开启语音输入。'); return }
+    void voice.start()
+  }
+
+  function startPress(event: PointerEvent<HTMLTextAreaElement>) {
+    held.current = false
+    clearPress()
+    if (!token || !event.isPrimary || event.button !== 0 || voice.status) return
+    press.current = {
+      x: event.clientX,
+      y: event.clientY,
+      timer: window.setTimeout(() => {
+        held.current = true
+        startVoice()
+      }, 450),
+    }
+  }
+
   function newChat() {
+    clearPress()
+    voice.cancel()
     chat.newChat()
     setDraft('')
     resetAttachments()
@@ -130,6 +168,8 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
   function openSession(id: number) {
     drawer.current?.close()
     if (id === chat.session?.id && chat.operation) return
+    clearPress()
+    voice.cancel()
     setDraft('')
     resetAttachments()
     follow.current = true
@@ -156,7 +196,7 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
 
   function submit(event?: FormEvent) {
     event?.preventDefault()
-    if (!draft.trim() || chat.operation || !chat.preferenceReady || !token || reading) return
+    if (!draft.trim() || chat.operation || !chat.preferenceReady || !token || reading || voice.status) return
     if (chat.quota !== null && chat.quota <= 0 && chat.preference.provider !== 'free') {
       chat.setError('今日 Credits 已用完。可切换免费模型或明天再试。')
       return
@@ -250,10 +290,24 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
             <div key={i} className="attachment"><AttachmentView attachment={attachment} />
               <button type="button" className="icon-button" aria-label={`移除 ${attachment.name}`} onClick={() => setAttachments((items) => items.filter((_, index) => index !== i))}><X size={15} /></button>
             </div>)}</div>}
-          <textarea ref={composer} rows={2} aria-label="消息" placeholder="输入消息…" value={draft} onChange={(event) => setDraft(event.target.value)}
+          <textarea ref={composer} rows={2} aria-label="消息" placeholder={token ? '输入消息，或长按语音输入…' : '输入消息…'} value={draft} onChange={(event) => setDraft(event.target.value)}
+            onPointerDown={startPress} onPointerUp={clearPress} onPointerCancel={clearPress} onPointerLeave={clearPress}
+            onPointerMove={(event) => {
+              if (press.current && Math.hypot(event.clientX - press.current.x, event.clientY - press.current.y) > 12) clearPress()
+            }}
+            onContextMenu={(event) => {
+              if (held.current) event.preventDefault()
+              clearPress()
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit() }
             }} />
+          {voice.status && <div className="voice-status">
+            <span role="status">{voice.status === 'permission' ? '正在请求麦克风权限…'
+              : voice.status === 'recording' ? '录音中，再点麦克风开始识别（最多 60 秒）' : '正在识别语音…'}</span>
+            <button type="button" onClick={voice.cancel}>取消</button>
+          </div>}
+          {chat.freeStatus === 'error' && <button className="composer-retry" type="button" onClick={() => void chat.reloadFree()}>重试免费列表</button>}
           <div className="composer-controls">
             <select aria-label="模型" value={chat.preference.modelId} disabled={Boolean(chat.operation)}
               onChange={(event) => {
@@ -266,7 +320,6 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
                 <optgroup key={provider} label={group.name}>{group.models.map((model) => <option key={model.id} value={model.id}>{group.name} · {model.name}</option>)}</optgroup>)}
               {!!chat.free.length && <optgroup label="免费模型">{chat.free.map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}</optgroup>}
             </select>
-            {chat.freeStatus === 'error' && <button type="button" onClick={() => void chat.reloadFree()}>重试免费列表</button>}
             {selectedModel?.multi && <button className="icon-button" type="button" title="添加附件" aria-label="添加附件" disabled={reading} onClick={() => fileInput.current?.click()}><Paperclip size={18} /></button>}
             <input type="file" accept="image/*,audio/*" multiple hidden ref={fileInput} onChange={(event) => {
               void addFiles(event.currentTarget.files)
@@ -276,7 +329,14 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
               disabled={Boolean(chat.operation)} onClick={() => chat.setPreference({ ...chat.preference, thinking: !chat.preference.thinking })}><Sparkles size={16} /><span>深度思考</span></button>}
             {(chat.operation === 'send' || chat.operation === 'replay') ? <button className="send" type="button"
               aria-label={chat.operation === 'replay' ? '停止接收' : '停止生成'} onClick={chat.stop}><Square size={17} fill="currentColor" /></button>
-              : <button className="send" type="submit" aria-label="发送" disabled={!token || !draft.trim() || reading || !!chat.operation || !chat.preferenceReady}><ArrowUp size={19} /></button>}
+              : <button className="send" type="submit" aria-label="发送" disabled={!token || !draft.trim() || reading || !!chat.operation || !chat.preferenceReady || !!voice.status}><ArrowUp size={19} /></button>}
+            <button className={`icon-button voice-button${voice.status === 'recording' ? ' recording' : ''}`} type="button"
+              aria-label={voice.status === 'recording' ? '结束录音并识别' : '语音输入'}
+              title={voice.status === 'recording' ? '结束录音并识别' : '语音输入（也可长按输入框）'}
+              disabled={voice.status === 'permission' || voice.status === 'transcribing'}
+              onClick={voice.status === 'recording' ? voice.stop : startVoice}>
+              {voice.status === 'recording' ? <Square size={16} fill="currentColor" /> : <Mic size={18} />}
+            </button>
           </div>
         </form>
         <p className="composer-footnote">AI 可能出错，请核实重要信息。</p>

@@ -123,7 +123,7 @@ svg { flex: none; vertical-align: middle; }
 .session-menu > div { position: absolute; right: 0; top: 100%; min-width: 7rem; z-index: 2; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); padding: .2rem; border-radius: 8px; }
 .session-menu button { display: block; width: 100%; text-align: left; border: 0; }
 .session-menu button:hover { background: var(--raised); }
-.chat-main { min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.chat-main { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
 .chat-header { display: flex; align-items: center; justify-content: space-between; gap: .7rem; padding: .7rem clamp(.85rem, 3.5vw, 2.4rem); border-bottom: 1px solid var(--line); }
 .chat-header > div { display: flex; gap: .75rem; align-items: center; min-width: 0; }
 .chat-header h1 { font-size: 1.03rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -157,7 +157,7 @@ svg { flex: none; vertical-align: middle; }
 .composer textarea { display: block; width: 100%; min-height: 54px; resize: none; border: 0; background: transparent; padding: .38rem .3rem; }
 .composer textarea:focus-visible { outline-offset: -1px; }
 .composer-controls { display: flex; align-items: center; gap: .45rem; padding-top: .4rem; }
-.composer-controls select { padding: .35rem .25rem; max-width: min(48%, 15rem); }
+.composer-controls select { min-width: 0; padding: .35rem .25rem; max-width: min(48%, 15rem); }
 .composer-controls .think { display: flex; align-items: center; gap: .35rem; white-space: nowrap; }
 .think[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
 .send { width: 40px; height: 40px; margin-left: auto; flex-shrink: 0; display: inline-grid; place-items: center; padding: 0; }
@@ -247,3 +247,9 @@ dialog::backdrop { background: #15100c85; }
 .eleven-voice-option small { display: block; margin-top: .2rem; }
 .eleven-voice-pagination { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
 .eleven-voice-controls audio { width: 100%; }
+
+.voice-button { flex-shrink: 0; width: 40px; height: 40px; }
+.voice-button.recording { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.voice-status { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .2rem .3rem; color: var(--muted); font-size: .84rem; }
+.voice-status button { padding: .25rem .5rem; flex-shrink: 0; }
+.composer-retry { margin: .25rem 0; padding: .25rem .5rem; font-size: .84rem; }

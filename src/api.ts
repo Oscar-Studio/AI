@@ -43,7 +43,7 @@ export function payload(method: string, data?: unknown): RequestInit {
   return { method, body: data === undefined ? undefined : JSON.stringify(data) }
 }
 
-export function readFile(file: File): Promise<string> {
+export function readFile(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
