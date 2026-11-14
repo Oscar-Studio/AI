@@ -177,9 +177,10 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
   }
 
   async function addFiles(files: FileList | null) {
-    if (!selectedModel?.multi || !files?.length || reading) return
-    const supported = Array.from(files).filter((file) => /^(image|audio)\//.test(file.type))
-    if (!supported.length) { chat.setError('请选择图片或音频文件。'); return }
+    if (!files?.length || reading) return
+    const supported = Array.from(files).filter((file) =>
+      selectedModel?.attachments?.some((type) => file.type.startsWith(type + '/')))
+    if (!supported.length) { chat.setError('当前模型不支持所选附件类型。'); return }
     const version = ++uploadVersion.current
     setReading(true)
     try {
@@ -202,7 +203,7 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
       return
     }
     follow.current = true
-    void chat.send(draft.trim(), selectedModel?.multi ? attachments : [])
+    void chat.send(draft.trim(), attachments.filter(({ type }) => selectedModel?.attachments?.includes(type)))
     setDraft('')
     resetAttachments()
   }
@@ -284,7 +285,7 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
       </div>
       <div className="composer-area">
         {chat.error && <div className="composer-error" role="alert">{chat.error}<button type="button" className="icon-button" aria-label="关闭提示" onClick={() => chat.setError('')}><X size={15} /></button></div>}
-        <form className="composer" onSubmit={submit} onDragOver={(event) => { if (selectedModel?.multi) event.preventDefault() }}
+        <form className="composer" onSubmit={submit} onDragOver={(event) => { if (selectedModel?.attachments?.length) event.preventDefault() }}
           onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void addFiles(event.dataTransfer.files) } }}>
           {!!attachments.length && <div className="attachments">{attachments.map((attachment, i) =>
             <div key={i} className="attachment"><AttachmentView attachment={attachment} />
@@ -313,15 +314,17 @@ function Workspace({ token, active }: { token: string | null; active: boolean })
               onChange={(event) => {
                 const next = modelPreference(event.target.value, chat.preference.thinking, chat.free)
                 chat.setPreference(next)
-                if (!(next.provider === 'free' ? chat.free : MODEL_CONFIG[next.provider].models).find((model) => model.id === next.modelId)?.multi) resetAttachments()
+                const supported = (next.provider === 'free' ? chat.free : MODEL_CONFIG[next.provider].models)
+                  .find((model) => model.id === next.modelId)?.attachments
+                if (attachments.some(({ type }) => !supported?.includes(type))) resetAttachments()
               }}>
               {!chat.preferenceReady && <option value={chat.preference.modelId}>正在读取模型…</option>}
               {Object.entries(MODEL_CONFIG).filter(([provider]) => provider !== 'free').map(([provider, group]) =>
                 <optgroup key={provider} label={group.name}>{group.models.map((model) => <option key={model.id} value={model.id}>{group.name} · {model.name}</option>)}</optgroup>)}
               {!!chat.free.length && <optgroup label="免费模型">{chat.free.map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}</optgroup>}
             </select>
-            {selectedModel?.multi && <button className="icon-button" type="button" title="添加附件" aria-label="添加附件" disabled={reading} onClick={() => fileInput.current?.click()}><Paperclip size={18} /></button>}
-            <input type="file" accept="image/*,audio/*" multiple hidden ref={fileInput} onChange={(event) => {
+            {Boolean(selectedModel?.attachments?.length) && <button className="icon-button" type="button" title="添加附件" aria-label="添加附件" disabled={reading} onClick={() => fileInput.current?.click()}><Paperclip size={18} /></button>}
+            <input type="file" accept={selectedModel?.attachments?.map((type) => type + '/*').join(',')} multiple hidden ref={fileInput} onChange={(event) => {
               void addFiles(event.currentTarget.files)
               event.currentTarget.value = ''
             }} />

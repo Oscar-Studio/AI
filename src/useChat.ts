@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, ApiError, errorMessage, json, payload, sessionsPath } from './api'
-import { defaultModel, modelPreference, type Model, type Preference } from './models'
+import { MODEL_CONFIG, defaultModel, modelPreference, type Model, type Preference } from './models'
 import { readEvents } from './sse'
 
 export type Attachment = { type: 'image' | 'audio'; name: string; url: string }
@@ -34,8 +34,9 @@ function initialPreference(): Preference {
   } catch { return fallback }
 }
 
-function toModelMessage(message: Message) {
-  const { role, content, attachments } = message
+function toModelMessage(message: Message, supported: Model['attachments']) {
+  const { role, content } = message
+  const attachments = message.attachments?.filter(({ type }) => supported?.includes(type))
   if (!attachments?.length) return { role, content }
   const parts = attachments.map(({ type, url }) => type === 'image'
     ? { type: 'image_url', image_url: { url } } : { type: 'audio', audio_url: { url } })
@@ -52,15 +53,6 @@ function fromSaved(message: SavedMessage): Message {
     id: String(message.id), role: message.role, content: message.content || '', reasoning: message.reasoning,
     attachments, pending: Boolean(message.is_in_progress), tokens: (message.input_tokens || 0) + (message.output_tokens || 0),
   }
-}
-
-function streamOptions({ provider, thinking }: Preference) {
-  const type = thinking ? 'enabled' : 'disabled'
-  if (provider === 'deepseek') return { thinking: { type }, ...(thinking && { reasoning_effort: 'high' }) }
-  if (provider === 'mimo') return { thinking: { type, ...(thinking && { budget_tokens: 2048 }) } }
-  if (provider === 'minimax') return { reasoning_split: true }
-  if (provider === 'xai') return { extra_body: { reasoning: type } }
-  return {}
 }
 
 export function useChat(token: string | null) {
@@ -115,7 +107,7 @@ export function useChat(token: string | null) {
       if (signal?.aborted) return
       setFree(data.models.map((model) => ({
         id: model.id, name: model.name || model.id, think: model.think,
-        multi: (model.modalities?.length ?? 0) > 1,
+        attachments: model.modalities?.includes('image') ? ['image'] : [],
       })))
       setFreeStatus('ready')
     } catch { if (!signal?.aborted) setFreeStatus('error') }
@@ -231,6 +223,8 @@ export function useChat(token: string | null) {
     const ctrl = start('send')
     const user: Message = { id: crypto.randomUUID(), role: 'user', content, attachments }
     const assistant: Message = { id: crypto.randomUUID(), role: 'assistant', content: '', pending: true }
+    const supported = (selected.provider === 'free' ? free : MODEL_CONFIG[selected.provider].models)
+      .find((model) => model.id === selected.modelId)?.attachments
     const history = [...messages.filter((message) => !message.pending && (message.role !== 'assistant' || message.content)), user]
     setMessages([...history, assistant])
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -269,8 +263,8 @@ export function useChat(token: string | null) {
       resetIdle()
       const response = await api('/chat', {
         ...payload('POST', {
-          model: selected.modelId, messages: history.map(toModelMessage), stream: true,
-          sessionId: activeSession.id, ...streamOptions(selected),
+          model: selected.modelId, messages: history.map((message) => toModelMessage(message, supported)), stream: true,
+          sessionId: activeSession.id, ...(selected.provider !== 'minimax' && { thinking: selected.thinking }),
         }),
         signal: ctrl.signal,
       })
